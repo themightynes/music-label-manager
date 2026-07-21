@@ -1,0 +1,64 @@
+{
+  "formId": "v3-sam-pool-review",
+  "savedAt": "2026-07-21T02:25:30.192Z",
+  "meetings": {
+    "slow_news_week": {
+      "verdict": "approve_with_edits",
+      "notes": "Sam:“Nothing is happening. I've read every trade twice, three group chats are arguing about a festival poster, and that's the whole industry this week. We might have an opportunity to fill the vacuum. I can start a fight, I can place a piece, or I can sit on my hands while someone else takes advantage.”"
+    },
+    "billboard_money": {
+      "verdict": "kill",
+      "notes": ""
+    },
+    "journalist_favor_called_in": {
+      "verdict": "approve",
+      "notes": ""
+    },
+    "crisis_retainer": {
+      "verdict": "approve_with_edits",
+      "notes": "1. money −40000, executive_mood +5, artist_mood +5→press_momentum +2 | 2. money −15000, reputation +1→press_momentum +1 | 3.  executive_mood −10→ —"
+    },
+    "own_the_correction": {
+      "verdict": "approve_with_edits",
+      "notes": "This is a good scenario but the outcomes need to be more extreme (2.5x or so)"
+    },
+    "the_dossier": {
+      "verdict": "rework",
+      "notes": "This would work better if it was about a specific scenario (artist or some past from the label) - too broad. We could even come up with a few scenarios that get played, but it's the same types of choices. Would be a good way to create more \"stories\"."
+    },
+    "awards_whisper_campaign": {
+      "verdict": "approve_with_edits",
+      "notes": "An artist would feel like the label is supporting her by spending cash. So I would go back to that. This should also be a meeting that pops up to a specific release. Side note - releases should get awards as a achievement? something to work on later."
+    },
+    "the_comeback_client": {
+      "verdict": "kill",
+      "notes": "What does this have to do with music?"
+    },
+    "platform_exclusive_bidding": {
+      "verdict": "approve_with_edits",
+      "notes": "Should be tied to a release. Should say the artist name and release name. Effects should be 2x"
+    },
+    "the_documentary_ask": {
+      "verdict": "approve_with_edits",
+      "notes": "Effects 2x. Money 4x"
+    },
+    "chart_debut_one_hour_window": {
+      "verdict": "approve_with_edits",
+      "notes": "Artist would LIKE the label support on this. I think it needs the effects 2x and money 4x. I think it needs to mess with artist popularity. Almost like a varience a slim chance the exposure could lead to a negative outcome. "
+    },
+    "old_tweets_surface": {
+      "verdict": "approve",
+      "notes": ""
+    },
+    "the_engagement_farm": {
+      "verdict": "approve_with_edits",
+      "notes": "Money 4x, artist effects 3x."
+    },
+    "the_hatchet_piece": {
+      "verdict": "kill",
+      "notes": ""
+    }
+  },
+  "overallNotes": "",
+  "voiceConsistency": ""
+}

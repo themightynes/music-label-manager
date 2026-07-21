@@ -3,7 +3,7 @@ import { useMachine } from '@xstate/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { executiveMeetingMachine } from '../../machines/executiveMeetingMachine';
 import { makeCachedFetchExecutives } from '../../hooks/useExecutives';
-import { ExecutiveCard, roleConfig, meetingDisplayName, snippetOf } from './ExecutiveCard';
+import { ExecutiveCard, roleConfig, meetingDisplayName, meetingPreviewSnippet } from './ExecutiveCard';
 import { MeetingSelector } from './MeetingSelector';
 import { DialogueInterface } from './DialogueInterface';
 import { AutoSelectReviewPanel } from './AutoSelectReviewPanel';
@@ -239,11 +239,14 @@ export function ExecutiveMeetings({
             // Task 4: brief preview from the SAME response — first meeting's
             // display name + prompt snippet. Fetch errors fall through to no
             // preview (the strip keeps its generic open-channel copy).
+            // Placeholder fix (F4): meetingPreviewSnippet resolves {artistName}/
+            // {songTitle} against reactiveContext before truncating, so raw
+            // tokens never reach the card.
             const first = meetings[0];
             const preview = first
               ? {
                   name: meetingDisplayName(first),
-                  snippet: snippetOf(first.prompt_before_selection || first.prompt),
+                  snippet: meetingPreviewSnippet(first),
                   moreCount: meetings.length - 1,
                 }
               : null;
@@ -413,6 +416,9 @@ export function ExecutiveMeetings({
               ? artists.find(a => a.id === context.selectedArtistId)?.name
               : undefined
           }
+          // Reactive global meetings: thread the triggering happening's names
+          // so {artistName}/{songTitle} render real names, not literal braces.
+          reactiveContext={context.selectedMeeting?.reactiveContext}
         />
       );
     }

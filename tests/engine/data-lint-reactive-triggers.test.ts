@@ -14,9 +14,12 @@ import type { HappeningType, RelevanceTag } from '@shared/types/gameTypes';
  *  1. Every `reactive_trigger` value is in the canonical HAPPENING_TYPES enum
  *     (shared/types/gameTypes.ts — the single source of truth both Zod
  *     surfaces derive from).
- *  2. At most ONE reactive meeting per (role_id, reactive_trigger) pair —
- *     otherwise the injection stage's match would be ambiguous within one
- *     exec's pool (shared/engine/meetingSelection.ts matchReactiveMeeting).
+ *  2. (RELAXED 2026-07-20 — designer decision) Multiple meetings in one exec's
+ *     pool MAY own the SAME (role_id, reactive_trigger) pair: when the trigger
+ *     fires with >1 eligible owner, the injection stage picks ONE uniformly at
+ *     random via its isolated seeded tie-break (shared/engine/meetingSelection.ts
+ *     matchReactiveMeeting step 3). The old at-most-one-owner uniqueness lint
+ *     is gone; the sanity test below pins the exact authored multiset instead.
  *  3. Reactive meetings' `requires` tags are consistent with their trigger.
  *     Chosen mapping (documented here, not derived — this is a lint policy):
  *       - mood_crater, recent_signing => must require 'artist_signed'
@@ -81,21 +84,23 @@ describe('Data lint — reactive triggers (Tier 2, PR-1, dark launch)', () => {
     ).toEqual([]);
   });
 
-  it('at most ONE reactive meeting per (role_id, reactive_trigger) pair', () => {
-    const seen = new Map<string, string>();
+  it('shared (role_id, reactive_trigger) ownership is permitted, but each owner is a DISTINCT meeting id', () => {
+    // The old at-most-one-owner rule was relaxed (see file header): the
+    // injection stage's seeded tie-break picks one owner at random when
+    // several are eligible. What must still hold is that no meeting id is
+    // authored twice into the reactive set (a literal duplicate entry would
+    // silently double that meeting's tie-break odds).
+    const seenIds = new Set<string>();
     const offenders: string[] = [];
     for (const meeting of reactiveMeetings) {
-      const key = `${meeting.role_id ?? '?'}::${meeting.reactive_trigger}`;
-      const existing = seen.get(key);
-      if (existing) {
-        offenders.push(`${key} claimed by both "${existing}" and "${meeting.id}"`);
-      } else {
-        seen.set(key, meeting.id);
+      if (seenIds.has(meeting.id)) {
+        offenders.push(`meeting id "${meeting.id}" appears more than once in the reactive set`);
       }
+      seenIds.add(meeting.id);
     }
     expect(
       offenders,
-      offenders.length ? `Duplicate (role, trigger) reactive meetings:\n  ${offenders.join('\n  ')}` : undefined
+      offenders.length ? `Duplicate reactive meeting id(s):\n  ${offenders.join('\n  ')}` : undefined
     ).toEqual([]);
   });
 
@@ -118,9 +123,28 @@ describe('Data lint — reactive triggers (Tier 2, PR-1, dark launch)', () => {
     ).toEqual([]);
   });
 
-  it('sanity: PR-2 authored exactly 5 reactive meetings, one per exec', () => {
-    expect(reactiveMeetings).toHaveLength(5);
-    const roleIds = reactiveMeetings.map((m) => m.role_id).sort();
-    expect(roleIds).toEqual(['ceo', 'cco', 'cmo', 'head_ar', 'head_distribution'].sort());
+  it('sanity: the authored reactive set covers every exec (head_ar owns recent_signing TWICE — shared-trigger random ownership)', () => {
+    // PR-2 dark-launched 5 reactive meetings (one per exec). The v3 Mac pool
+    // adds head_ar × chart_debut (one_that_got_away_again) and the v3 Sam pool
+    // swaps cmo × chart_debut to chart_debut_one_hour_window and adds
+    // cmo × release_out (old_tweets_surface). 2026-07-20: demo_ethics_one was
+    // restored to reactive on recent_signing alongside ar_recent_signing_plan
+    // (shared ownership, random pick — see file header), so
+    // head_ar:recent_signing appears TWICE in this multiset by design.
+    const roleIds = Array.from(new Set(reactiveMeetings.map((m) => m.role_id)));
+    expect(roleIds.sort()).toEqual(['ceo', 'cco', 'cmo', 'head_ar', 'head_distribution'].sort());
+    const pairs = reactiveMeetings.map((m) => `${m.role_id}:${m.reactive_trigger}`).sort();
+    expect(pairs).toEqual(
+      [
+        'ceo:chart_debut',
+        'cco:mood_crater',
+        'cmo:chart_debut',
+        'cmo:release_out',
+        'head_ar:chart_debut',
+        'head_ar:recent_signing',
+        'head_ar:recent_signing',
+        'head_distribution:release_out',
+      ].sort()
+    );
   });
 });

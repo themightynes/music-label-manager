@@ -4,6 +4,7 @@ import { Badge } from '../ui/badge';
 import { Globe, Star, User, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { RoleMeeting, GameArtist } from '../../../../shared/types/gameTypes';
 import { formatWhyNow } from '../../utils/reactiveContextCopy';
+import { resolveMeetingPromptPlaceholders } from '../../utils/meetingPromptPlaceholders';
 
 /**
  * Exec Console redesign (2026-07-11): the meeting step renders as the solo
@@ -171,9 +172,16 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
   const safeIndex = Math.min(meetingIndex, filteredMeetings.length - 1);
   const meeting = filteredMeetings[safeIndex];
   const isUserSelected = meeting.target_scope === 'user_selected' && signedArtists.length > 0;
-  const briefPrompt = meeting.target_scope === 'user_selected' && meeting.prompt_before_selection
-    ? meeting.prompt_before_selection
-    : meeting.prompt;
+  // Resolve {artistName}/{songTitle} against the reactive happening's names
+  // (global-scope reactive meetings — e.g. chart_debut_one_hour_window — know
+  // WHICH song charted via reactiveContext), with graceful fallbacks so
+  // literal braces never render (see meetingPromptPlaceholders.ts).
+  const briefPrompt = resolveMeetingPromptPlaceholders(
+    meeting.target_scope === 'user_selected' && meeting.prompt_before_selection
+      ? meeting.prompt_before_selection
+      : meeting.prompt,
+    meeting.reactiveContext ?? {}
+  );
 
   const handleStart = () => {
     if (isUserSelected) {

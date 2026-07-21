@@ -97,6 +97,10 @@ export class SongGenerationProcessor {
         : 0;
 
       let songsGeneratedThisWeek = false;
+      // Meeting-content session — track which artists actually recorded this week so
+      // per-artist quality pools ("hypeArtistPools treatment") are zeroed only for
+      // the artists that consumed them (a label-mate who didn't record keeps theirs).
+      const generatedArtistIds = new Set<string>();
 
       for (const project of recordingProjects) {
         if (this.shouldGenerateProjectSongs(project)) {
@@ -104,6 +108,7 @@ export class SongGenerationProcessor {
           await this.generateWeeklyProjectSongs(ctx, project, summary, dbTransaction);
           if ((project.songsCreated || 0) > songsBefore) {
             songsGeneratedThisWeek = true;
+            if (project.artistId) generatedArtistIds.add(project.artistId);
           }
         }
       }
@@ -123,6 +128,38 @@ export class SongGenerationProcessor {
           appliedEffects: { quality_bonus: bankedQualityBonus }
         });
         console.log(`[QUALITY BONUS] Consumed banked bonus (${bankedQualityBonus}) this week, pool zeroed`);
+      }
+
+      // Meeting-content session — zero the per-ARTIST quality pools that were
+      // consumed this week. Each recording artist that generated a song drains its
+      // own pool (calculateEnhancedSongQuality already applied it additively above);
+      // pools belonging to artists who didn't record are untouched. Container is
+      // dropped when it empties so no-op games stay byte-stable.
+      const artistPoolsSnapshot = (ctx.gameState.flags || {}) as Record<string, any>;
+      if (songsGeneratedThisWeek
+          && artistPoolsSnapshot.qualityBonusArtistPools
+          && typeof artistPoolsSnapshot.qualityBonusArtistPools === 'object') {
+        const pools = artistPoolsSnapshot.qualityBonusArtistPools as Record<string, { amount: number; week: number }>;
+        for (const consumedArtistId of Array.from(generatedArtistIds)) {
+          const pool = pools[consumedArtistId];
+          if (pool && typeof pool.amount === 'number' && pool.amount !== 0) {
+            const consumed = pool.amount;
+            delete pools[consumedArtistId];
+            summary.changes.push({
+              type: 'meeting',
+              description: consumed > 0
+                ? `Studio focus paid off: +${consumed} quality applied to this artist's recordings`
+                : `Studio pressure took its toll: ${consumed} quality on this artist's recordings`,
+              amount: consumed,
+              appliedEffects: { quality_bonus: consumed }
+            });
+            console.log(`[QUALITY BONUS] Consumed artist pool for ${consumedArtistId} (${consumed}) this week, pool zeroed`);
+          }
+        }
+        if (Object.keys(pools).length === 0) {
+          delete artistPoolsSnapshot.qualityBonusArtistPools;
+          ctx.gameState.flags = artistPoolsSnapshot;
+        }
       }
 
       if (bankedVariance !== 0 && songsGeneratedThisWeek) {
@@ -591,10 +628,25 @@ export class SongGenerationProcessor {
     // bank is zeroed once per week (after all songs generated that week have had a
     // chance to consume it) in processRecordingProjects, not per-song, so a batch of
     // songs from the same recording session all benefit from one banked bonus.
+    // Meeting-content session — PER-ARTIST quality pools ("hypeArtistPools
+    // treatment"). The label-wide bank (pendingQualityBonus) applies to whichever
+    // artist records first; an artist-scoped bank
+    // (qualityBonusArtistPools[project.artistId]) applies ONLY to that artist's
+    // sessions. Both are additive here, so a song by a targeted artist gets label +
+    // its own pool. Read-only: the zero-out happens once per week per consuming
+    // artist in processRecordingProjects.
     const qualityFlagsSnapshot = (ctx.gameState.flags || {}) as Record<string, any>;
-    const pendingQualityBonus = typeof qualityFlagsSnapshot.pendingQualityBonus === 'number'
+    const labelQualityBonus = typeof qualityFlagsSnapshot.pendingQualityBonus === 'number'
       ? qualityFlagsSnapshot.pendingQualityBonus
       : 0;
+    let artistQualityBonus = 0;
+    const recordingArtistId = project?.artistId;
+    if (recordingArtistId && qualityFlagsSnapshot.qualityBonusArtistPools
+        && typeof qualityFlagsSnapshot.qualityBonusArtistPools === 'object') {
+      const pool = (qualityFlagsSnapshot.qualityBonusArtistPools as Record<string, { amount: number; week: number }>)[recordingArtistId];
+      if (pool && typeof pool.amount === 'number') artistQualityBonus = pool.amount;
+    }
+    const pendingQualityBonus = labelQualityBonus + artistQualityBonus;
 
     const finalQuality = Math.round(
       Math.min(QUALITY_CEILING, Math.max(QUALITY_FLOOR, quality + pendingQualityBonus))

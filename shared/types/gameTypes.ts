@@ -18,6 +18,57 @@ export interface GameArtist {
   age?: number;
 }
 
+/**
+ * Engine-verbs Slice 1 (M4 chained/scheduled events): the ONE non-numeric
+ * effect value. Authored as `"schedule_event": { "event_id": ..., "defer_weeks": N }`
+ * inside a choice's effects_immediate — banks an entry into
+ * `flags.scheduled_events[]` that promotes into `flags.pending_side_event`
+ * (the mandatory crisis slot) once `defer_weeks` weeks have passed AND the
+ * slot is free. See ActionProcessor.applyEffects (`schedule_event` case) and
+ * GameEngine.promoteScheduledEvents for the queue/priority rules.
+ */
+export interface ScheduleEventEffect {
+  /** Id of an event in data/events.json (typically `scheduled_only: true`). */
+  event_id: string;
+  /** Non-negative integer: weeks from now the event becomes due. */
+  defer_weeks: number;
+}
+
+/** Runtime guard for the authored `schedule_event` effect value shape. */
+export function isScheduleEventEffect(value: unknown): value is ScheduleEventEffect {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    typeof (value as any).event_id === 'string' &&
+    (value as any).event_id.length > 0 &&
+    typeof (value as any).defer_weeks === 'number' &&
+    Number.isInteger((value as any).defer_weeks) &&
+    (value as any).defer_weeks >= 0
+  );
+}
+
+/**
+ * Engine-verbs Slice 1: one entry in the `flags.scheduled_events[]` queue
+ * (additive flags key — NO SNAPSHOT_VERSION bump). Written by
+ * ActionProcessor.applyEffects (`schedule_event`), drained by
+ * GameEngine.promoteScheduledEvents.
+ */
+export interface ScheduledEventEntry {
+  /** data/events.json event id to land. */
+  eventId: string;
+  /** Absolute game week the entry becomes due (authored week + defer_weeks). */
+  landsOnWeek: number;
+  /** Provenance for logs/debugging (meeting/side-event id that scheduled it). */
+  source: string;
+  /**
+   * Optional pinned artist for predetermined-target events ({artistName}
+   * interpolation / artist-scoped effects resolve against THIS artist at
+   * resolution time instead of re-deriving highest-popularity). Threaded
+   * through pending_side_event when the entry promotes.
+   */
+  artistId?: string;
+}
+
 export interface ChoiceEffect {
   money?: number;
   reputation?: number;
@@ -26,8 +77,77 @@ export interface ChoiceEffect {
   artist_mood?: number;
   /** @deprecated Use `artist_energy` */
   artist_loyalty?: never;
-  [key: string]: number | undefined;
+  /**
+   * Engine-verbs Slice 1: structured (non-numeric) scheduling effect. Only
+   * honored in effects_immediate of actions.json / events.json choices
+   * (lint-enforced).
+   */
+  schedule_event?: ScheduleEventEffect;
+  /**
+   * Engine-verbs SLICE 5 (M13): string TARGETING DIRECTIVE, not an effect key.
+   * Routes a sibling `executive_mood` value to a specific executive — one of
+   * {@link EXEC_MOOD_TARGET_ROLE_IDS} or {@link EXEC_MOOD_TARGET_BROADCAST}
+   * ('all'). Only valid in `effects_immediate` of CEO meetings and side/
+   * escalation event choices (data-lint enforced); role meetings must NOT
+   * carry it (their exec is implicit via action.metadata.executiveId).
+   */
+  target_executive?: string;
+  /**
+   * Engine-verbs M14 rider: string TARGETING DIRECTIVE, not an effect key.
+   * On a side/escalation EVENT choice only — 'predetermined' applies the
+   * block's artist-scoped keys (artist_mood/energy/popularity) to the event's
+   * resolved artist (highest-popularity signed artist); 'global' forces the
+   * legacy all-signed-artists application. Absent → the event-level `target`
+   * field governs (current behavior).
+   */
+  target_artist?: 'predetermined' | 'global';
+  [key: string]: number | string | ScheduleEventEffect | Record<string, unknown> | undefined;
 }
+
+/**
+ * Engine-verbs SLICE 5 (M13 + M14 rider): the string-valued targeting
+ * DIRECTIVE keys that may appear inside an authored effects block alongside
+ * the numeric effect keys. They are NOT effect channels (never in
+ * LIVE_EFFECT_KEYS, never carry a magnitude) — they only steer WHERE a
+ * sibling effect lands. Every numeric-effect consumer already filters
+ * `typeof value === 'number'`, so directives are inert everywhere except the
+ * dedicated resolvers (ActionProcessor.applyTargetedExecutiveMood and
+ * game-engine.processPendingSideEventResolution).
+ */
+export const EFFECT_TARGETING_DIRECTIVE_KEYS = ['target_executive', 'target_artist'] as const;
+
+/**
+ * Engine-verbs arc — THE canonical list of effect keys whose authored VALUE is
+ * structured (a string or an object), not a plain number. Lives here (a leaf
+ * module with zero imports) so all three tiers derive from ONE list, the same
+ * way `RequiresEntrySchema` is shared:
+ *   - `STRUCTURED_EFFECT_KEYS` (shared/engine/processors/ActionProcessor.ts) —
+ *     the engine's effects-pipeline admission set (value shapes documented there);
+ *   - `STRUCTURED_OBJECT_KEY_SET` in shared/api/contracts.ts (ChoiceEffectSchema)
+ *     and shared/utils/dataLoader.ts — the Zod value-FAMILY validators.
+ * Before this constant existed the list was hand-copied in all three places,
+ * which is exactly the schema-drift class that bit the dialogue immediate path.
+ * Content is pinned by tests/engine/engine-verbs-flags-keys.test.ts.
+ */
+export const STRUCTURED_EFFECT_KEY_LIST = [
+  'schedule_event',
+  'story_flag',
+  'spawn_prospect',
+  'set_exec_absence',
+  'distribution_efficiency',
+  'grant_song',
+  'spawn_release',
+] as const;
+
+/**
+ * Valid `target_executive` role ids (the four hireable executives — the CEO is
+ * the player and has no executive row). Matches gameCreationService's seeded
+ * roles and shared/engine/emailTemplates.ts's role union.
+ */
+export const EXEC_MOOD_TARGET_ROLE_IDS = ['head_ar', 'cmo', 'cco', 'head_distribution'] as const;
+
+/** `target_executive: 'all'` — broadcast the mood delta to every executive. */
+export const EXEC_MOOD_TARGET_BROADCAST = 'all' as const;
 
 export interface DialogueChoice {
   id: string;
@@ -41,6 +161,13 @@ export interface DialogueChoice {
    * or would pick a choice that is not the in-character self-serving one.
    */
   self_serving_hint?: boolean;
+  /**
+   * C92: optional authored past-tense outcome line ("Signed the deal despite the
+   * risk") rendered by digest/results surfaces — WeekSummary autonomous digest,
+   * meeting entries, crisis-resolved beats. Falls back to `label` when absent.
+   * Pre-decision surfaces (choice buttons, meeting flows) always use `label`.
+   */
+  outcome_summary?: string;
 }
 
 // Mood targeting scope for executive meetings (Task 3.1)
@@ -63,9 +190,59 @@ export const RELEVANCE_TAGS = [
   'release_out',
   'recording_project_active',
   'tour_active',
+  // Engine-verbs M16 (requires-gates): per-artist-state tags. Thresholds are
+  // config knobs in data/balance/progression.json weekly_meeting_selection
+  // .artist_state_thresholds (comparator encoded in the knob name); predicates
+  // in shared/engine/meetingSelection.ts deriveRelevanceState.
+  'any_artist_low_mood',
+  'any_artist_high_popularity',
+  'any_artist_low_energy',
 ] as const;
 
 export type RelevanceTag = (typeof RELEVANCE_TAGS)[number];
+
+/**
+ * Engine-verbs M16 (requires-gates) — the extended `requires` grammar.
+ *
+ * A `requires` array keeps AND semantics; each entry is ONE of:
+ *  - a plain RelevanceTag string (the original Tier 0 grammar, unchanged);
+ *  - a stat threshold object `{ stat, gte?, lte? }` — at least one bound
+ *    required; both together form an inclusive range. `stat` names come from
+ *    REQUIRES_STAT_NAMES ('week' = current game week, 'cash' = label money,
+ *    'reputation' = label reputation). An UNKNOWN stat value at selection
+ *    time (e.g. cash not threaded by a caller) fails CLOSED — the meeting is
+ *    ineligible, never spuriously offered.
+ *  - a story-flag object `{ flag, is? }` — reads `gameState.flags.story[flag]`
+ *    (M3's write key; read defensively: an absent flag counts as false).
+ *    `is` defaults to true ("flag must be set"); `is: false` means "flag must
+ *    NOT be set" (exclusion gate).
+ *
+ * SINGLE SOURCE OF TRUTH: both Zod surfaces (shared/api/contracts.ts
+ * RequiresEntrySchema, reused by shared/utils/dataLoader.ts) and the data-lint
+ * suite (tests/engine/data-lint-relevance-tags.test.ts) validate against this
+ * shape. Predicates live in shared/engine/meetingSelection.ts
+ * (isRequirementSatisfied).
+ */
+export const REQUIRES_STAT_NAMES = ['week', 'cash', 'reputation'] as const;
+
+export type RequiresStatName = (typeof REQUIRES_STAT_NAMES)[number];
+
+export interface StatRequirement {
+  stat: RequiresStatName;
+  /** Inclusive lower bound: satisfied when value >= gte. */
+  gte?: number;
+  /** Inclusive upper bound: satisfied when value <= lte. */
+  lte?: number;
+}
+
+export interface FlagRequirement {
+  /** Key into gameState.flags.story (snake_case; absent = false). */
+  flag: string;
+  /** Required flag value; defaults to true. `is: false` = exclusion gate. */
+  is?: boolean;
+}
+
+export type RequiresEntry = RelevanceTag | StatRequirement | FlagRequirement;
 
 /**
  * Tier 2 (PR-1) — the canonical "week happening" vocabulary.
@@ -130,9 +307,11 @@ export interface RoleMeeting {
   target_scope: TargetScope; // Determines how mood effects are targeted (Task 3.2)
   /**
    * Meeting-relevance Tier 0 (PR-1): relevance tags with AND semantics.
-   * Absent = always eligible. See shared/engine/meetingSelection.ts.
+   * Absent = always eligible. M16 (requires-gates): entries may also be
+   * `{stat, gte?, lte?}` / `{flag, is?}` objects — see RequiresEntry above and
+   * shared/engine/meetingSelection.ts isRequirementSatisfied.
    */
-  requires?: RelevanceTag[];
+  requires?: RequiresEntry[];
   /**
    * Meeting-relevance Tier 1 (PR-2): weighting axis. Existing field on every
    * actions.json entry (business/talent/production/marketing/distribution/live);
@@ -186,6 +365,8 @@ export interface EventChoice {
   label: string;
   effects_immediate: ChoiceEffect;
   effects_delayed: ChoiceEffect;
+  /** C92: optional authored past-tense outcome line (falls back to `label`). */
+  outcome_summary?: string;
 }
 
 export interface SideEvent {
@@ -211,6 +392,15 @@ export interface SideEvent {
    * of the roll's candidate pool in game-engine.ts checkForEvents.
    */
   escalation_only?: boolean;
+  /**
+   * Engine-verbs Slice 1 (M4): marks an event as INJECTED ONLY via the
+   * `flags.scheduled_events[]` queue (authored `schedule_event` effects) — it
+   * must never enter the weekly weighted side-event roll. Parallel to
+   * `escalation_only` (an event may carry either, never both — lint-enforced
+   * in tests/engine/data-lint-effect-keys.test.ts). Filtered out of the roll's
+   * candidate pool in game-engine.ts checkForEvents.
+   */
+  scheduled_only?: boolean;
   prompt: string;
   choices: EventChoice[];
 }
@@ -389,6 +579,12 @@ export interface BalanceConfig {
       genre_specific?: Record<string, string[]>;
     };
     mood_types: string[];
+    /** Engine-verbs M1a (grant_song). Optional — absent ⇒ read-site HARDCODED fallback.
+     * default_quality_range is a [min, max] pair (typed number[] because JSON
+     * imports infer arrays, not tuples; the read site validates length === 2). */
+    granted_song?: {
+      default_quality_range: number[];
+    };
   };
 }
 
@@ -500,7 +696,7 @@ export interface ChartUpdate {
 }
 
 export interface GameChange {
-  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'energy' | 'popularity' | 'executive_interaction' | 'expense_tracking' | 'breakthrough' | 'awareness_gain' | 'awareness_decay' | 'tour_planning' | 'hype_banked' | 'hype_applied' | 'hype_expired' | 'pre_campaign' | 'flop';
+  type: 'expense' | 'revenue' | 'meeting' | 'project_complete' | 'delayed_effect' | 'unlock' | 'ongoing_revenue' | 'song_release' | 'release' | 'marketing' | 'reputation' | 'error' | 'mood' | 'energy' | 'popularity' | 'executive_interaction' | 'expense_tracking' | 'breakthrough' | 'awareness_gain' | 'awareness_decay' | 'tour_planning' | 'hype_banked' | 'hype_applied' | 'hype_expired' | 'pre_campaign' | 'flop' | 'creative_capital' | 'song_granted' | 'release_spawned';
   description: string;
   amount?: number;
   roleId?: string;
@@ -534,6 +730,11 @@ export interface GameChange {
   meetingId?: string;
   choiceId?: string;
   choiceLabel?: string;
+  // C92: authored past-tense outcome line (choice.outcome_summary), camelCase on
+  // the wire like choiceLabel. Only present when the choice authors it — producers
+  // conditionally spread it (never an always-present undefined key; golden master
+  // snapshots WeekSummary verbatim). Render sites fall back to choiceLabel.
+  outcomeSummary?: string;
   appliedEffects?: Record<string, number>;
   // Executive Delegation arc (Tier 1, §4.6): true on a 'meeting' entry that an
   // executive resolved AUTONOMOUSLY (the player spent no slot on them). Drives the
@@ -602,6 +803,9 @@ export interface EventOccurrence {
   resolved?: boolean;
   choiceId?: string;
   choiceLabel?: string;
+  // C92: authored past-tense outcome line (choice.outcome_summary), conditionally
+  // spread by the engine (golden-master-safe); render falls back to choiceLabel.
+  outcomeSummary?: string;
   effects?: Record<string, number>;
   delayedEffects?: Record<string, number>;
 }

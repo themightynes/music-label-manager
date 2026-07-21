@@ -61,6 +61,16 @@ export class ProjectStageProcessor {
       console.log(`[PROJECT ADVANCEMENT] Found ${projectList.length} projects to evaluate`);
 
       for (const project of projectList) {
+        // Engine-verbs arc slice 9 (M6 cancel_project): a soft-cancelled project
+        // is frozen — never advanced, never completed. The cancel verb (and the
+        // tour cancel route) sets BOTH stage:'cancelled' (which indexOf below
+        // already maps to -1) and completionStatus:'cancelled'; this explicit
+        // guard makes the skip contract-level rather than an indexOf accident,
+        // and covers legacy rows where only completionStatus was set.
+        if (project.completionStatus === 'cancelled' || project.stage === 'cancelled') {
+          console.log(`[PROJECT ADVANCEMENT] Skipping cancelled project "${project.title}"`);
+          continue;
+        }
         const stages = ['planning', 'production', 'recorded'];
         const currentStageIndex = stages.indexOf(project.stage || 'planning');
         const weeksElapsed = (ctx.gameState.currentWeek || 1) - (project.startWeek || 1);

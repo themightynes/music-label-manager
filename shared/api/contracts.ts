@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { GameState, GameProject } from '../types/gameTypes';
-import { RELEVANCE_TAGS, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES } from '../types/gameTypes';
+import { RELEVANCE_TAGS, REQUIRES_STAT_NAMES, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES, EFFECT_TARGETING_DIRECTIVE_KEYS, STRUCTURED_EFFECT_KEY_LIST } from '../types/gameTypes';
 import { ArtistSchema } from '../schemas/artist';
 
 // API Response schemas
@@ -366,8 +366,65 @@ export function createErrorResponse(error: string, message: string, details?: an
 // Admin Actions Config Schemas
 // ========================================
 
-// Choice effect schema - flexible object with number properties (defaults to empty object)
-export const ChoiceEffectSchema = z.record(z.number()).default({});
+// Engine-verbs Slice 1 (M4): the schedule_event structured value — carries
+// { event_id, defer_weeks } instead of a number. Mirrors
+// shared/utils/dataLoader.ts ScheduleEventEffectSchema (admin Content Editor
+// round-trips actions.json through this contract, so the shapes must agree).
+export const ScheduleEventEffectSchema = z.object({
+  event_id: z.string().min(1),
+  defer_weeks: z.number().int().min(0),
+});
+
+// Choice effect schema — flexible record (defaults to empty object).
+// Engine-verbs arc (merge-reconciled): three value families are legal —
+//   1. plain numbers (every classic effect channel);
+//   2. strings — the two TARGETING DIRECTIVE keys (target_executive /
+//      target_artist, see EFFECT_TARGETING_DIRECTIVE_KEYS) plus story_flag's
+//      shorthand string form;
+//   3. objects — the STRUCTURED_EFFECT_KEYS shapes (schedule_event, story_flag,
+//      spawn_prospect, set_exec_absence, distribution_efficiency, grant_song,
+//      spawn_release). Deep per-key shape validation is the data-lint test's
+//      job (tests/engine/data-lint-effect-keys.test.ts) + the contentLint
+//      mirror; this contract enforces the value-FAMILY per key so an admin
+//      Content Editor save can never silently strip or corrupt them.
+const EFFECT_DIRECTIVE_KEY_SET: ReadonlySet<string> = new Set(EFFECT_TARGETING_DIRECTIVE_KEYS);
+// Same list as STRUCTURED_EFFECT_KEYS in shared/engine/processors/ActionProcessor.ts —
+// both derive from the ONE canonical STRUCTURED_EFFECT_KEY_LIST in
+// shared/types/gameTypes.ts (a leaf module, so no engine import is pulled into
+// contract consumers). Formerly a hand-copy; drift is now impossible.
+const STRUCTURED_OBJECT_KEY_SET: ReadonlySet<string> = new Set(STRUCTURED_EFFECT_KEY_LIST);
+export const ChoiceEffectSchema = z
+  .record(z.union([z.number(), z.string(), z.record(z.any())]))
+  .superRefine((effects, ctx) => {
+    for (const [key, value] of Object.entries(effects)) {
+      if (EFFECT_DIRECTIVE_KEY_SET.has(key)) {
+        if (typeof value !== 'string') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `'${key}' is a targeting directive and must be a string (got ${typeof value})`,
+            path: [key],
+          });
+        }
+      } else if (typeof value === 'string') {
+        if (key !== 'story_flag') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `effect '${key}' may not be a string (only targeting directives and story_flag's shorthand may be strings)`,
+            path: [key],
+          });
+        }
+      } else if (typeof value === 'object' && value !== null) {
+        if (!STRUCTURED_OBJECT_KEY_SET.has(key)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `effect '${key}' must be a number (only structured engine-verbs keys may carry objects)`,
+            path: [key],
+          });
+        }
+      }
+    }
+  })
+  .default({});
 
 // Dialogue choice schema
 export const DialogueChoiceSchema = z.object({
@@ -377,6 +434,10 @@ export const DialogueChoiceSchema = z.object({
   effects_delayed: ChoiceEffectSchema,
   // Delegation-arc §4.3.1: optional self-serving-pick override (see DialogueChoice type).
   self_serving_hint: z.boolean().optional(),
+  // C92: optional authored past-tense outcome line, rendered by digest/results
+  // surfaces (falls back to `label`). This schema is NOT passthrough, so the
+  // field MUST be declared here or admin Content Editor saves silently strip it.
+  outcome_summary: z.string().min(1).optional(),
 });
 
 // Action details schema (for non-meeting actions)
@@ -401,6 +462,48 @@ export const TargetScopeSchema = z.enum(['global', 'predetermined', 'user_select
 // Meeting-relevance Tier 0 (PR-1): relevance-tag enum, derived from the canonical
 // RELEVANCE_TAGS array in shared/types/gameTypes.ts (single source of truth).
 export const RelevanceTagSchema = z.enum(RELEVANCE_TAGS);
+
+// ---------------------------------------------------------------------------
+// Engine-verbs M16 (requires-gates): the extended `requires` grammar. THE ONE
+// Zod definition — shared/utils/dataLoader.ts imports these schemas instead of
+// re-deriving, so the two validation surfaces cannot drift. Canonical grammar
+// doc: RequiresEntry in shared/types/gameTypes.ts; runtime predicate:
+// shared/engine/meetingSelection.ts isRequirementSatisfied.
+// ---------------------------------------------------------------------------
+
+// `{stat, gte?, lte?}` — inclusive threshold(s); at least one bound required.
+// .strict() so a typo'd key ("gt", "min", …) is a validation error, not a
+// silently-ignored always-true gate.
+export const StatRequirementSchema = z
+  .object({
+    stat: z.enum(REQUIRES_STAT_NAMES),
+    gte: z.number().optional(),
+    lte: z.number().optional(),
+  })
+  .strict()
+  .refine((r) => r.gte !== undefined || r.lte !== undefined, {
+    message: 'A stat requirement needs at least one bound (gte and/or lte)',
+  });
+
+// `{flag, is?}` — story-flag gate on gameState.flags.story[flag]; `is`
+// defaults to true. Flag keys are snake_case identifiers (written by the
+// story_flag effect key — sibling M3 slice).
+export const FlagRequirementSchema = z
+  .object({
+    flag: z.string().regex(/^[a-z][a-z0-9_]*$/, {
+      message: 'Story-flag keys must be snake_case identifiers (e.g. "dante_deal_taken")',
+    }),
+    is: z.boolean().optional(),
+  })
+  .strict();
+
+// One `requires` entry: plain tag string OR threshold object OR flag object.
+export const RequiresEntrySchema = z.union([
+  RelevanceTagSchema,
+  StatRequirementSchema,
+  FlagRequirementSchema,
+]);
+export type RequiresEntryContract = z.infer<typeof RequiresEntrySchema>;
 
 // Tier 2 (PR-1): week-happening-type enum, derived from the canonical
 // HAPPENING_TYPES array in shared/types/gameTypes.ts (single source of truth).
@@ -436,7 +539,8 @@ export const WeeklyActionSchema = z.object({
   prompt_before_selection: z.string().optional(),
   target_scope: TargetScopeSchema.default('global'),
   // Meeting-relevance Tier 0 (PR-1): AND semantics, absent = always eligible.
-  requires: z.array(RelevanceTagSchema).nonempty().optional(),
+  // M16: entries may also be `{stat, gte?, lte?}` / `{flag, is?}` objects.
+  requires: z.array(RequiresEntrySchema).nonempty().optional(),
   // Tier 2 (PR-1): optional reactive-meeting trigger. Dark launch: no
   // data/actions.json entry sets this yet (PR-2 authors the first ones).
   reactive_trigger: HappeningTypeSchema.optional(),
@@ -846,3 +950,287 @@ export type AnyPlaytestFeedbackResponses = z.infer<typeof AnyPlaytestFeedbackRes
 export type SavePlaytestFeedbackRequest = z.infer<typeof SavePlaytestFeedbackRequestSchema>;
 export type SavePlaytestFeedbackResponse = z.infer<typeof SavePlaytestFeedbackResponseSchema>;
 export type GetPlaytestFeedbackResponse = z.infer<typeof GetPlaytestFeedbackResponseSchema>;
+
+// ========================================
+// Admin Content Review Schemas — v3 Pool Reviews (2026-07-12)
+// ========================================
+// Content-review surface for the authored v3 content pools (working session
+// 2026-07-12): the designer reads each authored entry and records a verdict +
+// freeform notes per entry, plus two overall fields. Started as the Mac pool
+// only; extended the same day to all SEVEN pools (Mac / Sam / Dante / Pat /
+// CEO / side events / escalations). These are NOT playtest rounds — the
+// round-shaped PLAYTEST_FORM_REGISTRY (sections/knobs, round picker, feel
+// scale) stays untouched. The SAME /api/admin/playtest-feedback endpoint pair
+// serves every review form: the server's formId allowlist is widened by
+// exactly these ids (AdminFeedbackFormId below), and each pool's review saves
+// to its OWN responses file
+// (docs/01-planning/v3-<pool>-pool-review.responses.json) — structurally
+// unreachable from any other form's save and vice versa.
+
+export const MAC_POOL_REVIEW_FORM_ID = 'v3-mac-pool-review' as const;
+export const SAM_POOL_REVIEW_FORM_ID = 'v3-sam-pool-review' as const;
+export const DANTE_POOL_REVIEW_FORM_ID = 'v3-dante-pool-review' as const;
+export const PAT_POOL_REVIEW_FORM_ID = 'v3-pat-pool-review' as const;
+export const CEO_POOL_REVIEW_FORM_ID = 'v3-ceo-pool-review' as const;
+export const EVENTS_POOL_REVIEW_FORM_ID = 'v3-events-pool-review' as const;
+export const ESCALATIONS_POOL_REVIEW_FORM_ID = 'v3-escalations-pool-review' as const;
+
+export const POOL_REVIEW_FORM_IDS = [
+  MAC_POOL_REVIEW_FORM_ID,
+  SAM_POOL_REVIEW_FORM_ID,
+  DANTE_POOL_REVIEW_FORM_ID,
+  PAT_POOL_REVIEW_FORM_ID,
+  CEO_POOL_REVIEW_FORM_ID,
+  EVENTS_POOL_REVIEW_FORM_ID,
+  ESCALATIONS_POOL_REVIEW_FORM_ID,
+] as const;
+
+export type PoolReviewFormId = (typeof POOL_REVIEW_FORM_IDS)[number];
+
+export function isPoolReviewFormId(value: string): value is PoolReviewFormId {
+  return (POOL_REVIEW_FORM_IDS as readonly string[]).includes(value);
+}
+
+// Canonical meeting ids per pool, in each review form's reading order (source
+// scratchpad file order: routine → major → reactive → new; CEO/events/
+// escalations in their hand-off file order). The client-side content modules
+// (client/src/admin/v3*PoolReview.ts) must use exactly these ids; the server
+// writes `meetings` keys in this order for a stable JSON file.
+export const MAC_POOL_REVIEW_MEETING_IDS = [
+  'wall_of_misses',
+  'the_3am_demo',
+  'tuesday_superstition',
+  'reinvention_tape',
+  'showcase_slot',
+  'vintage_speakers',
+  'poaching_season',
+  'favor_signing',
+  'second_album_syndrome',
+  'one_that_got_away_again',
+  'mood_crater_rescue',
+  'demo_ethics_one',
+  'the_circuit',
+  'second_pair_of_ears',
+  'machine_that_listens',
+] as const;
+
+export const SAM_POOL_REVIEW_MEETING_IDS = [
+  'slow_news_week',
+  'billboard_money',
+  'journalist_favor_called_in',
+  'crisis_retainer',
+  'own_the_correction',
+  'the_dossier',
+  'awards_whisper_campaign',
+  'the_comeback_client',
+  'platform_exclusive_bidding',
+  'the_documentary_ask',
+  'chart_debut_one_hour_window',
+  'old_tweets_surface',
+  'the_engagement_farm',
+  'the_hatchet_piece',
+] as const;
+
+export const DANTE_POOL_REVIEW_MEETING_IDS = [
+  'the_432_hz_surcharge',
+  'protege_producer',
+  'the_perfect_take_exists',
+  'remaster_the_debut',
+  'employee_effectiveness_rewritten',
+  'forty_eight_hours_or_delete',
+  'the_aura_veto',
+  'mountain_retreat',
+  'the_pop_sellout_brief',
+  'sample_clearance_roulette',
+  'score_offer',
+  'salvage_job',
+  'the_dead_room',
+  'the_loudness_heresy',
+  'the_two_inch_truth',
+] as const;
+
+export const PAT_POOL_REVIEW_MEETING_IDS = [
+  'the_guaranteed_placement',
+  'the_47_slide_deck',
+  'spontaneity_block',
+  'tour_routing_optimization',
+  'predict_the_quarter',
+  'territory_arbitrage',
+  'physical_media_bet',
+  'the_chargeback_discrepancy',
+  'the_data_broker',
+  'the_exclusive_window_auction',
+  'the_algorithm_change',
+  'supply_chain_hostage',
+  'the_anomaly_premium',
+  'the_long_tail_audit',
+] as const;
+
+export const CEO_POOL_REVIEW_MEETING_IDS = [
+  'the_investor_term_sheet',
+  'buy_the_failing_rival',
+  'the_genre_pivot',
+  'anchor_artist_renegotiation',
+  'the_buyout_letter',
+  'chart_week_war_room',
+  'the_second_signing_doctrine',
+  'layoff_or_lean',
+  'the_mentorship_hour',
+  'define_the_legacy',
+  'the_counter_offer',
+  'the_open_letter',
+] as const;
+
+export const EVENTS_POOL_REVIEW_MEETING_IDS = [
+  'event_sync_bidding_war',
+  'event_leaked_masters',
+  'event_beta_algorithm_invite',
+  'event_festival_cancellation',
+  'event_studio_flood',
+  'event_ghostwriter_confession',
+  'event_brand_deal_strings',
+  'event_tribute_moment',
+  'the_loop_deal',
+  'sampled_without_asking',
+  'takeover_tuesday',
+  'ransom_note',
+  'detained_abroad',
+  'the_catalog_fund',
+  'the_plant_callout',
+  'the_amplify_pilot',
+  'twenty_four_frames',
+  'the_collab_drop',
+  'the_old_clip',
+  'the_arena_cover',
+  // Scheduled verdict events — new, chained from meeting choices (2026-07-13 sweep).
+  // Order here MUST match the append order in v3EventsPoolReview.ts
+  // (V3_EVENTS_POOL_MEETINGS); the render test asserts exact-order lockstep.
+  'scheduled_mac_3am_demo_verdict',
+  'scheduled_mac_machine_verdict',
+  'scheduled_sam_comeback_verdict',
+  'scheduled_sam_documentary_release',
+  'scheduled_dante_comp_leak_verdict',
+  'scheduled_dante_clearance_lawsuit_verdict',
+  'scheduled_pat_forecast_graded',
+  'scheduled_pat_anomaly_lockin',
+] as const;
+
+export const ESCALATIONS_POOL_REVIEW_MEETING_IDS = [
+  'escalation_ar_botched_signing',
+  'escalation_ar_pipeline_burned',
+  'escalation_cmo_narrative_lost',
+  'escalation_cmo_fabricated_story',
+  'escalation_cco_artist_walkout',
+  'escalation_cco_erased_masters',
+  'escalation_dist_deal_collapsed',
+  'escalation_dist_royalty_freeze',
+] as const;
+
+export const POOL_REVIEW_MEETING_IDS: Record<PoolReviewFormId, readonly string[]> = {
+  [MAC_POOL_REVIEW_FORM_ID]: MAC_POOL_REVIEW_MEETING_IDS,
+  [SAM_POOL_REVIEW_FORM_ID]: SAM_POOL_REVIEW_MEETING_IDS,
+  [DANTE_POOL_REVIEW_FORM_ID]: DANTE_POOL_REVIEW_MEETING_IDS,
+  [PAT_POOL_REVIEW_FORM_ID]: PAT_POOL_REVIEW_MEETING_IDS,
+  [CEO_POOL_REVIEW_FORM_ID]: CEO_POOL_REVIEW_MEETING_IDS,
+  [EVENTS_POOL_REVIEW_FORM_ID]: EVENTS_POOL_REVIEW_MEETING_IDS,
+  [ESCALATIONS_POOL_REVIEW_FORM_ID]: ESCALATIONS_POOL_REVIEW_MEETING_IDS,
+};
+
+// Per-meeting verdict scale: approve / approve with edits / rework / kill.
+// (MacPoolReviewVerdictSchema is the historical name; the scale is shared by
+// every pool review form.)
+export const MacPoolReviewVerdictSchema = z.enum([
+  'approve',
+  'approve_with_edits',
+  'rework',
+  'kill',
+]);
+export const PoolReviewVerdictSchema = MacPoolReviewVerdictSchema;
+
+export const MacPoolMeetingReviewSchema = z.object({
+  verdict: MacPoolReviewVerdictSchema.nullable().default(null),
+  notes: z.string().default(''),
+});
+export const PoolReviewMeetingSchema = MacPoolMeetingReviewSchema;
+
+// Full review document — one shape for all seven pools; the formId (a closed
+// enum) selects the pool. `savedAt` is stamped server-side on save. Note:
+// formId is REQUIRED here (no default) — a document with no formId still
+// defaults to the ACTIVE playtest form via the union below (unchanged
+// behavior since the Mac-only version).
+export const PoolReviewResponsesSchema = z.object({
+  formId: z.enum(POOL_REVIEW_FORM_IDS),
+  savedAt: z.string().nullable().default(null),
+  meetings: z.record(z.string(), MacPoolMeetingReviewSchema).default({}),
+  overallNotes: z.string().default(''),
+  voiceConsistency: z.string().default(''),
+});
+
+// Historical Mac-only schema (literal formId with a default) — kept for
+// callers/tests that parse a Mac document standalone; the endpoint union
+// routes through the generic schema above.
+export const MacPoolReviewResponsesSchema = z.object({
+  formId: z.literal(MAC_POOL_REVIEW_FORM_ID).default(MAC_POOL_REVIEW_FORM_ID),
+  savedAt: z.string().nullable().default(null),
+  meetings: z.record(z.string(), MacPoolMeetingReviewSchema).default({}),
+  overallNotes: z.string().default(''),
+  voiceConsistency: z.string().default(''),
+});
+
+// The full allowlist the endpoint pair validates against: every playtest
+// round plus the seven pool reviews. Union order matters — the playtest union
+// goes first so a document with no explicit formId still defaults to the
+// ACTIVE playtest form (unchanged behavior); an explicit pool-review formId
+// fails every round's literal and lands here.
+export const AnyAdminFeedbackResponsesSchema = z.union([
+  AnyPlaytestFeedbackResponsesSchema,
+  PoolReviewResponsesSchema,
+]);
+
+export type AdminFeedbackFormId = PlaytestFormId | PoolReviewFormId;
+
+export function isAdminFeedbackFormId(value: string): value is AdminFeedbackFormId {
+  return isPlaytestFormId(value) || isPoolReviewFormId(value);
+}
+
+// Empty review default for any pool (GET returns this when that pool's
+// responses file does not exist yet), with every canonical meeting key
+// present in reading order.
+export function buildEmptyPoolReviewResponsesFor(formId: PoolReviewFormId): PoolReviewResponses {
+  const meetings: Record<string, MacPoolMeetingReview> = {};
+  for (const id of POOL_REVIEW_MEETING_IDS[formId]) {
+    meetings[id] = { verdict: null, notes: '' };
+  }
+  return {
+    formId,
+    savedAt: null,
+    meetings,
+    overallNotes: '',
+    voiceConsistency: '',
+  };
+}
+
+// Historical Mac-only builder (delegates to the generic one).
+export function buildEmptyMacPoolReviewResponses(): MacPoolReviewResponses {
+  return buildEmptyPoolReviewResponsesFor(
+    MAC_POOL_REVIEW_FORM_ID
+  ) as MacPoolReviewResponses;
+}
+
+// Allowlist-wide empty-default builder (server GET path).
+export function buildEmptyAdminFeedbackResponsesFor(
+  formId: AdminFeedbackFormId
+): AnyAdminFeedbackResponses {
+  if (isPoolReviewFormId(formId)) {
+    return buildEmptyPoolReviewResponsesFor(formId);
+  }
+  return buildEmptyPlaytestFeedbackResponsesFor(formId);
+}
+
+export type MacPoolReviewVerdict = z.infer<typeof MacPoolReviewVerdictSchema>;
+export type MacPoolMeetingReview = z.infer<typeof MacPoolMeetingReviewSchema>;
+export type MacPoolReviewResponses = z.infer<typeof MacPoolReviewResponsesSchema>;
+export type PoolReviewVerdict = MacPoolReviewVerdict;
+export type PoolReviewMeeting = MacPoolMeetingReview;
+export type PoolReviewResponses = z.infer<typeof PoolReviewResponsesSchema>;
+export type AnyAdminFeedbackResponses = z.infer<typeof AnyAdminFeedbackResponsesSchema>;

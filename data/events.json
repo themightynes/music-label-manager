@@ -469,7 +469,7 @@
       "role_hint": "Mac (Head of A&R)",
       "category": "industry_drama",
       "escalation_only": true,
-      "prompt": "Mac trusted his gut on your most promising signing — no follow-through, no calls — until the artist quietly walked to a rival label. He's already replaying every conversation he didn't have.",
+      "prompt": "Week one was supposed to set the tone for your newest signing. Nobody set anything. The onboarding plan Mac never brought to your desk got run anyway — by a rival label, who walked the artist through it and then out the door. Mac heard the news mid-pitch on the next name he wants to sign.",
       "choices": [
         {
           "id": "chase_rebound",
@@ -509,7 +509,7 @@
       "role_hint": "Sam (CMO)",
       "category": "industry_drama",
       "escalation_only": true,
-      "prompt": "Sam left your press cycle unsupervised, and a rival act took the story that should've been yours this week. His read: the market moved, not him.",
+      "prompt": "You charted, and the press window opened — that was the week Sam decided the story could breathe on its own. It breathed its way into a rival's headline: the coverage your debut earned is running this morning under someone else's logo, and Sam's read is that the market moved, not him.",
       "choices": [
         {
           "id": "buy_back_narrative",
@@ -547,7 +547,7 @@
       "role_hint": "Dante (CCO)",
       "category": "artist_personal",
       "escalation_only": true,
-      "prompt": "Left unattended, Dante chased the sound past your artist's patience — they walked out mid-session while he was already reaching for the next take.",
+      "prompt": "The burnout flag went up — step in before it costs us the work, that was the ask. It cost you the work. With no one watching, Dante's answer to a cratering artist was another take, and they walked out mid-session while he was still reaching for the next one.",
       "choices": [
         {
           "id": "emergency_session",
@@ -587,7 +587,7 @@
       "role_hint": "Pat (Head of Distribution)",
       "category": "business_opportunities",
       "escalation_only": true,
-      "prompt": "Pat's guaranteed-safe distribution deal for your release — the one with no failure modes on paper — collapsed at the signature line, unmonitored until now.",
+      "prompt": "The first-week numbers review was the checkpoint — the meeting where the partner's cold feet would have shown up in black and white. Nobody read the numbers. The deal died quietly at the signature line, and Pat's checklist turns out to have covered every failure mode except someone actually watching.",
       "choices": [
         {
           "id": "scramble_new_deal",
@@ -619,6 +619,149 @@
           "effects_delayed": {
             "reputation": -1
           }
+        }
+      ]
+    },
+    {
+      "id": "scheduled_mac_3am_demo_verdict",
+      "role_hint": "Mac (Head of A&R)",
+      "category": "industry_drama",
+      "scheduled_only": true,
+      "prompt": "Eight weeks ago you fronted a quiet development deal on the 3 AM find — a check, studio hours, no announcement, and a promise to check back in. Mac just walked the tapes into your office. 'So. Daylight happened.' There's a blank space on his wall he keeps glancing at. Whatever the sessions became, the option comes due this week: commit real money before a major smells it, let it lapse, or keep them parked.",
+      "choices": [
+        {
+          "id": "sign_at_premium",
+          "label": "Sign them now — pay the premium before a major does",
+          "effects_immediate": {
+            "money": -22000,
+            "reputation": 2,
+            "spawn_prospect": {
+              "quality_hint": 72,
+              "popularity_hint": 58,
+              "source": "mac_3am_verdict"
+            }
+          },
+          "effects_delayed": {
+            "press_story_flag": 1
+          },
+          "outcome_summary": "You paid the premium and the 3 AM find lands in the discovery pool ready to sign — Mac finally gets to fill the blank space on his wall, and the trades noticed."
+        },
+        {
+          "id": "let_it_lapse",
+          "label": "Let the option lapse — the magic didn't survive daylight",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "reputation": -1,
+            "story_flag": "mac_3am_miss"
+          },
+          "outcome_summary": "You let the 3 AM option lapse — another name for the Wall of Misses, and Mac writes it up there himself."
+        },
+        {
+          "id": "keep_parked",
+          "label": "Keep them on the bench — no premium, no goodbye",
+          "effects_immediate": {
+            "money": -4000,
+            "spawn_prospect": {
+              "quality_hint": 54,
+              "source": "mac_3am_verdict"
+            }
+          },
+          "effects_delayed": {},
+          "outcome_summary": "You extended the quiet deal — the 3 AM find sits in the pool as an ordinary prospect, no windfall, no funeral."
+        }
+      ]
+    },
+    {
+      "id": "scheduled_mac_machine_verdict",
+      "role_hint": "Mac (Head of A&R)",
+      "category": "industry_drama",
+      "scheduled_only": true,
+      "prompt": "Six weeks ago Mac bet his ear against the prediction engine — his next call versus the algorithm's, out loud, on the record. The trades kept score. The board kept score. The roster definitely kept score. This morning the numbers that settle it are on your desk, and the read is close enough that the story is still yours to write. Mac's already got a jacket on — for the server-room walk of shame, or the victory lap.",
+      "choices": [
+        {
+          "id": "declare_victory",
+          "label": "Declare it clean — Mac won, put it on the record",
+          "effects_immediate": {
+            "money": -4000,
+            "reputation": 2
+          },
+          "effects_delayed": {
+            "press_story_flag": 1,
+            "story_flag": "mac_beat_the_machine",
+            "artist_mood": 2
+          },
+          "outcome_summary": "You put Mac's win on the record — the roster loved the swagger, the trades ran 'Mac vs. the Machine,' and the terminal stays in its box."
+        },
+        {
+          "id": "concede_terminal",
+          "label": "Concede gracefully — license the platform the board wanted",
+          "effects_immediate": {
+            "money": -12000,
+            "reputation": 2
+          },
+          "effects_delayed": {
+            "quality_bonus": 2,
+            "artist_mood": -2
+          },
+          "outcome_summary": "You conceded the bet and licensed the platform — the data moved in down the hall, Mac calls it the obituary desk, and the sessions genuinely got sharper."
+        },
+        {
+          "id": "call_it_draw",
+          "label": "Call it a draw — keep the rivalry running",
+          "effects_immediate": {
+            "money": -1000
+          },
+          "effects_delayed": {
+            "variance_up": 1,
+            "press_story_flag": 1
+          },
+          "outcome_summary": "You called the showdown a draw — no victory lap, no funeral, and Mac versus the machine rolls on as an open question."
+        }
+      ]
+    },
+    {
+      "id": "scheduled_sam_documentary_release",
+      "role_hint": "Sam (CMO)",
+      "category": "industry_drama",
+      "scheduled_only": true,
+      "target": "predetermined",
+      "prompt": "Seven weeks ago you sold the streamer full access to the tour — the fights, the flat nights, the 4 AM load-outs, the whole raw cut. It drops Friday. Sam has seen the rough edit and won't say which version of the truth made it in, only that 'the thing everyone screenshots is in there, and so is the thing nobody should have filmed.' Episode three exists. How the label meets the release is the last call that's actually yours.",
+      "choices": [
+        {
+          "id": "lean_into_raw",
+          "label": "Lean all the way in — sell it as the real story",
+          "effects_immediate": {
+            "money": -6000,
+            "reputation": 1
+          },
+          "effects_delayed": {
+            "press_momentum": 2,
+            "awareness_boost": 2,
+            "artist_mood": 1
+          },
+          "outcome_summary": "You leaned into the raw cut and sold it as the real story — the rawness read as authenticity, the band ended up owning their own myth, and the next release inherits the buzz."
+        },
+        {
+          "id": "buy_back_approvals",
+          "label": "Work the edit — buy back approvals on the worst of it",
+          "effects_immediate": {
+            "money": -11000,
+            "reputation": 1
+          },
+          "effects_delayed": {
+            "artist_mood": 3,
+            "awareness_boost": 1
+          },
+          "outcome_summary": "You spent to claw back approvals on the ugliest footage — the doc landed softer, the band exhaled and remembered you had their back, and the next setup still caught a little heat."
+        },
+        {
+          "id": "let_it_air",
+          "label": "Say nothing — let it air and move to the next thing",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "press_momentum": 1
+          },
+          "outcome_summary": "You let the doc air without comment — competent, forgettable, a small press bump and no lasting damage."
         }
       ]
     }

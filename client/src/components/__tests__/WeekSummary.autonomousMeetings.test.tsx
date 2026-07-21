@@ -120,6 +120,26 @@ describe('WeekSummary "While you were out" digest', () => {
     expect(screen.queryByText('Samara ran the awards campaign while you were out')).not.toBeInTheDocument();
   });
 
+  it('prefers outcomeSummary over choiceLabel in the "Their call" line (C92)', () => {
+    renderSummary([
+      {
+        ...AUTONOMOUS_ENTRY,
+        outcomeSummary: 'Went all in — the awards campaign is running',
+      } as GameChange,
+    ]);
+
+    const toggle = screen.getByTestId('autonomous-digest-toggle');
+    fireEvent.click(toggle);
+
+    // The authored past-tense outcome line wins over the raw option label.
+    expect(
+      screen.getByText(/Their call:.*Went all in — the awards campaign is running/)
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Their call:.*Go all in on the awards campaign/)
+    ).not.toBeInTheDocument();
+  });
+
   it('renders player-chosen meeting entries unaffected alongside the digest', () => {
     renderSummary([PLAYER_ENTRY, AUTONOMOUS_ENTRY]);
 

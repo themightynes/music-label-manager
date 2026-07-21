@@ -16,8 +16,8 @@ import { ServerGameData } from '../../server/data/gameData';
 import { FinancialSystem } from './FinancialSystem';
 import { ChartService } from './ChartService';
 import { AchievementsEngine } from './AchievementsEngine';
-import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence, GameArtist } from '../types/gameTypes';
-import { ArtistChangeHelpers } from '../types/gameTypes';
+import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence, GameArtist, ScheduledEventEntry, ScheduleEventEffect } from '../types/gameTypes';
+import { ArtistChangeHelpers, isScheduleEventEffect } from '../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../utils/seasonalCalculations';
 import { scaleReputationGain } from '../utils/reputationScaling';
 import { selectSideEvent } from './sideEventSelection';
@@ -30,13 +30,13 @@ import { SongGenerationProcessor } from './processors/SongGenerationProcessor';
 import { ProjectStageProcessor } from './processors/ProjectStageProcessor';
 import { ReleaseProcessor } from './processors/ReleaseProcessor';
 import { ArtistStateProcessor } from './processors/ArtistStateProcessor';
-import { ActionProcessor } from './processors/ActionProcessor';
+import { ActionProcessor, STRUCTURED_EFFECT_KEYS } from './processors/ActionProcessor';
 import type { WeekContext } from './processors/types';
-import { deriveRelevanceState, selectWeeklyMeetingWithHappenings } from './meetingSelection';
+import { buildRelevanceInput, deriveRelevanceState, selectWeeklyMeetingWithHappenings } from './meetingSelection';
 import { deriveWeekHappenings } from './weekHappenings';
 import { generateMeetingSeed } from '../utils/seededRandom';
 import { pickAutonomousChoice } from './executiveAutonomy';
-import { DEFAULT_EXEC_DELEGATION_CONFIG, ESCALATION_EVENT_BY_ROLE } from '../utils/executiveDelegation';
+import { DEFAULT_EXEC_DELEGATION_CONFIG, pickEscalationEventId, ESCALATION_EVENT_BY_ROLE } from '../utils/executiveDelegation';
 
 // Re-export WeekSummary for backward compatibility
 export type { WeekSummary } from '../types/gameTypes';
@@ -232,6 +232,16 @@ export class GameEngine {
     // week's roll — if it hits — discards in favor of the escalation via the
     // roll's own "already pending" check). See applyEscalation's doc comment.
     await this.applyEscalation(summary, dbTransaction);
+
+    // Engine-verbs Slice 1 (M4): promote the earliest DUE scheduled event
+    // (flags.scheduled_events queue) into the mandatory-crisis slot. MUST run
+    // AFTER applyEscalation (escalations keep ABSOLUTE priority — an escalation
+    // that just occupied the slot makes every scheduled entry wait) and BEFORE
+    // checkForEvents (a promoted event occupies the slot first, so this week's
+    // roll — if it hits — discards via its own "already pending" check, same
+    // first-set-wins rule as escalation). See the method doc for the
+    // queue/starvation rules.
+    await this.promoteScheduledEvents(summary, dbTransaction);
 
     // Process ongoing revenue from released projects
     await this.processReleasedProjects(summary, dbTransaction);
@@ -723,9 +733,22 @@ export class GameEngine {
     // processExecutiveActions during PHASE 1). Those are NOT auto-resolved.
     const acted: Set<string> = (summary as any).usedExecutives ?? new Set<string>();
 
+    // Engine-verbs Slice 11 (M7, READ half): an exec marked absent skips
+    // autonomous resolution — no meeting was offered for them at the planning
+    // week (the /api/roles route applies the SAME filter, so route and engine
+    // agree the exec sat out). `flags.execAbsence[roleId] = untilWeek`; absent
+    // while untilWeek > the PLANNING (offered) week. The WRITE key
+    // (`set_exec_absence`) ships in a sibling slice — this read is defensive.
+    const planningWeek = (this.gameState.currentWeek || 1) - 1;
+    const execAbsence = ((this.gameState.flags as any)?.execAbsence ?? {}) as Record<string, unknown>;
+    const isAbsent = (roleId: string): boolean => {
+      const until = execAbsence[roleId];
+      return typeof until === 'number' && until > planningWeek;
+    };
+
     // Only auto-resolve if at least one exec actually needs it.
     const candidates = executives.filter(
-      (e: any) => e?.role && e.role !== 'ceo' && !acted.has(e.id),
+      (e: any) => e?.role && e.role !== 'ceo' && !acted.has(e.id) && !isAbsent(e.role),
     );
     if (candidates.length === 0) return;
 
@@ -765,14 +788,30 @@ export class GameEngine {
       storage.getReleasesByGame(gameId, dbTransaction),
       storage.getSongsByGame(gameId, dbTransaction),
     ]);
-    const relevanceState = deriveRelevanceState({
+    // M16 (requires-gates): cash/reputation/flags threaded through the SAME
+    // buildRelevanceInput lockstep helper as the /api/roles route, so the
+    // threshold/flag/artist-state grammar evaluates identically at both sites
+    // for identical state (parity test:
+    // tests/engine/meeting-selection-two-site-parity.test.ts). NOTE on cash
+    // gates: this re-derivation reads this.gameState.money as of PHASE 1 of
+    // the advance (after the player's own meeting spends), while the route
+    // read the persisted money at fetch time — the same in-week drift window
+    // that already exists for artists/projects rows. With no authored
+    // threshold content this is behavior-identical to the pre-M16 pipeline.
+    const relevanceState = deriveRelevanceState(buildRelevanceInput({
       artists,
       projects,
       releases,
       songs,
       currentWeek: offeredWeek,
+      gameState: {
+        money: this.gameState.money,
+        reputation: this.gameState.reputation,
+        flags: this.gameState.flags,
+      },
       recencyWindowWeeks: tuning.recency_window_weeks,
-    });
+      artistStateThresholds: tuning.artist_state_thresholds,
+    }));
 
     // Reactive-meeting happenings at the offered week (same mapping as the route).
     let happenings: any[] = [];
@@ -859,7 +898,18 @@ export class GameEngine {
         reactiveHappening &&
         preUpdateLoyalty < loyaltyCeiling
       ) {
-        const escalationEventId = ESCALATION_EVENT_BY_ROLE[roleId];
+        // v3 array routing: pick from the role's escalation-event pool via an
+        // ISOLATED seeded draw (never ctx.getRandom — Ground Rule 4). Seed is
+        // namespaced off the in-scope meeting seed; with today's singleton
+        // pools seededRandomPick short-circuits to the only element, so the
+        // pick is byte-identical to the old single-id map.
+        // Engine-verbs Slice 14 (M12b): pass this role's escalation last-seen
+        // history (stamped by applyEscalation, mirrors flags.side_event_history)
+        // so a repeat offender doesn't see the same crisis twice. The picker
+        // never filters to empty — a fully-seen pool falls back to the whole
+        // pool (and applyEscalation's saturation reset keeps the history small).
+        const seenEscalations = (((this.gameState.flags as any)?.escalationHistory ?? {})[roleId] ?? []) as string[];
+        const escalationEventId = pickEscalationEventId(roleId, `${seed}-escalation-event`, seenEscalations);
         if (escalationEventId) {
           escalationCandidate = { roleId, eventId: escalationEventId };
         }
@@ -956,12 +1006,40 @@ export class GameEngine {
     // Deferred landing, same shape as a rolled crisis (game-engine.ts
     // checkForEvents mandatory branch): the escalation lands as NEXT week's
     // mandatory crisis card.
+    // TODO(M14 rider): carry the TRIGGERING meeting's resolved artist id in this
+    // payload so a `target_artist: 'predetermined'` choice on the escalation
+    // event hits the artist who caused the wound, not whoever is
+    // highest-popularity at resolution time. Not trivial today: the autonomous
+    // meeting's predetermined artist is resolved INSIDE
+    // ActionProcessor.processRoleMeeting and never returned to
+    // resolveAutonomousExecMeetings, so the candidate is only {roleId, eventId}.
+    // Until then, predetermined directives on escalation events resolve against
+    // the highest-popularity signed artist at resolution time (same resolver as
+    // rolled crises).
     flags.pending_side_event = {
       eventId: event.id,
       week: currentWeek,
       prompt: event.prompt,
       category: event.category,
       choices: event.choices,
+    };
+
+    // Engine-verbs Slice 14 (M12b — escalation last-seen): stamp this role's
+    // escalation history so pickEscalationEventId (called from
+    // resolveAutonomousExecMeetings NEXT time this exec escalates) filters the
+    // already-seen event out of the pool. Mirrors flags.side_event_history
+    // (additive flags key — NO SNAPSHOT_VERSION bump). SATURATION RESET: once
+    // every event in the role's pool has been seen, the history collapses to
+    // just the event landing now — so the cycle restarts but an immediate
+    // repeat of THIS event is still filtered on the next pick.
+    const escalationHistory = (flags.escalationHistory || {}) as Record<string, string[]>;
+    const prevSeen = Array.isArray(escalationHistory[pending.roleId]) ? escalationHistory[pending.roleId] : [];
+    const nextSeen = prevSeen.includes(event.id) ? prevSeen : [...prevSeen, event.id];
+    const rolePool = ESCALATION_EVENT_BY_ROLE[pending.roleId] ?? [];
+    const saturated = rolePool.length > 0 && rolePool.every((id) => nextSeen.includes(id));
+    flags.escalationHistory = {
+      ...escalationHistory,
+      [pending.roleId]: saturated ? [event.id] : nextSeen,
     };
 
     summary.events.push({
@@ -973,6 +1051,112 @@ export class GameEngine {
       // No `choices` → same convention as the mandatory-roll branch: the crisis
       // card (not an in-results interactive beat) reads the pending flag.
     });
+  }
+
+  /**
+   * Engine-verbs Slice 1 (M4 — chained/scheduled events). Drains the
+   * `flags.scheduled_events[]` queue (written by ActionProcessor.applyEffects's
+   * `schedule_event` case) into the mandatory-crisis slot
+   * (`flags.pending_side_event`), exactly like a rolled crisis / an escalation.
+   *
+   * QUEUE / PRIORITY / STARVATION RULES (as implemented):
+   *  - AT MOST ONE promotion per advance: the earliest DUE entry (lowest
+   *    landsOnWeek <= currentWeek; FIFO insertion order breaks ties) promotes.
+   *  - THE SLOT WINS: if `flags.pending_side_event` is already set — an
+   *    escalation emitted this advance (applyEscalation runs immediately
+   *    before this), or an unresolved prior crisis — NOTHING promotes. Entries
+   *    are NEVER dropped; they wait in the queue for a later advance. This
+   *    means a sustained stream of escalations can starve the queue
+   *    indefinitely (deliberate: escalations have absolute priority, and a
+   *    scheduled consequence arriving "late" is fiction-safe, unlike one that
+   *    silently vanishes).
+   *  - Runs BEFORE checkForEvents, so a promoted event beats this week's
+   *    weekly roll by construction (the roll's own "already pending" check
+   *    discards its pick — first-set wins, same rule escalation relies on).
+   *  - A backlog (several due entries) drains at ONE per advance, earliest
+   *    landsOnWeek first.
+   *  - MANDATORY MODE ONLY: with mandatory side events disabled (legacy
+   *    in-results path) nothing promotes — the queue waits. Scheduled events
+   *    are crisis-card content; the legacy path has no gated slot to land into.
+   *  - Unknown event ids (content removed after scheduling) are dropped with a
+   *    warn, and the next due entry is considered in the same advance.
+   *
+   * Roll-free and RNG-free: no draws of any kind — the engine's pinned stream
+   * and every isolated seed are untouched (GM-safe when the queue is empty,
+   * which is every pre-slice save: `flags.scheduled_events` simply never exists).
+   */
+  private async promoteScheduledEvents(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+    const flags = (this.gameState.flags || {}) as Record<string, any>;
+    this.gameState.flags = flags;
+
+    const queue = Array.isArray(flags.scheduled_events)
+      ? (flags.scheduled_events as ScheduledEventEntry[])
+      : [];
+    if (queue.length === 0) return;
+
+    // Legacy (non-mandatory) mode: no crisis slot to land into — queue waits.
+    const mandatory = this.gameData.getMandatorySideEventsConfigSync?.()?.enabled ?? true;
+    if (!mandatory) return;
+
+    // Slot occupied (escalation this advance / unresolved prior crisis) →
+    // starvation rule: everything waits, nothing is dropped.
+    if (flags.pending_side_event) return;
+
+    const currentWeek = this.gameState.currentWeek || 0;
+    const remaining = [...queue];
+
+    while (true) {
+      // Earliest due entry: lowest landsOnWeek <= currentWeek, FIFO tie-break
+      // (first qualifying index wins via strict <).
+      let dueIdx = -1;
+      for (let i = 0; i < remaining.length; i++) {
+        const e = remaining[i];
+        if (!e || typeof e.landsOnWeek !== 'number' || e.landsOnWeek > currentWeek) continue;
+        if (dueIdx === -1 || e.landsOnWeek < remaining[dueIdx].landsOnWeek) dueIdx = i;
+      }
+      if (dueIdx === -1) break; // nothing due this week
+
+      const [entry] = remaining.splice(dueIdx, 1);
+      const event = await this.gameData.getEventById(entry.eventId);
+      if (!event) {
+        // Content removed after scheduling — drop the entry, try the next due one.
+        console.warn(`[SCHEDULED EVENT] Unknown event "${entry.eventId}" (source: ${entry.source}); dropping entry.`);
+        continue;
+      }
+
+      // Promote: same rich mandatory payload as a rolled crisis / an escalation.
+      // The pinned artistId (if the scheduling choice targeted an artist) rides
+      // along so predetermined-target resolution hits the SAME artist.
+      flags.pending_side_event = {
+        eventId: event.id,
+        week: currentWeek,
+        prompt: event.prompt,
+        category: event.category,
+        choices: event.choices,
+        ...(entry.artistId ? { artistId: entry.artistId } : {}),
+      };
+
+      summary.events.push({
+        id: event.id,
+        title: event.prompt.substring(0, 50),
+        occurred: true,
+        category: event.category,
+        prompt: event.prompt,
+        // No `choices` → crisis-card convention (see applyEscalation above).
+      });
+      console.log(
+        `[SCHEDULED EVENT] Promoted "${event.id}" (scheduled by ${entry.source}, due week ${entry.landsOnWeek}) as week ${currentWeek}'s pending crisis`
+      );
+      break; // at most ONE promotion per advance
+    }
+
+    // Persist the drained queue; delete the key entirely when empty so old-save
+    // flag shapes stay byte-identical once the queue has fully drained.
+    if (remaining.length > 0) {
+      flags.scheduled_events = remaining;
+    } else {
+      delete flags.scheduled_events;
+    }
   }
 
   /**
@@ -1393,8 +1577,11 @@ export class GameEngine {
         // Defensive: if the artist read fails, keep the legacy (unfiltered) pool.
         console.warn('[SIDE EVENT] Signed-artist read failed; predetermined events not filtered:', err);
       }
+      // Engine-verbs Slice 1 (M4): scheduled_only events are injected exclusively
+      // via the flags.scheduled_events queue (promoteScheduledEvents) — parallel
+      // to the escalation_only exclusion, they must never enter the weekly roll.
       const events = (await this.gameData.getAllEvents()).filter(
-        (e: any) => !e.escalation_only && (hasSignedArtist || e.target !== 'predetermined'),
+        (e: any) => !e.escalation_only && !e.scheduled_only && (hasSignedArtist || e.target !== 'predetermined'),
       );
       const selectionConfig = this.gameData.getSideEventsConfigSync();
       const history = (flags.side_event_history || {}) as Record<string, number>;
@@ -1500,6 +1687,20 @@ export class GameEngine {
       return;
     }
 
+    // Engine-verbs M14 rider: per-CHOICE artist-targeting directive. A choice's
+    // effects block may carry `target_artist: 'predetermined' | 'global'` (a
+    // string DIRECTIVE key, not an effect channel) to override the event-level
+    // `target` field for THAT block: 'predetermined' routes the block's
+    // artist-scoped keys to the event's resolved artist; 'global' forces the
+    // legacy all-signed-artists application. Absent → event-level behavior,
+    // byte-identical for all existing events (no current content authors it).
+    const readTargetArtistDirective = (block: unknown): 'predetermined' | 'global' | undefined => {
+      const v = (block as Record<string, unknown> | undefined)?.target_artist;
+      return v === 'predetermined' || v === 'global' ? v : undefined;
+    };
+    const immediateArtistDirective = readTargetArtistDirective(choice.effects_immediate);
+    const delayedArtistDirective = readTargetArtistDirective(choice.effects_delayed);
+
     // Executive Delegation arc (Tier 1, §8/fork f): predetermined-target support.
     // `event.target === 'predetermined'` resolves artist-scoped effects (artist_mood
     // etc.) against the highest-popularity signed artist, reusing the SAME resolver
@@ -1507,46 +1708,122 @@ export class GameEngine {
     // (undefined) → existing global-application behavior, byte-identical for all 12
     // legacy events. Label-scoped effects (money, reputation, creative_capital, ...)
     // are untouched by targetScope/artistId — they apply the same either way.
-    const isPredetermined = (event as any).target === 'predetermined';
+    // M14: a choice-level 'predetermined' directive also triggers the resolution
+    // (so a globally-targeted event can still route ONE choice's fallout to the
+    // headline artist).
+    const isPredetermined =
+      (event as any).target === 'predetermined' ||
+      immediateArtistDirective === 'predetermined' ||
+      delayedArtistDirective === 'predetermined';
     let targetArtistId: string | undefined;
     if (isPredetermined) {
-      const selectedArtist = await new ArtistStateProcessor().selectHighestPopularityArtist(
-        this.weekContext(summary, dbTransaction),
-      );
-      if (selectedArtist) {
-        targetArtistId = selectedArtist.id;
-        console.log(`[SIDE EVENT] Predetermined targeting: Selected ${selectedArtist.name} (popularity: ${selectedArtist.popularity}) for "${event.id}"`);
-      } else {
-        console.warn(`[SIDE EVENT] Predetermined targeting failed for "${event.id}": no signed artists available; artist-scoped effects apply globally.`);
+      // Engine-verbs Slice 1 (M4): a SCHEDULED event may carry a pinned artist
+      // (the artist the scheduling choice targeted, threaded through the queue
+      // and onto the pending payload by promoteScheduledEvents). Prefer it —
+      // but only if that artist is still a signed member of this game;
+      // otherwise fall back to the legacy highest-popularity resolver.
+      const pinnedArtistId = (pending as any).artistId as string | undefined;
+      if (pinnedArtistId) {
+        try {
+          const gameArtists = this.storage?.getArtistsByGame
+            ? await this.storage.getArtistsByGame(this.gameState.id, dbTransaction)
+            : [];
+          const pinned = (gameArtists || []).find((a: any) => a?.id === pinnedArtistId && a?.signed);
+          if (pinned) {
+            targetArtistId = pinned.id;
+            console.log(`[SIDE EVENT] Predetermined targeting: pinned artist ${pinned.name} (from scheduled-event queue) for "${event.id}"`);
+          }
+        } catch (err) {
+          console.warn(`[SIDE EVENT] Pinned-artist read failed for "${event.id}"; falling back to highest-popularity:`, err);
+        }
+      }
+      if (!targetArtistId) {
+        const selectedArtist = await new ArtistStateProcessor().selectHighestPopularityArtist(
+          this.weekContext(summary, dbTransaction),
+        );
+        if (selectedArtist) {
+          targetArtistId = selectedArtist.id;
+          console.log(`[SIDE EVENT] Predetermined targeting: Selected ${selectedArtist.name} (popularity: ${selectedArtist.popularity}) for "${event.id}"`);
+        } else {
+          console.warn(`[SIDE EVENT] Predetermined targeting failed for "${event.id}": no signed artists available; artist-scoped effects apply globally.`);
+        }
       }
     }
-    const targetScope: string = targetArtistId ? 'predetermined' : 'global';
+    // Event-level default (pre-M14 behavior): predetermined event → resolved
+    // artist; otherwise global. Per-block directives override it.
+    const eventLevelArtistId = (event as any).target === 'predetermined' ? targetArtistId : undefined;
+    const resolveBlockArtistId = (directive: 'predetermined' | 'global' | undefined): string | undefined =>
+      directive === 'global' ? undefined
+        : directive === 'predetermined' ? targetArtistId
+        : eventLevelArtistId;
+    const immediateArtistId = resolveBlockArtistId(immediateArtistDirective);
+    const targetScope: string = immediateArtistId ? 'predetermined' : 'global';
 
     // Apply immediate effects, queued like a weekly action (global scope — side
     // events are label-level, so artist-scoped keys hit every signed artist —
     // unless predetermined targeting resolved a single artist above).
-    const effectsImmediate: Record<string, number> = {};
+    // Engine-verbs arc: structured-value keys (STRUCTURED_EFFECT_KEYS) are
+    // admitted alongside numbers — their applyEffects cases handle the
+    // string/object values.
+    const effectsImmediate: Record<string, any> = {};
     for (const [k, v] of Object.entries(choice.effects_immediate || {})) {
-      if (typeof v === 'number') effectsImmediate[k] = v;
+      if (typeof v === 'number' || STRUCTURED_EFFECT_KEYS.has(k)) effectsImmediate[k] = v;
     }
-    if (Object.keys(effectsImmediate).length > 0) {
+    // Engine-verbs Slice 1 (M4): a crisis choice may itself schedule a follow-up
+    // (chained verdict events). schedule_event is the one structured effect —
+    // the numeric filter above drops it, so re-attach it for applyEffects.
+    const chainedSchedule = isScheduleEventEffect((choice.effects_immediate as any)?.schedule_event)
+      ? ((choice.effects_immediate as any).schedule_event as ScheduleEventEffect)
+      : undefined;
+    const immediateToApply: Record<string, number | ScheduleEventEffect> = chainedSchedule
+      ? { ...effectsImmediate, schedule_event: chainedSchedule }
+      : effectsImmediate;
+    if (Object.keys(immediateToApply).length > 0) {
       await new ActionProcessor().applyEffects(
         this.weekContext(summary, dbTransaction),
-        effectsImmediate,
-        targetArtistId,
+        immediateToApply,
+        immediateArtistId,
         targetScope,
         `side_event:${event.id}`,
         choice.id
       );
     }
 
+    // Engine-verbs SLICE 5 (M13): TARGETED executive_mood from event choices.
+    // applyEffects deliberately drops executive_mood (it has no artist/label
+    // channel), so before this slice the key was DEAD on the whole side/
+    // escalation-event surface. With a target_executive directive sibling the
+    // delta now routes to the named exec(s) — same clamp/persist path as role
+    // meetings (ActionProcessor.applyTargetedExecutiveMood), inside this
+    // advance's transaction. The directive itself is a string, so the numeric
+    // filter above already kept it out of effectsImmediate.
+    {
+      const rawImmediate = (choice.effects_immediate ?? {}) as Record<string, unknown>;
+      if (
+        typeof rawImmediate.executive_mood === 'number' &&
+        typeof rawImmediate.target_executive === 'string'
+      ) {
+        await new ActionProcessor().applyTargetedExecutiveMood(
+          this.weekContext(summary, dbTransaction),
+          rawImmediate.executive_mood,
+          rawImmediate.target_executive,
+          dbTransaction,
+          `side_event:${event.id}/${choice.id}`
+        );
+      }
+    }
+
     // Bank delayed effects (deterministic week-based key — never Date.now()).
-    const effectsDelayed: Record<string, number> = {};
+    const effectsDelayed: Record<string, any> = {};
     for (const [k, v] of Object.entries(choice.effects_delayed || {})) {
-      if (typeof v === 'number') effectsDelayed[k] = v;
+      if (typeof v === 'number' || STRUCTURED_EFFECT_KEYS.has(k)) effectsDelayed[k] = v;
     }
     if (Object.keys(effectsDelayed).length > 0) {
       const delayedKey = `side-event-${event.id}-${choice.id}-week${currentWeek}`;
+      // M14: the delayed block resolves its OWN artist target (its directive may
+      // differ from the immediate block's). No directive → event-level default,
+      // preserving the pre-M14 shape exactly.
+      const delayedArtistId = resolveBlockArtistId(delayedArtistDirective);
       flags[delayedKey] = {
         triggerWeek: currentWeek + 1,
         effects: effectsDelayed,
@@ -1557,7 +1834,7 @@ export class GameEngine {
         // targeting actually resolved an artist. Legacy/global events omit both keys
         // entirely (rather than writing targetScope: 'global') so their delayed-flag
         // shape stays byte-identical to pre-arc behavior (GM policy, §10.1).
-        ...(targetArtistId ? { artistId: targetArtistId, targetScope } : {}),
+        ...(delayedArtistId ? { artistId: delayedArtistId, targetScope: 'predetermined' } : {}),
       };
     }
 
@@ -1574,6 +1851,10 @@ export class GameEngine {
       prompt: event.prompt,
       choiceId: choice.id,
       choiceLabel: choice.label,
+      // C92: authored past-tense outcome line. CONDITIONAL spread — the golden
+      // master snapshots WeekSummary verbatim, so an always-present undefined
+      // key would spuriously diff every fixture (see _pendingEscalation above).
+      ...(choice.outcome_summary ? { outcomeSummary: choice.outcome_summary } : {}),
       effects: effectsImmediate,
       delayedEffects: effectsDelayed,
     });
@@ -1692,6 +1973,18 @@ export class GameEngine {
     const hitSingleBonus = typeof reputationSystem.hit_single_bonus === 'number' ? reputationSystem.hit_single_bonus : 5;
     const numberOneBonus = typeof reputationSystem.number_one_bonus === 'number' ? reputationSystem.number_one_bonus : 10;
 
+    // PENDING-DECISIONS #9 (2026-07-12): milestone-sourced Creative Capital.
+    // CC's only positive source was a single cco meeting choice; chart milestones
+    // now grant a small CC trickle, riding the SAME once-per-song flags as the
+    // reputation bonuses above. Knobs: progression.json reputation_system
+    // .creative_capital_milestones { cc_top10_bonus (1), cc_number_one_bonus (2) }.
+    // NO-STACK RULE: when a song's first top-10 entry and first #1 land the same
+    // week (a #1 debut), the grants do NOT stack — the higher of the two applies
+    // (unlike the reputation bonuses, which intentionally stack both).
+    const ccMilestoneConfig = reputationSystem.creative_capital_milestones || {};
+    const ccTop10Bonus = typeof ccMilestoneConfig.cc_top10_bonus === 'number' ? ccMilestoneConfig.cc_top10_bonus : 1;
+    const ccNumberOneBonus = typeof ccMilestoneConfig.cc_number_one_bonus === 'number' ? ccMilestoneConfig.cc_number_one_bonus : 2;
+
     const flags = (this.gameState.flags || {}) as Record<string, any>;
     const milestones = { ...(flags.chartMilestones || {}) } as Record<string, { hitTop10?: boolean; hitNumberOne?: boolean }>;
     let milestonesChanged = false;
@@ -1701,24 +1994,32 @@ export class GameEngine {
 
       const songId = entry.songId;
       const record = milestones[songId] || {};
+      const firstTop10 = entry.position <= 10 && !record.hitTop10;
+      const firstNumberOne = entry.position === 1 && !record.hitNumberOne;
       let bonus = 0;
       const labels: string[] = [];
 
-      if (entry.position <= 10 && !record.hitTop10) {
+      if (firstTop10) {
         bonus += hitSingleBonus;
         labels.push(`Top 10 debut (+${hitSingleBonus} reputation)`);
         record.hitTop10 = true;
       }
-      if (entry.position === 1 && !record.hitNumberOne) {
+      if (firstNumberOne) {
         bonus += numberOneBonus;
         labels.push(`No. 1 (+${numberOneBonus} reputation)`);
         record.hitNumberOne = true;
       }
 
-      if (bonus > 0) {
+      if (firstTop10 || firstNumberOne) {
+        // Persist the once-fired flags whenever a milestone fires — moved out of
+        // the `bonus > 0` gate so a zeroed reputation knob can't let the CC grant
+        // below re-fire weekly (default config behavior is identical: bonus > 0
+        // exactly when a milestone first fires).
         milestones[songId] = record;
         milestonesChanged = true;
+      }
 
+      if (bonus > 0) {
         // Volatility-economy slice 3: throttle chart-milestone reputation (a
         // "release success" gain) through the shared global gain-scaling helper.
         const scaledBonus = scaleReputationGain(bonus, reputationSystem);
@@ -1732,6 +2033,30 @@ export class GameEngine {
           amount: scaledBonus
         });
         console.log(`[CHART MILESTONE] ${entry.songTitle} (${songId}): +${scaledBonus} reputation (raw ${bonus}) (${labels.join(', ')})`);
+      }
+
+      // Milestone-sourced Creative Capital (PENDING-DECISIONS #9). No-stack:
+      // a same-week top-10 + #1 (a #1 debut) grants the HIGHER of the two knobs,
+      // never the sum. Clamped ≥ 0 mirroring ActionProcessor's creative_capital
+      // handling (there is no upper CC cap anywhere in the engine — audited
+      // 2026-07-12: ActionProcessor.applyEffects only floors at 0).
+      let ccGrant = 0;
+      if (firstTop10 && firstNumberOne) {
+        ccGrant = Math.max(ccTop10Bonus, ccNumberOneBonus);
+      } else if (firstNumberOne) {
+        ccGrant = ccNumberOneBonus;
+      } else if (firstTop10) {
+        ccGrant = ccTop10Bonus;
+      }
+
+      if (ccGrant > 0) {
+        this.gameState.creativeCapital = Math.max(0, (this.gameState.creativeCapital || 0) + ccGrant);
+        summary.changes.push({
+          type: 'creative_capital',
+          description: `Creative spark: ${entry.songTitle}'s chart run inspires the label (+${ccGrant} creative capital)`,
+          amount: ccGrant
+        });
+        console.log(`[CHART MILESTONE] ${entry.songTitle} (${songId}): +${ccGrant} creative capital`);
       }
     }
 

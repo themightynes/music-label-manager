@@ -1,0 +1,141 @@
+{
+  "formId": "playtest-feedback-2026-07-11",
+  "savedAt": "2026-07-11T21:47:07.073Z",
+  "sections": {
+    "flop_penalty": {
+      "exposure": [
+        "never"
+      ],
+      "feel": "works",
+      "anythingOff": "Whether it fired or not it didn't feel dramatic enough. ",
+      "designerAnswers": [
+        "N/A",
+        "In theory yes."
+      ]
+    },
+    "mood_recording_variance": {
+      "exposure": [
+        "never"
+      ],
+      "feel": "flat",
+      "anythingOff": "Mood doesn't swing much. I played for about 20 weeks and mood was generally stable.",
+      "designerAnswers": [
+        "I think because mood is generally stable - you don't get to a place where you experience any true volatility.",
+        "I think in theory it's good and based in realism. "
+      ]
+    },
+    "energy_tour_sellthrough": {
+      "exposure": [
+        "never"
+      ],
+      "feel": "flat",
+      "anythingOff": "",
+      "designerAnswers": [
+        "Same as previous - energy doesn't swing much that for the most part you can just play the game as normal. I would ask - what does energy tie to in real life? Artist energy should feel more dyamic, tied to all they do.",
+        "Yes it should be tied to touring and recording - in general when an artist does anything \"active\""
+      ]
+    },
+    "tour_popularity_saturation": {
+      "exposure": [
+        "compared"
+      ],
+      "feel": "works",
+      "anythingOff": "",
+      "designerAnswers": []
+    },
+    "loss_leader_marketing": {
+      "exposure": [
+        "saw"
+      ],
+      "feel": "works",
+      "anythingOff": "",
+      "designerAnswers": []
+    },
+    "hype_pools_premarketing": {
+      "exposure": [
+        "banked_spent"
+      ],
+      "feel": "sings",
+      "anythingOff": "The one thing that still is a bit odd in the UI is the hype section in the dashboard that has BUILDING and draining - while in their it's good - it seems very general. ",
+      "designerAnswers": [
+        "It is somewhat distinct - but I think when planning a release there are opportunities to describe if there will be any banked hype applied, I also think finding ways to tell the once the marketing is going how much hype/awareness is being added week to week could be good.",
+        "Yes good"
+      ]
+    },
+    "awareness_surfacing": {
+      "exposure": [
+        "breakthrough_line",
+        "weekly_buzz_line",
+        "release_buzz_section"
+      ],
+      "feel": "sings",
+      "anythingOff": "",
+      "designerAnswers": [
+        "",
+        "As listed in #6 - some numbers could be good but honestly not a requierment"
+      ]
+    },
+    "reactive_meetings_side_events": {
+      "exposure": [
+        "why_now",
+        "urgency_dot",
+        "side_event_beat",
+        "auto_review"
+      ],
+      "feel": "sings",
+      "anythingOff": "",
+      "designerAnswers": [
+        "The system is working really well. I think the side event INSIDE the weekly results make it feel less like an \"OH MY!\" | I think in general doing a working session to go through the existing meetings and come up with better scenarios is an opportunity - but in general the system is much improved. ",
+        "I think the side even should be MANDATORY and it should take up a focus slot for the week. Then i think it could feel more dramatic/important."
+      ]
+    },
+    "tour_tier1": {
+      "exposure": [
+        "clean_finish",
+        "city_cards",
+        "foreshadow",
+        "status_strip"
+      ],
+      "feel": "sings",
+      "anythingOff": "",
+      "designerAnswers": []
+    },
+    "the_board_reskin": {
+      "exposure": [
+        "real_time"
+      ],
+      "feel": "sings",
+      "anythingOff": "",
+      "designerAnswers": [
+        "I think it works great. I think in the section that says something like \"a choice is waiting\" having a preview of what it is would be better. ",
+        "No"
+      ]
+    },
+    "phase4_game_feel": {
+      "exposure": [
+        "staged_rhythm"
+      ],
+      "feel": "works",
+      "anythingOff": "",
+      "designerAnswers": []
+    }
+  },
+  "knobStrength": {
+    "flop_reputation_penalty": "too_weak",
+    "low_mood_recording_variance": "too_weak",
+    "energy_tour_sellthrough": "too_weak",
+    "tour_popularity_saturation": "about_right",
+    "hype_pools_premarketing": "about_right",
+    "side_event_frequency": "about_right",
+    "meeting_relevance_why_now": "too_weak",
+    "staged_reveal_pacing": "about_right"
+  },
+  "oneKnobChange": "Reputation gain feels aggresive and quick. Creative Capital needs to also be revisited - as gaining CC is a bit of a struggle.",
+  "topPriorities": [
+    "",
+    "",
+    ""
+  ],
+  "pullBack": "",
+  "gutCheck": ""
+}

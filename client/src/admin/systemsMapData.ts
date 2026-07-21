@@ -163,7 +163,7 @@ export const NODES: SystemNode[] = [
     domain: 'resources',
     col: 0,
     row: 2,
-    description: `Starts at ${reputationSystem.starting_creative_capital} (progression.json reputation_system.starting_creative_capital). Gates action availability at the route/UI layer only — see non-edges (no engine revenue/quality/stream formula reads it). Set by meeting choices (ActionProcessor.ts:657).`,
+    description: `Starts at ${reputationSystem.starting_creative_capital} (progression.json reputation_system.starting_creative_capital). Gates action availability at the route/UI layer only — see non-edges (no engine revenue/quality/stream formula reads it). Set by meeting choices (ActionProcessor.ts:657) and earned from chart milestones (e-chart-creative-capital, PENDING-DECISIONS #9).`,
   },
   {
     id: 'focus_slots',
@@ -840,6 +840,20 @@ export const EDGES: SystemEdge[] = [
     note: 'Volatility-economy slice 3: the chart-milestone bonus (a "release success" reputation GAIN) is throttled by the global reputation_gain_scaling damper before it lands. Same damper applies to press-coverage + marketing + meeting reputation gains; losses (flop) are exempt.',
   },
   {
+    id: 'e-chart-creative-capital',
+    from: 'chart_position',
+    to: 'creative_capital',
+    mechanism: 'Chart milestone creative-capital grant (once per song, no-stack)',
+    formula: 'first top-10 → +cc_top10_bonus; first No.1 → +cc_number_one_bonus; SAME WEEK both (a #1 debut) → max of the two, never the sum',
+    values: [
+      { label: 'cc_top10_bonus', value: reputationSystem.creative_capital_milestones?.cc_top10_bonus, source: 'live', configPath: 'progression.reputation_system.creative_capital_milestones.cc_top10_bonus', ref: 'game-engine.ts applyChartMilestoneBonuses' },
+      { label: 'cc_number_one_bonus', value: reputationSystem.creative_capital_milestones?.cc_number_one_bonus, source: 'live', configPath: 'progression.reputation_system.creative_capital_milestones.cc_number_one_bonus' },
+    ],
+    hardcoded: false,
+    ref: 'game-engine.ts (applyChartMilestoneBonuses)',
+    note: 'PENDING-DECISIONS #9 (2026-07-12): CC\'s first non-meeting positive source — rides the SAME once-per-song chartMilestones flags as e-chart-reputation. NOT scaled by reputation_gain_scaling (that damper is reputation-only). Clamped ≥ 0; no upper CC cap exists in the engine.',
+  },
+  {
     id: 'e-flop-reputation',
     from: 'streams',
     to: 'reputation',
@@ -988,9 +1002,11 @@ export const EDGES: SystemEdge[] = [
     from: 'executive_loyalty',
     to: 'money',
     mechanism: 'Autonomous choice DIRECTION (loyalty bands) — un-acted meetings never lapse',
-    formula: 'loyalty > loyal_above → picks the AUTO-safe choice; loyalty < disloyal_below → picks the in-character self-serving choice; otherwise → the exec\'s own competent-professional call. The picked choice\'s money/effects apply through the SAME path a player pick uses.',
+    formula: 'loyalty > loyal_above → picks the AUTO-safe choice; loyalty < disloyal_below → picks the in-character self-serving choice; otherwise → the exec\'s own competent-professional call. The picked choice\'s money/effects apply through the SAME path a player pick uses. Loyal-scorer fix (2026-07-12): the AUTO-safe scorer now values quality_bonus/artist_mood/awareness_boost/press_momentum (soft_stat_weights) and scores money per-$1000 up to money_spend_cap instead of a ±5 clamp — so a loyal exec no longer rushes a release for $1k or copyright-strikes a viral moment because it was the only free choice. All scorer weights/caps are config knobs (auto_safe_scoring).',
     values: [
       { label: 'loyal_above / disloyal_below', value: `${reputationSystem.executive_delegation?.loyalty_bands?.loyal_above ?? 70} / ${reputationSystem.executive_delegation?.loyalty_bands?.disloyal_below ?? 30}`, source: 'live', configPath: 'progression.reputation_system.executive_delegation.loyalty_bands.loyal_above / disloyal_below', ref: 'shared/utils/executiveDelegation.ts getLoyaltyBand' },
+      { label: 'auto_safe_scoring soft_stat_weights (quality/mood/awareness/press)', value: `${reputationSystem.executive_delegation?.auto_safe_scoring?.soft_stat_weights?.quality_bonus ?? 2}/${reputationSystem.executive_delegation?.auto_safe_scoring?.soft_stat_weights?.artist_mood ?? 2}/${reputationSystem.executive_delegation?.auto_safe_scoring?.soft_stat_weights?.awareness_boost ?? 1}/${reputationSystem.executive_delegation?.auto_safe_scoring?.soft_stat_weights?.press_momentum ?? 1}`, source: 'live', configPath: 'progression.reputation_system.executive_delegation.auto_safe_scoring.soft_stat_weights', ref: 'shared/utils/executiveAutoSelect.ts scoreChoiceSafety' },
+      { label: 'auto_safe_scoring money (per $1k / gain cap / spend cap / spend dampener)', value: `${reputationSystem.executive_delegation?.auto_safe_scoring?.money_per_thousand ?? 1} / ${reputationSystem.executive_delegation?.auto_safe_scoring?.money_gain_cap ?? 5} / ${reputationSystem.executive_delegation?.auto_safe_scoring?.money_spend_cap ?? 20} / ${reputationSystem.executive_delegation?.auto_safe_scoring?.money_spend_dampener ?? 0.5}`, source: 'live', configPath: 'progression.reputation_system.executive_delegation.auto_safe_scoring.money_*', ref: 'shared/utils/executiveAutoSelect.ts scoreChoiceSafety' },
     ],
     hardcoded: false,
     ref: 'shared/engine/executiveAutonomy.ts pickAutonomousChoice; shared/engine/game-engine.ts resolveAutonomousExecMeetings',

@@ -15,6 +15,11 @@ Artists, songs, roles, executives, actions, world definitions
 ## Effect-Key Authoring Rules (July 2026)
 - Every key used in `actions.json`/`events.json`/`dialogue.json` `effects_immediate`/`effects_delayed` must be canonical — `LIVE_EFFECT_KEYS` (`shared/engine/processors/ActionProcessor.ts`) ∪ `executive_mood`. `tests/engine/data-lint-effect-keys.test.ts` fails otherwise.
 - A **new** effect key needs its engine case added to `ActionProcessor.applyEffects` **first**, before it can be authored into any content JSON.
+- **Targeting directives (engine-verbs SLICE 5, M13/M14)** — two STRING-valued keys may ride inside an effects block (they route a sibling effect, they are not channels):
+  - `target_executive: 'head_ar'|'cmo'|'cco'|'head_distribution'|'all'` — REQUIRED next to `executive_mood` on CEO-meeting (`role_id: "ceo"`) and `events.json` choices (those surfaces have no implicit exec; without it the key is dead and lint fails). `effects_immediate` only. FORBIDDEN on role-meeting choices and in `dialogue.json`. Example: `"effects_immediate": { "executive_mood": -5, "target_executive": "cmo" }`.
+  - `target_artist: 'predetermined'|'global'` — `events.json` choices only; overrides the event-level `target` for that block's artist-scoped keys ('predetermined' = the resolved highest-popularity signed artist; 'global' = every signed artist). Legal in both effect blocks; absent = event-level behavior.
+  - `executive_mood` in `effects_delayed` is a dead key on CEO-meeting/event choices — lint-blocked.
+  - Full grammar + resolver map: `docs/01-planning/implementation-specs/REFERENCES AND ANALYSIS/[REFERENCE] executive-meetings-system-complete-reference.md` §2.
 - No choice may strictly dominate its siblings within a meeting — enforced by `tests/engine/meeting-dominance.test.ts`.
 - Balance-knob file map for tuning authored content:
   - Press/awareness → `balance/markets.json`

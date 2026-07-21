@@ -11,7 +11,7 @@ import type {
   RoleMeeting,
   ChoiceEffect
 } from '../../shared/types/gameTypes';
-import { projects, songs } from '../../shared/schema';
+import { projects, songs, releases, releaseSongs } from '../../shared/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { db } from '../db';
 import { storage } from '../storage';
@@ -546,7 +546,10 @@ export class ServerGameData {
         // Exec-meetings-revival PR-3 (C2): press_momentum chance-per-point knob.
         press_momentum_chance_per_point: 0.02,
         // Phase B fix-2: unconsumed story flags expire like the quality/awareness banks.
-        press_story_flag_expiry_weeks: 8
+        press_story_flag_expiry_weeks: 8,
+        // Engine-verbs slice 13 (M15): next-release press-scrutiny liability knobs.
+        press_scrutiny_penalty_factor: 0.5,
+        press_scrutiny_flag_expiry_weeks: 8
       };
     }
 
@@ -558,7 +561,47 @@ export class ServerGameData {
       story_flag_bonus: press.story_flag_bonus,
       max_pickups_per_release: press.max_pickups_per_release,
       press_momentum_chance_per_point: press.press_momentum_chance_per_point ?? 0.02,
-      press_story_flag_expiry_weeks: press.press_story_flag_expiry_weeks ?? 8
+      press_story_flag_expiry_weeks: press.press_story_flag_expiry_weeks ?? 8,
+      press_scrutiny_penalty_factor: press.press_scrutiny_penalty_factor ?? 0.5,
+      press_scrutiny_flag_expiry_weeks: press.press_scrutiny_flag_expiry_weeks ?? 8
+    };
+  }
+
+  // Engine-verbs slice 12 (M10 distribution_efficiency): persistent label
+  // distribution modifier knobs. Lives in data/balance/markets.json under
+  // market_formulas.distribution. The cap clamps the APPLIED amount at read time
+  // (ReleaseProcessor.calculateOngoingSongRevenue) — banking is uncapped, the
+  // economy read is not.
+  getDistributionConfigSync() {
+    if (!this.balanceData) {
+      return {
+        efficiency_amount_cap: 0.25
+      };
+    }
+
+    const distribution = (this.balanceData.market_formulas?.distribution || {}) as Record<string, any>;
+    return {
+      efficiency_amount_cap: distribution.efficiency_amount_cap ?? 0.25
+    };
+  }
+
+  // Engine-verbs slice 2 (M2 spawn_prospect): default hint ranges for spawned
+  // prospect targeting. Lives in data/balance/artists.json under
+  // artist_stats.prospect_spawn. When an authored spawn_prospect descriptor
+  // omits quality_hint/popularity_hint, the engine rolls a target inside these
+  // ranges with an ISOLATED seed (never ctx.getRandom).
+  getProspectSpawnConfigSync() {
+    if (!this.balanceData) {
+      return {
+        default_talent_range: [40, 85] as [number, number],
+        default_popularity_range: [5, 40] as [number, number]
+      };
+    }
+
+    const prospectSpawn = ((this.balanceData as any).artist_stats?.prospect_spawn || {}) as Record<string, any>;
+    return {
+      default_talent_range: (prospectSpawn.default_talent_range ?? [40, 85]) as [number, number],
+      default_popularity_range: (prospectSpawn.default_popularity_range ?? [5, 40]) as [number, number]
     };
   }
 
@@ -730,6 +773,23 @@ export class ServerGameData {
         loyalty_ceiling: cfg.escalation?.loyalty_ceiling ?? d.escalation.loyalty_ceiling,
         enabled: cfg.escalation?.enabled ?? d.escalation.enabled,
       },
+      auto_safe_scoring: {
+        gamble_base_penalty: cfg.auto_safe_scoring?.gamble_base_penalty ?? d.auto_safe_scoring.gamble_base_penalty,
+        gamble_per_point_penalty: cfg.auto_safe_scoring?.gamble_per_point_penalty ?? d.auto_safe_scoring.gamble_per_point_penalty,
+        value_gain_cap: cfg.auto_safe_scoring?.value_gain_cap ?? d.auto_safe_scoring.value_gain_cap,
+        value_loss_cap: cfg.auto_safe_scoring?.value_loss_cap ?? d.auto_safe_scoring.value_loss_cap,
+        value_loss_dampener: cfg.auto_safe_scoring?.value_loss_dampener ?? d.auto_safe_scoring.value_loss_dampener,
+        money_per_thousand: cfg.auto_safe_scoring?.money_per_thousand ?? d.auto_safe_scoring.money_per_thousand,
+        money_gain_cap: cfg.auto_safe_scoring?.money_gain_cap ?? d.auto_safe_scoring.money_gain_cap,
+        money_spend_cap: cfg.auto_safe_scoring?.money_spend_cap ?? d.auto_safe_scoring.money_spend_cap,
+        money_spend_dampener: cfg.auto_safe_scoring?.money_spend_dampener ?? d.auto_safe_scoring.money_spend_dampener,
+        soft_stat_weights: {
+          quality_bonus: cfg.auto_safe_scoring?.soft_stat_weights?.quality_bonus ?? d.auto_safe_scoring.soft_stat_weights.quality_bonus,
+          artist_mood: cfg.auto_safe_scoring?.soft_stat_weights?.artist_mood ?? d.auto_safe_scoring.soft_stat_weights.artist_mood,
+          awareness_boost: cfg.auto_safe_scoring?.soft_stat_weights?.awareness_boost ?? d.auto_safe_scoring.soft_stat_weights.awareness_boost,
+          press_momentum: cfg.auto_safe_scoring?.soft_stat_weights?.press_momentum ?? d.auto_safe_scoring.soft_stat_weights.press_momentum,
+        },
+      },
     };
   }
 
@@ -741,9 +801,17 @@ export class ServerGameData {
     // HARDCODED: fallback tuning if data/balance/progression.json's
     // weekly_meeting_selection block is absent (matches the balance file's
     // authored defaults so behavior is identical either way).
+    // M16 (requires-gates): artist_state_thresholds drive the per-artist-state
+    // requires tags (any_artist_low_mood / any_artist_high_popularity /
+    // any_artist_low_energy) — comparator encoded in the knob name.
     const defaults = {
       relevance_weight: 2.0,
-      recency_window_weeks: 4
+      recency_window_weeks: 4,
+      artist_state_thresholds: {
+        low_mood_lt: 40,
+        high_popularity_gte: 70,
+        low_energy_lt: 30
+      }
     };
     if (!this.balanceData) {
       return defaults;
@@ -751,7 +819,12 @@ export class ServerGameData {
     const cfg = (this.balanceData.weekly_meeting_selection || {}) as Record<string, any>;
     return {
       relevance_weight: cfg.relevance_weight ?? defaults.relevance_weight,
-      recency_window_weeks: cfg.recency_window_weeks ?? defaults.recency_window_weeks
+      recency_window_weeks: cfg.recency_window_weeks ?? defaults.recency_window_weeks,
+      artist_state_thresholds: {
+        low_mood_lt: cfg.artist_state_thresholds?.low_mood_lt ?? defaults.artist_state_thresholds.low_mood_lt,
+        high_popularity_gte: cfg.artist_state_thresholds?.high_popularity_gte ?? defaults.artist_state_thresholds.high_popularity_gte,
+        low_energy_lt: cfg.artist_state_thresholds?.low_energy_lt ?? defaults.artist_state_thresholds.low_energy_lt
+      }
     };
   }
 
@@ -1145,10 +1218,13 @@ export class ServerGameData {
     return storage.getSongsByGame(gameId);
   }
 
-  async getSongsByArtist(artistId: string, gameId: string) {
-    console.log('[ServerGameData] getSongsByArtist called with:', { artistId, gameId });
+  async getSongsByArtist(artistId: string, gameId: string, dbTransaction?: any) {
+    console.log('[ServerGameData] getSongsByArtist called with:', { artistId, gameId, transaction: !!dbTransaction });
     try {
-      const songs = await storage.getSongsByArtist(artistId, gameId);
+      // Engine-verbs M1b: optional tx pass-through so spawn_release's
+      // 'latest_recorded' read sees songs created earlier in the same week
+      // transaction (storage.getSongsByArtist was already tx-aware).
+      const songs = await storage.getSongsByArtist(artistId, gameId, dbTransaction);
       console.log('[ServerGameData] getSongsByArtist returned:', songs?.length || 0, 'songs');
       return songs;
     } catch (error) {
@@ -1157,7 +1233,15 @@ export class ServerGameData {
     }
   }
 
-  async createRelease(release: any) {
+  async createRelease(release: any, dbConnection: any = null) {
+    // Engine-verbs M1b: transaction-aware, mirroring createSong above — inside the
+    // one-transaction week (D6) the insert MUST ride the week transaction (the
+    // game row is locked FOR UPDATE; an out-of-tx insert with an FK to it would
+    // block until commit).
+    if (dbConnection) {
+      const [createdRelease] = await dbConnection.insert(releases).values(release).returning();
+      return createdRelease;
+    }
     return storage.createRelease(release);
   }
 
@@ -1301,7 +1385,12 @@ export class ServerGameData {
     }
   }
 
-  async createReleaseSong(releaseSong: any) {
+  async createReleaseSong(releaseSong: any, dbConnection: any = null) {
+    // Engine-verbs M1b: transaction-aware, mirroring createSong/createRelease.
+    if (dbConnection) {
+      const [createdReleaseSong] = await dbConnection.insert(releaseSongs).values(releaseSong).returning();
+      return createdReleaseSong;
+    }
     return storage.createReleaseSong(releaseSong);
   }
 

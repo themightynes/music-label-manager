@@ -41,6 +41,14 @@ describe('deriveRelevanceState — one predicate per tag', () => {
       tourActive: false,
       releasePlannedSoon: false,
       artistSignedRecently: false,
+      // M16 (requires-gates): stat values absent (thresholds fail closed) and
+      // artist-state tags false on an empty label.
+      cash: undefined,
+      reputation: undefined,
+      storyFlags: undefined,
+      anyArtistLowMood: false,
+      anyArtistHighPopularity: false,
+      anyArtistLowEnergy: false,
     });
   });
 
@@ -209,22 +217,29 @@ describe('selectWeeklyMeeting — deterministic uniform pick over the eligible p
 });
 
 describe('week-1 scenario against the real catalog (spec §1 empty-pool finding)', () => {
-  it('empty label state → exactly ceo_priorities, ar_discovery, cmo_pr_angle eligible across all 24 meetings', () => {
+  it('empty label state → exactly the ungated (requires-less) meetings eligible across the whole catalog', () => {
     const actions = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data/actions.json'), 'utf-8'));
     const catalog = (actions.weekly_actions as any[]).filter(
       (a) => a.type === 'role_meeting' && !String(a.id).startsWith('TEST_')
     );
-    // Tier 2 PR-2 added 5 authored reactive meetings (25 total, up from 20) —
-    // all 5 require tags that are false under empty label state, so the
-    // empty-pool eligible set was unchanged. Executive Delegation arc (Tier 1,
-    // §8) migrated `ceo_crisis` out of actions.json into the side-events
-    // pipeline (data/events.json, id crisis_fired_dancers) — 24 total, down
-    // from 25. ceo_crisis required ['artist_signed', 'tour_active'], both false
-    // under empty label state, so it was never in the empty-pool eligible set
-    // either — this removal is catalog-count-only.
-    expect(catalog).toHaveLength(24);
+    // Content session (content/meeting-content-session): the v2 head_ar/cmo
+    // meetings were replaced by the reviewed v3 Mac (12) + Sam (11) pools. The
+    // old empty-pool set {ceo_priorities, ar_discovery, cmo_pr_angle} referenced
+    // v2 ids that no longer exist (ar_discovery, cmo_pr_angle removed). The live
+    // pool is now 38 weekly_actions. Under an empty label state EVERY relevance
+    // tag is false, so a meeting is eligible iff its `requires` is empty. The
+    // ungated meetings are: ceo_priorities (CEO floor), plus the four v3
+    // requires-less meetings the new pools introduced — the_3am_demo,
+    // tuesday_superstition, vintage_speakers (Mac) and crisis_retainer (Sam).
+    expect(catalog).toHaveLength(38);
 
     const eligible = filterEligible(catalog, emptyState()).map((m) => m.id).sort();
-    expect(eligible).toEqual(['ar_discovery', 'ceo_priorities', 'cmo_pr_angle']);
+    expect(eligible).toEqual([
+      'ceo_priorities',
+      'crisis_retainer',
+      'the_3am_demo',
+      'tuesday_superstition',
+      'vintage_speakers',
+    ]);
   });
 });

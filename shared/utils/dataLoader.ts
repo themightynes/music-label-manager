@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { ArtistSchema } from '../schemas/artist';
-import { RELEVANCE_TAGS, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES } from '../types/gameTypes';
+import { HAPPENING_TYPES, SIDE_EVENT_CATEGORIES } from '../types/gameTypes';
+// M16 (requires-gates): the ONE `requires`-entry schema, shared with the
+// contracts surface so the two Zod definitions cannot drift.
+import { RequiresEntrySchema } from '../api/contracts';
+import { EFFECT_TARGETING_DIRECTIVE_KEYS, STRUCTURED_EFFECT_KEY_LIST } from '../types/gameTypes';
+import { RELEVANCE_TAGS } from '../types/gameTypes';
 import type {
   GameDataFiles,
   GameArtist,
@@ -14,7 +19,53 @@ import type {
 } from '../types/gameTypes';
 
 // Zod validation schemas
-const ChoiceEffectSchema = z.record(z.number()).default({});
+// Engine-verbs arc (merge-reconciled — mirrors shared/api/contracts.ts
+// ChoiceEffectSchema): three value families are legal per effects record —
+// numbers (classic channels), strings (the two targeting directives +
+// story_flag's shorthand), and objects (the STRUCTURED_EFFECT_KEYS shapes).
+// Deep shapes + WHERE each key is legal are the data-lint test's job; this
+// schema pins the value FAMILY per key.
+export const ScheduleEventEffectSchema = z.object({
+  event_id: z.string().min(1),
+  defer_weeks: z.number().int().min(0),
+});
+const EFFECT_DIRECTIVE_KEY_SET: ReadonlySet<string> = new Set(EFFECT_TARGETING_DIRECTIVE_KEYS);
+// Same list as STRUCTURED_EFFECT_KEYS in shared/engine/processors/ActionProcessor.ts —
+// both derive from the ONE canonical STRUCTURED_EFFECT_KEY_LIST in
+// shared/types/gameTypes.ts (formerly a hand-copy; drift is now impossible).
+const STRUCTURED_OBJECT_KEY_SET: ReadonlySet<string> = new Set(STRUCTURED_EFFECT_KEY_LIST);
+const ChoiceEffectSchema = z
+  .record(z.union([z.number(), z.string(), z.record(z.any())]))
+  .superRefine((effects, ctx) => {
+    for (const [key, value] of Object.entries(effects)) {
+      if (EFFECT_DIRECTIVE_KEY_SET.has(key)) {
+        if (typeof value !== 'string') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `'${key}' is a targeting directive and must be a string (got ${typeof value})`,
+            path: [key],
+          });
+        }
+      } else if (typeof value === 'string') {
+        if (key !== 'story_flag') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `effect '${key}' may not be a string (only targeting directives and story_flag's shorthand may be strings)`,
+            path: [key],
+          });
+        }
+      } else if (typeof value === 'object' && value !== null) {
+        if (!STRUCTURED_OBJECT_KEY_SET.has(key)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `effect '${key}' must be a number (only structured engine-verbs keys may carry objects)`,
+            path: [key],
+          });
+        }
+      }
+    }
+  })
+  .default({});
 
 const DialogueChoiceSchema = z.object({
   id: z.string(),
@@ -23,7 +74,10 @@ const DialogueChoiceSchema = z.object({
   effects_delayed: ChoiceEffectSchema.default({}),
   // Delegation-arc §4.3.1: optional authoring escape hatch — forces this choice as
   // the exec's self-serving pick (scoreSelfServing → +Infinity). Additive/optional.
-  self_serving_hint: z.boolean().optional()
+  self_serving_hint: z.boolean().optional(),
+  // C92: optional authored past-tense outcome line for digest/results surfaces
+  // (falls back to `label`). Additive/optional.
+  outcome_summary: z.string().min(1).optional()
 });
 
 const RoleMeetingSchema = z.object({
@@ -68,7 +122,9 @@ const EventChoiceSchema = z.object({
   id: z.string(),
   label: z.string(),
   effects_immediate: ChoiceEffectSchema,
-  effects_delayed: ChoiceEffectSchema
+  effects_delayed: ChoiceEffectSchema,
+  // C92: optional authored past-tense outcome line (falls back to `label`).
+  outcome_summary: z.string().min(1).optional()
 });
 
 const SideEventSchema = z.object({
@@ -87,6 +143,10 @@ const SideEventSchema = z.object({
   // events (injected by the escalation mechanism, never rolled). Absent/false
   // for every pre-arc event. See shared/types/gameTypes.ts SideEvent doc.
   escalation_only: z.boolean().optional(),
+  // Engine-verbs Slice 1 (M4): true only for events injected via the
+  // flags.scheduled_events queue (authored schedule_event effects) — never
+  // rolled weekly. See shared/types/gameTypes.ts SideEvent doc.
+  scheduled_only: z.boolean().optional(),
   prompt: z.string(),
   choices: z.array(EventChoiceSchema)
 });
@@ -364,9 +424,11 @@ export class GameDataLoader {
         prompt_before_selection: z.string().optional(),
         target_scope: z.enum(['global', 'predetermined', 'user_selected']).optional(),
         // Meeting-relevance Tier 0 (PR-1): optional relevance tags (AND semantics,
-        // absent = always eligible). Enum derived from the canonical RELEVANCE_TAGS
-        // in shared/types/gameTypes.ts — single source of truth.
-        requires: z.array(z.enum(RELEVANCE_TAGS)).nonempty().optional(),
+        // absent = always eligible). M16 (requires-gates): entries may also be
+        // `{stat, gte?, lte?}` / `{flag, is?}` objects — schema imported from
+        // shared/api/contracts.ts (RequiresEntrySchema, the one definition both
+        // Zod surfaces share).
+        requires: z.array(RequiresEntrySchema).nonempty().optional(),
         // Tier 2 (PR-1): optional reactive-meeting trigger. Enum derived from
         // the canonical HAPPENING_TYPES in shared/types/gameTypes.ts — single
         // source of truth. Dark launch: no data/actions.json entry sets this yet.
@@ -374,10 +436,18 @@ export class GameDataLoader {
         choices: z.array(z.object({
           id: z.string(),
           label: z.string(),
-          effects_immediate: z.record(z.number()).optional(),
-          effects_delayed: z.record(z.number()).optional(),
+          // Engine-verbs arc: all three value families (numbers, targeting-
+          // directive/story_flag strings, structured-key objects) are legal —
+          // same ChoiceEffectSchema the dialogue schemas use above. The old
+          // Slice-1 union (number | ScheduleEventEffectSchema) rejected the
+          // v3 pools' grant_song/spawn_release/spawn_prospect payloads.
+          effects_immediate: ChoiceEffectSchema,
+          effects_delayed: ChoiceEffectSchema,
           // Delegation-arc §4.3.1: optional self-serving-pick override (see DialogueChoice).
-          self_serving_hint: z.boolean().optional()
+          self_serving_hint: z.boolean().optional(),
+          // C92: optional past-tense outcome line — passthrough would keep it
+          // anyway; declared explicitly for symmetry with the other schemas.
+          outcome_summary: z.string().min(1).optional()
         }).passthrough()).optional(),
         details: z.object({
           cost: z.string(),
@@ -455,16 +525,19 @@ export class GameDataLoader {
 
     const parsed = schema.parse(data);
 
-    const normalizeEffectKeys = (effects: Record<string, number> | undefined): ChoiceEffect => {
+    // Engine-verbs arc: the effects record may carry string directives and
+    // structured objects (schema-level); dialogue never legally authors them
+    // (data-lint), but the type must accept the widened record.
+    const normalizeEffectKeys = (effects: Record<string, unknown> | undefined): ChoiceEffect => {
       if (!effects) return {};
       if ('artist_loyalty' in effects && !('artist_energy' in effects)) {
         const { artist_loyalty, ...rest } = effects;
         return {
           ...rest,
-          artist_energy: artist_loyalty as number
-        };
+          artist_energy: artist_loyalty as unknown as number
+        } as ChoiceEffect;
       }
-      return effects;
+      return effects as ChoiceEffect;
     };
 
     return {

@@ -9,10 +9,16 @@
     "reputation_gain_scaling": 0.7,
     "_reputation_gain_scaling_note": "Volatility-economy slice 3: a global damper on how fast reputation is EARNED (playtest: rep hit 100 by week ~21 of 52). Multiplies every POSITIVE reputation gain (rounded) at each source — there is no single chokepoint, so it is applied per-source via shared/utils/reputationScaling.scaleReputationGain at: chart milestones (game-engine), press coverage (ReleaseProcessor), PR-push + digital-ads marketing (ActionProcessor), and meeting immediate + delayed rep effects (ActionProcessor). LOSSES ARE NOT SCALED (flop penalty, negative meeting/rep-swing outcomes apply at full magnitude). 1.0 = no damping.",
     "flop_penalty": 8,
-    "flop_revenue_ratio": 0.10,
+    "flop_revenue_ratio": 0.30,
     "flop_investment_floor": 10000,
     "flop_artist_mood_penalty": -12,
     "_flop_artist_mood_penalty_note": "Volatility-economy slice 2: a flop doesn't just cost the label reputation (flop_penalty) — it wounds the release artist's morale. Applied ONCE, alongside the flop reputation sink (same once-only flag, same deterministic gate), to summary.artistChanges[release.artistId].mood; clamped 0-100 downstream. Signed value (negative = a drop). Zero RNG. Round-2 tuning (2026-07-12): flop_penalty 5 -> 8, flop_artist_mood_penalty -8 -> -12.",
+
+    "creative_capital_milestones": {
+      "cc_top10_bonus": 1,
+      "cc_number_one_bonus": 2,
+      "_note": "PENDING-DECISIONS #9 (2026-07-12): milestone-sourced Creative Capital — a small trickle from chart milestones so CC income isn't gated on one cco meeting choice. Fires via GameEngine.applyChartMilestoneBonuses on the SAME once-per-song flags as hit_single_bonus/number_one_bonus: cc_top10_bonus the week a song FIRST enters the top 10, cc_number_one_bonus the week it FIRST hits No. 1. NO-STACK: a #1 debut (both milestones same week) grants max(cc_top10_bonus, cc_number_one_bonus), not the sum — unlike the reputation bonuses, which stack. Not scaled by reputation_gain_scaling. No upper CC cap exists in the engine (floor 0 only)."
+    },
 
     "award_chance_per_point": 0.08,
     "award_chance_cap": 0.8,
@@ -49,6 +55,23 @@
       "escalation": {
         "loyalty_ceiling": 40,
         "enabled": true
+      },
+      "auto_safe_scoring": {
+        "gamble_base_penalty": 100,
+        "gamble_per_point_penalty": 10,
+        "value_gain_cap": 5,
+        "value_loss_cap": 5,
+        "value_loss_dampener": 0.5,
+        "money_per_thousand": 1,
+        "money_gain_cap": 5,
+        "money_spend_cap": 20,
+        "money_spend_dampener": 0.5,
+        "soft_stat_weights": {
+          "quality_bonus": 2,
+          "artist_mood": 2,
+          "awareness_boost": 1,
+          "press_momentum": 1
+        }
       }
     },
 
@@ -145,7 +168,13 @@
   "weekly_meeting_selection": {
     "relevance_weight": 3.0,
     "_relevance_weight_note": "Volatility-economy slice 4: raised 2.0 -> 3.0 so recently-relevant meetings surface more strongly (playtest: meeting relevance was too subtle to notice). Recency window unchanged.",
-    "recency_window_weeks": 4
+    "recency_window_weeks": 4,
+    "artist_state_thresholds": {
+      "_note": "Engine-verbs M16: thresholds for the per-artist-state requires tags (any_artist_low_mood / any_artist_high_popularity / any_artist_low_energy). Comparator is encoded in the knob name: _lt = strictly below, _gte = at or above.",
+      "low_mood_lt": 40,
+      "high_popularity_gte": 70,
+      "low_energy_lt": 30
+    }
   },
 
   "difficulty_modifiers": {

@@ -1,0 +1,68 @@
+{
+  "formId": "v3-mac-pool-review",
+  "savedAt": "2026-07-18T03:28:40.955Z",
+  "meetings": {
+    "wall_of_misses": {
+      "verdict": "approve_with_edits",
+      "notes": "We should add awareness to that released song, and the artist mood should be more severe (-8)"
+    },
+    "the_3am_demo": {
+      "verdict": "approve",
+      "notes": ""
+    },
+    "tuesday_superstition": {
+      "verdict": "approve_with_edits",
+      "notes": "this should cost money - we are signing and artist. junior should be most expensive. "
+    },
+    "reinvention_tape": {
+      "verdict": "approve",
+      "notes": ""
+    },
+    "showcase_slot": {
+      "verdict": "approve_with_edits",
+      "notes": "Money should be -$35000 (prime_friday) and -$10000 (early_doors). Artist Mood should be -8 (keep_cutting)"
+    },
+    "vintage_speakers": {
+      "verdict": "approve",
+      "notes": ""
+    },
+    "poaching_season": {
+      "verdict": "kill",
+      "notes": ""
+    },
+    "favor_signing": {
+      "verdict": "kill",
+      "notes": ""
+    },
+    "second_album_syndrome": {
+      "verdict": "approve_with_edits",
+      "notes": "Approve, but quality_bonus (and variance_up) must bank to THE artist, not label-wide — right now the next recording session to generate songs eats the bonus, whoever it is. Needs the hypeArtistPools treatment (per-artist pool) before/with the JSON commit. Applies to every scenario pairing quality_bonus with a named artist, not just this one."
+    },
+    "one_that_got_away_again": {
+      "verdict": "approve",
+      "notes": ""
+    },
+    "mood_crater_rescue": {
+      "verdict": "kill",
+      "notes": ""
+    },
+    "demo_ethics_one": {
+      "verdict": "approve_with_edits",
+      "notes": "Rewrite the opening text. \"The demo — the one that made me sign {artistName}. There's a co-writer on it: uncleared, uncredited, and as of this morning, lawyered. I played that tape for this whole building and said I'd found a complete artist. Turns out I found most of one. I can make this quiet, I can make it right, or we cut the song again from zero — but if it gets loud before the ink dries on the profile pieces, it isn't their name that eats it. It's mine.\""
+    },
+    "the_circuit": {
+      "verdict": "approve",
+      "notes": ""
+    },
+    "second_pair_of_ears": {
+      "verdict": "approve",
+      "notes": ""
+    },
+    "machine_that_listens": {
+      "verdict": "approve",
+      "notes": ""
+    }
+  },
+  "overallNotes": "",
+  "voiceConsistency": ""
+}

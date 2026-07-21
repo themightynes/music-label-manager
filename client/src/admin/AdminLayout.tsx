@@ -22,6 +22,7 @@ function AdminHome() {
           <Link href="/admin/database-health" className="text-brand-rose hover:underline">💾 Database Health</Link>
           <Link href="/admin/systems-map" className="text-brand-rose hover:underline">🕸️ Systems Map</Link>
           <Link href="/admin/playtest-feedback" className="text-brand-rose hover:underline">🎧 Playtest Feedback</Link>
+          <Link href="/admin/mac-pool-review" className="text-brand-rose hover:underline">🎙️ v3 Pool Review (all 7 pools)</Link>
         </div>
       </div>
     </GameLayout>
