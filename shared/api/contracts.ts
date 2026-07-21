@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { GameState, GameProject } from '../types/gameTypes';
-import { RELEVANCE_TAGS, REQUIRES_STAT_NAMES, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES, EFFECT_TARGETING_DIRECTIVE_KEYS } from '../types/gameTypes';
+import { RELEVANCE_TAGS, REQUIRES_STAT_NAMES, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES, EFFECT_TARGETING_DIRECTIVE_KEYS, STRUCTURED_EFFECT_KEY_LIST } from '../types/gameTypes';
 import { ArtistSchema } from '../schemas/artist';
 
 // API Response schemas
@@ -388,13 +388,11 @@ export const ScheduleEventEffectSchema = z.object({
 //      mirror; this contract enforces the value-FAMILY per key so an admin
 //      Content Editor save can never silently strip or corrupt them.
 const EFFECT_DIRECTIVE_KEY_SET: ReadonlySet<string> = new Set(EFFECT_TARGETING_DIRECTIVE_KEYS);
-// Mirrors STRUCTURED_EFFECT_KEYS in shared/engine/processors/ActionProcessor.ts
-// (kept local to avoid pulling the engine into every contract consumer; the
-// data-lint suite imports both and will catch drift via authored content).
-const STRUCTURED_OBJECT_KEY_SET: ReadonlySet<string> = new Set([
-  'schedule_event', 'story_flag', 'spawn_prospect', 'set_exec_absence',
-  'distribution_efficiency', 'grant_song', 'spawn_release',
-]);
+// Same list as STRUCTURED_EFFECT_KEYS in shared/engine/processors/ActionProcessor.ts —
+// both derive from the ONE canonical STRUCTURED_EFFECT_KEY_LIST in
+// shared/types/gameTypes.ts (a leaf module, so no engine import is pulled into
+// contract consumers). Formerly a hand-copy; drift is now impossible.
+const STRUCTURED_OBJECT_KEY_SET: ReadonlySet<string> = new Set(STRUCTURED_EFFECT_KEY_LIST);
 export const ChoiceEffectSchema = z
   .record(z.union([z.number(), z.string(), z.record(z.any())]))
   .superRefine((effects, ctx) => {

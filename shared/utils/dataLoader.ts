@@ -4,7 +4,7 @@ import { HAPPENING_TYPES, SIDE_EVENT_CATEGORIES } from '../types/gameTypes';
 // M16 (requires-gates): the ONE `requires`-entry schema, shared with the
 // contracts surface so the two Zod definitions cannot drift.
 import { RequiresEntrySchema } from '../api/contracts';
-import { EFFECT_TARGETING_DIRECTIVE_KEYS } from '../types/gameTypes';
+import { EFFECT_TARGETING_DIRECTIVE_KEYS, STRUCTURED_EFFECT_KEY_LIST } from '../types/gameTypes';
 import { RELEVANCE_TAGS } from '../types/gameTypes';
 import type {
   GameDataFiles,
@@ -30,11 +30,10 @@ export const ScheduleEventEffectSchema = z.object({
   defer_weeks: z.number().int().min(0),
 });
 const EFFECT_DIRECTIVE_KEY_SET: ReadonlySet<string> = new Set(EFFECT_TARGETING_DIRECTIVE_KEYS);
-// Mirrors STRUCTURED_EFFECT_KEYS in shared/engine/processors/ActionProcessor.ts.
-const STRUCTURED_OBJECT_KEY_SET: ReadonlySet<string> = new Set([
-  'schedule_event', 'story_flag', 'spawn_prospect', 'set_exec_absence',
-  'distribution_efficiency', 'grant_song', 'spawn_release',
-]);
+// Same list as STRUCTURED_EFFECT_KEYS in shared/engine/processors/ActionProcessor.ts —
+// both derive from the ONE canonical STRUCTURED_EFFECT_KEY_LIST in
+// shared/types/gameTypes.ts (formerly a hand-copy; drift is now impossible).
+const STRUCTURED_OBJECT_KEY_SET: ReadonlySet<string> = new Set(STRUCTURED_EFFECT_KEY_LIST);
 const ChoiceEffectSchema = z
   .record(z.union([z.number(), z.string(), z.record(z.any())]))
   .superRefine((effects, ctx) => {
@@ -437,10 +436,13 @@ export class GameDataLoader {
         choices: z.array(z.object({
           id: z.string(),
           label: z.string(),
-          // Engine-verbs Slice 1: allow the structured schedule_event value
-          // alongside plain numbers (see ScheduleEventEffectSchema above).
-          effects_immediate: z.record(z.union([z.number(), ScheduleEventEffectSchema])).optional(),
-          effects_delayed: z.record(z.union([z.number(), ScheduleEventEffectSchema])).optional(),
+          // Engine-verbs arc: all three value families (numbers, targeting-
+          // directive/story_flag strings, structured-key objects) are legal —
+          // same ChoiceEffectSchema the dialogue schemas use above. The old
+          // Slice-1 union (number | ScheduleEventEffectSchema) rejected the
+          // v3 pools' grant_song/spawn_release/spawn_prospect payloads.
+          effects_immediate: ChoiceEffectSchema,
+          effects_delayed: ChoiceEffectSchema,
           // Delegation-arc §4.3.1: optional self-serving-pick override (see DialogueChoice).
           self_serving_hint: z.boolean().optional(),
           // C92: optional past-tense outcome line — passthrough would keep it

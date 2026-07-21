@@ -523,12 +523,16 @@ export interface ReactiveMatch<T> {
  *    meetings whose `reactive_trigger` matches ANY current happening's type.
  * 2. Among matches, pick the happening/meeting pair whose trigger has the
  *    highest `REACTIVE_TRIGGER_PRIORITY` rank.
- * 3. Ties within the same priority level (e.g. two different happenings of
- *    the SAME trigger type both matching, which the per-(exec,trigger) data
- *    lint makes rare but not impossible if the pool ever holds >1 meeting per
- *    trigger) are broken by a seeded pick using an ISOLATED seed
- *    (`${seed}-reactive-tiebreak`) — NEVER `ctx.getRandom`, so the engine's
- *    RNG stream stays untouched.
+ * 3. Ties within the same priority level are broken by a seeded pick using an
+ *    ISOLATED seed (`${seed}-reactive-tiebreak`) — NEVER `ctx.getRandom`, so
+ *    the engine's RNG stream stays untouched. This is also the SHARED-TRIGGER
+ *    random-ownership rule (designer decision, 2026-07-20): multiple meetings
+ *    in one exec's pool may own the SAME `reactive_trigger` (e.g. head_ar's
+ *    ar_recent_signing_plan + demo_ethics_one both own recent_signing); when
+ *    the trigger fires and more than one owner is eligible, exactly one is
+ *    picked uniformly at random via this seeded tie-break — deterministic per
+ *    (gameId, week, roleId) seed, varying across weeks/games. Single-owner
+ *    triggers are unaffected (a lone candidate wins outright, no draw).
  *
  * Returns null when no happening matches any pool meeting's trigger — the
  * caller then runs the existing Tier 0+1 pipeline unchanged.

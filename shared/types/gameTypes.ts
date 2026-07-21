@@ -117,6 +117,29 @@ export interface ChoiceEffect {
 export const EFFECT_TARGETING_DIRECTIVE_KEYS = ['target_executive', 'target_artist'] as const;
 
 /**
+ * Engine-verbs arc — THE canonical list of effect keys whose authored VALUE is
+ * structured (a string or an object), not a plain number. Lives here (a leaf
+ * module with zero imports) so all three tiers derive from ONE list, the same
+ * way `RequiresEntrySchema` is shared:
+ *   - `STRUCTURED_EFFECT_KEYS` (shared/engine/processors/ActionProcessor.ts) —
+ *     the engine's effects-pipeline admission set (value shapes documented there);
+ *   - `STRUCTURED_OBJECT_KEY_SET` in shared/api/contracts.ts (ChoiceEffectSchema)
+ *     and shared/utils/dataLoader.ts — the Zod value-FAMILY validators.
+ * Before this constant existed the list was hand-copied in all three places,
+ * which is exactly the schema-drift class that bit the dialogue immediate path.
+ * Content is pinned by tests/engine/engine-verbs-flags-keys.test.ts.
+ */
+export const STRUCTURED_EFFECT_KEY_LIST = [
+  'schedule_event',
+  'story_flag',
+  'spawn_prospect',
+  'set_exec_absence',
+  'distribution_efficiency',
+  'grant_song',
+  'spawn_release',
+] as const;
+
+/**
  * Valid `target_executive` role ids (the four hireable executives — the CEO is
  * the player and has no executive row). Matches gameCreationService's seeded
  * roles and shared/engine/emailTemplates.ts's role union.

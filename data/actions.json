@@ -789,18 +789,18 @@
                 70
               ],
               "artist": "targeted"
+            },
+            "spawn_release": {
+              "songs": "granted",
+              "type": "single",
+              "defer_weeks": 2
             }
           },
           "effects_delayed": {
             "variance_up": 1,
             "press_story_flag": 1,
             "awareness_boost": 3,
-            "artist_mood": -8,
-            "spawn_release": {
-              "songs": "granted",
-              "type": "single",
-              "defer_weeks": 2
-            }
+            "artist_mood": -8
           },
           "outcome_summary": "Mac let the vault demos slip to the press and cut a real \"From the Vault\" single out of them — his ear, on the record, and a genuine release banking for {artistName}'s catalog."
         }
@@ -1157,7 +1157,11 @@
       "category": "talent",
       "target_scope": "global",
       "requires": [
-        "music_exists"
+        "music_exists",
+        {
+          "flag": "one_that_got_away_resolved",
+          "is": false
+        }
       ],
       "reactive_trigger": "chart_debut",
       "prompt": "You know the name I don't say. The one that made me start the wall. Twenty minutes after {songTitle} charted, their manager called my cell — a number they've had for six years and never once used. They want in. The price is a war-chest number, and the memo has to be signed while the chart still has our name on it. I have waited two years for this phone to ring. Tell me what we do before I pick it up.",
@@ -1166,6 +1170,7 @@
           "id": "pay_the_price",
           "label": "Pay it — sign the memo tonight",
           "effects_immediate": {
+            "story_flag": "one_that_got_away_resolved",
             "money": -50000,
             "spawn_prospect": {
               "quality_hint": 80,
@@ -1184,6 +1189,7 @@
           "id": "feature_not_forever",
           "label": "Counter with a feature",
           "effects_immediate": {
+            "story_flag": "one_that_got_away_resolved",
             "money": -15000,
             "reputation": 2
           },
@@ -1197,6 +1203,7 @@
           "id": "let_mac_say_no",
           "label": "Let Mac finally say no",
           "effects_immediate": {
+            "story_flag": "one_that_got_away_resolved",
             "executive_mood": 8,
             "artist_mood": 3,
             "reputation": 1
@@ -1217,9 +1224,9 @@
       "category": "talent",
       "target_scope": "user_selected",
       "requires": [
-        "artist_signed",
-        "recording_project_active"
+        "artist_signed"
       ],
+      "reactive_trigger": "recent_signing",
       "prompt_before_selection": "Whose signing demo has the co-writer problem?",
       "prompt": "The demo — the one that made me sign {artistName}. There's a co-writer on it: uncleared, uncredited, and as of this morning, lawyered. I played that tape for this whole building and said I'd found a complete artist. Turns out I found most of one. I can make this quiet, I can make it right, or we cut the song again from zero — but if it gets loud before the ink dries on the profile pieces, it isn't their name that eats it. It's mine.",
       "choices": [
@@ -1629,8 +1636,10 @@
             "artist_mood": 3,
             "executive_mood": 3
           },
-          "effects_delayed": {},
-          "outcome_summary": "Sam made the outlet print the correction — bottom of the page, but every desk in town saw the label check its receipts."
+          "effects_delayed": {
+            "press_momentum": -1
+          },
+          "outcome_summary": "Sam made the outlet print the correction — bottom of the page, but every desk in town saw the label check its receipts. The outlet won't forget who twisted their arm."
         },
         {
           "id": "plant_the_counter",
@@ -1640,7 +1649,7 @@
             "reputation": 3
           },
           "effects_delayed": {
-            "promote_release": 20,
+            "promote_release": 8,
             "press_momentum": 3
           },
           "outcome_summary": "Sam planted a bigger counter-story over the bad math — the wrong number died under a better headline, and the release's own numbers moved to prove it."
@@ -1914,11 +1923,11 @@
           "id": "full_spectrum_blitz",
           "label": "Spend the moment — everywhere",
           "effects_immediate": {
-            "money": -180000,
+            "money": -150000,
             "executive_mood": 6,
             "artist_mood": 4,
             "artist_popularity": 4,
-            "promote_release": 30
+            "promote_release": 15
           },
           "effects_delayed": {
             "awareness_boost": 14,

@@ -45,6 +45,7 @@ import {
   ArtistChangeHelpers,
   isScheduleEventEffect,
   EFFECT_TARGETING_DIRECTIVE_KEYS,
+  STRUCTURED_EFFECT_KEY_LIST,
   EXEC_MOOD_TARGET_ROLE_IDS,
   EXEC_MOOD_TARGET_BROADCAST,
 } from '../../types/gameTypes';
@@ -143,16 +144,12 @@ export const LIVE_EFFECT_KEYS: ReadonlySet<string> = new Set([
  *   - grant_song:              { title_hint?, quality?, quality_range?, artist: 'targeted' }
  *   - spawn_release:           { songs: 'granted'|'latest_recorded', type: 'single', defer_weeks? }
  * (press_scrutiny_flag is numeric, like press_story_flag — not listed here.)
+ *
+ * The key list itself is canonical in shared/types/gameTypes.ts
+ * (STRUCTURED_EFFECT_KEY_LIST) so the Zod mirrors in shared/api/contracts.ts and
+ * shared/utils/dataLoader.ts derive from the SAME list instead of hand-copies.
  */
-export const STRUCTURED_EFFECT_KEYS: ReadonlySet<string> = new Set([
-  'schedule_event',
-  'story_flag',
-  'spawn_prospect',
-  'set_exec_absence',
-  'distribution_efficiency',
-  'grant_song',
-  'spawn_release'
-]);
+export const STRUCTURED_EFFECT_KEYS: ReadonlySet<string> = new Set(STRUCTURED_EFFECT_KEY_LIST);
 
 /**
  * Player-facing explanations for every effect channel, keyed by effect key.

@@ -71,8 +71,9 @@ describe('v2 stakes revision — creative capital grant amounts (actions.json)',
       }
     };
     walk(actions.weekly_actions);
-    // Exactly the three trilemma grants, all within the cap.
-    expect(positives.sort((a, b) => a - b)).toEqual([1, 2, 2]);
+    // The three creative_recording trilemma grants (+1/+2/+2) plus the v3 Mac
+    // pool's second_pair_of_ears keep_it_a_handshake (+1) — all within the cap.
+    expect(positives.sort((a, b) => a - b)).toEqual([1, 1, 2, 2]);
     positives.forEach((v) => expect(v).toBeLessThanOrEqual(2));
   });
 });

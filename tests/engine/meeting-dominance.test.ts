@@ -105,21 +105,13 @@ function dominanceViolations(m: any): string[] {
  * DELIBERATE-DESIGN ALLOWLIST — dominance pairs that are intentional v3 content,
  * not authoring bugs. Keyed `${meetingId}:${dominant}>${dominated}`.
  *
- * own_the_correction:demand_the_correction>let_it_die — Sam's "do nothing" option
- * (let_it_die) is authored to carry a pure morale downside (executive_mood −5,
- * artist_mood −3) while the free "fight on the record" option (demand_the_correction)
- * is pure upside (reputation/artist_mood/executive_mood +3). The v3 Sam pool review
- * (client/src/admin/v3SamPoolReview.ts, own_the_correction) documents this on
- * purpose: "artist reacts on two of three — defended (+) when the label fights,
- * stung (−) when nobody does" and predicts only demand/plant as anyone's pick —
- * let_it_die is the narrative "sit on your hands" choice that is SUPPOSED to be
- * mechanically worse than fighting. This is the inverse of a free-money trap (a
- * free GOOD option beating a costless-but-morale-negative inaction), so it is
- * intentionally exempt rather than a downside the content forgot to add.
+ * Currently empty. own_the_correction:demand_the_correction>let_it_die was
+ * allowlisted at v3 load, then resolved by designer ruling (2026-07-20):
+ * demand_the_correction gained a delayed press_momentum −1 (strong-arming the
+ * outlet chills press relations), so let_it_die is no longer weakly dominated —
+ * it is now the only choice that doesn't burn press goodwill.
  */
-const DELIBERATE_DOMINANCE_ALLOWLIST = new Set<string>([
-  'own_the_correction:demand_the_correction>let_it_die',
-]);
+const DELIBERATE_DOMINANCE_ALLOWLIST = new Set<string>([]);
 
 function unallowedViolations(m: any): string[] {
   const choices = (m.choices || []).map((c: any) => ({ id: c.id, vec: choiceVector(c) }));

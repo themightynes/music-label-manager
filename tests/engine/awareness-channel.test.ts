@@ -15,9 +15,9 @@
  *      clamped at 0 (a negative pool never drives awareness below zero), consumed
  *      by the FIRST release that releases songs this week, then zeroed. Draw-count
  *      invariance is asserted at the consumption site (no RNG added/reordered).
- *  (e) THE TRILEMMA (data-driven): no cmo_platform_exclusive choice's live payoff
- *      strictly dominates the others across the live axes (money, awareness_boost,
- *      reputation).
+ *  (e) THE TRILEMMA (data-driven): no platform_exclusive_bidding (v3 successor
+ *      of cmo_platform_exclusive) choice's live payoff strictly dominates the
+ *      others across the live axes (money, awareness_boost, reputation).
  */
 import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
@@ -344,15 +344,17 @@ describe('ReleaseProcessor.processPlannedReleases — awareness_boost consumptio
 });
 
 // ---------------------------------------------------------------------------
-// THE TRILEMMA — cmo_platform_exclusive non-dominance (data-driven)
+// THE TRILEMMA — platform_exclusive_bidding non-dominance (data-driven).
+// v3 pool load (2026-07-20): cmo_platform_exclusive was replaced by its v3
+// successor platform_exclusive_bidding; same three-axis tradeoff contract.
 // ---------------------------------------------------------------------------
-describe('cmo_platform_exclusive trilemma — no choice strictly dominates', () => {
-  const meeting = actions.weekly_actions.find((a: any) => a.id === 'cmo_platform_exclusive');
+describe('platform_exclusive_bidding trilemma — no choice strictly dominates', () => {
+  const meeting = actions.weekly_actions.find((a: any) => a.id === 'platform_exclusive_bidding');
 
-  it('has exactly three choices (spotify / apple / simultaneous)', () => {
+  it('has exactly three choices (check / reach / refuse)', () => {
     expect(meeting).toBeDefined();
     expect(meeting.choices.map((c: any) => c.id).sort()).toEqual(
-      ['apple_exclusive', 'simultaneous_release', 'spotify_exclusive'],
+      ['refuse_windows', 'take_the_check', 'take_the_reach'],
     );
   });
 
@@ -387,12 +389,13 @@ describe('cmo_platform_exclusive trilemma — no choice strictly dominates', () 
 
   it('each choice wins on a distinct axis (a genuine tradeoff triangle)', () => {
     const byId = Object.fromEntries(meeting.choices.map((c: any) => [c.id, payoff(c)]));
-    // apple: highest money; spotify: highest awareness; simultaneous: highest reputation.
-    expect(byId.apple_exclusive.money).toBeGreaterThan(byId.spotify_exclusive.money);
-    expect(byId.apple_exclusive.money).toBeGreaterThan(byId.simultaneous_release.money);
-    expect(byId.spotify_exclusive.awareness).toBeGreaterThan(byId.apple_exclusive.awareness);
-    expect(byId.spotify_exclusive.awareness).toBeGreaterThan(byId.simultaneous_release.awareness);
-    expect(byId.simultaneous_release.reputation).toBeGreaterThan(byId.spotify_exclusive.reputation);
-    expect(byId.simultaneous_release.reputation).toBeGreaterThan(byId.apple_exclusive.reputation);
+    // take_the_check: highest money; take_the_reach: highest awareness;
+    // refuse_windows: highest reputation.
+    expect(byId.take_the_check.money).toBeGreaterThan(byId.take_the_reach.money);
+    expect(byId.take_the_check.money).toBeGreaterThan(byId.refuse_windows.money);
+    expect(byId.take_the_reach.awareness).toBeGreaterThan(byId.take_the_check.awareness);
+    expect(byId.take_the_reach.awareness).toBeGreaterThan(byId.refuse_windows.awareness);
+    expect(byId.refuse_windows.reputation).toBeGreaterThan(byId.take_the_check.reputation);
+    expect(byId.refuse_windows.reputation).toBeGreaterThan(byId.take_the_reach.reputation);
   });
 });

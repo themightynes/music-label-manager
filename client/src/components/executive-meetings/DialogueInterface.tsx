@@ -10,6 +10,7 @@ import {
 } from '@shared/engine/processors/ActionProcessor';
 import { EffectBadgeTooltip } from './EffectBadgeTooltip';
 import { getChoiceCreativeCapitalCost } from '../../services/executiveAutoSelect';
+import { resolveMeetingPromptPlaceholders } from '../../utils/meetingPromptPlaceholders';
 
 // C99 fix (v3 meeting-content wave): an authored effect VALUE is not always a
 // number — the STRUCTURED_EFFECT_KEYS carry objects/strings (e.g. schedule_event
@@ -86,6 +87,14 @@ interface DialogueInterfaceProps {
    * other already-queued choices this week (ledger C75).
    */
   availableCreativeCapital?: number;
+  /**
+   * Reactive-meeting name context (Tier 2 `reactiveContext` off the selected
+   * meeting): a global-scope reactive meeting has no player-picked artist, but
+   * the triggering happening knows exactly which artist/song it's about — so
+   * `{artistName}`/`{songTitle}` in the prompt resolve against these instead
+   * of rendering literally. Absent for normal (non-reactive) meetings.
+   */
+  reactiveContext?: { artistName?: string; songTitle?: string };
 }
 
 function EffectBadge({
@@ -302,12 +311,17 @@ export function DialogueInterface({
   onBack,
   targetScope,
   selectedArtistName,
-  availableCreativeCapital
+  availableCreativeCapital,
+  reactiveContext
 }: DialogueInterfaceProps) {
-  // Replace {artistName} placeholder with actual artist name
-  const displayPrompt = selectedArtistName
-    ? dialogue.prompt.replace(/{artistName}/g, selectedArtistName)
-    : dialogue.prompt;
+  // Resolve {artistName}/{songTitle} placeholders: player-picked artist first
+  // (user_selected scope), then the reactive happening's names (global-scope
+  // reactive meetings), with graceful generic fallbacks — literal braces never
+  // reach the player (see meetingPromptPlaceholders.ts).
+  const displayPrompt = resolveMeetingPromptPlaceholders(dialogue.prompt, {
+    artistName: selectedArtistName ?? reactiveContext?.artistName,
+    songTitle: reactiveContext?.songTitle,
+  });
 
   return (
     <div className="space-y-6">
