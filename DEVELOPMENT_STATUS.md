@@ -1,8 +1,32 @@
 # Music Label Manager - Development Status
 **Single Source of Truth for Current Progress**
-*Updated: July 12, 2026*
+*Updated: July 21, 2026*
 
 ---
+
+## 📅 Session Log — July 21, 2026 (pre-merge review verdict processed: mechanical fixes F1/F4/F5 via 4-subagent fan-out, designer rulings F3/F6 applied, C104/C105 logged — still on `content/meeting-content-session`, first commits + PR opened this session)
+
+**Arc shape:** the five-reviewer parallel review of the branch came back (engineering clean bill — determinism, money reconciliation, save-compat; issues were one broken content contract, one dormant economy landmine, and designer-magnitude questions). This session processed the verdict end-to-end: the mechanical set was farmed to 4 parallel subagents (shared working dir, NOT worktrees — the branch's work was uncommitted and Agent worktrees cut from main), then Nes ruled live on F3/F6 and the rulings were applied inline. Combined verification green throughout (`npm run check` + 81/81 across the touched suites, then 68/68 content suites post-rulings).
+
+**Mechanical fixes (subagent fan-out):**
+- **F1 (HIGH, fixed)** — `wall_of_misses.leak_the_heat` silently broke its promise: `spawn_release` sat in `effects_delayed`, but the granted-song handoff (`grantedSong` in `ActionProcessor.applyEffects`) is scoped to a single effects pass, so the delayed spawn always found nothing and skipped. Moved `spawn_release` into `effects_immediate` AFTER `grant_song` (key order is load-bearing; `defer_weeks: 2` preserved so the authored release timing survives via the supported path). New lint `tests/engine/data-lint-spawn-release-placement.test.ts`: delayed `spawn_release` banned unless `songs: 'latest_recorded'` (the one delayed-safe mode); immediate granted-mode spawns must have an earlier `grant_song` sibling in the same block.
+- **F4 (fixed)** — last unguarded placeholder surface: the exec-card grid preview built its snippet from raw prompt text in `ExecutiveMeetings.tsx`'s per-role prefetch, so `{songTitle}` could render on the card pre-open. Now routed through `meetingPreviewSnippet()` (new export in `ExecutiveCard.tsx`) → `resolveMeetingPromptPlaceholders` with the meeting's `reactiveContext`, same invocation shape as MeetingSelector. 4 new tests incl. a no-literal-braces render assertion. The 24 `outcome_summary` `{artistName}` strings remain the known deferred slice — untouched.
+- **F5 (fixed)** — the structured-key set had THREE hand-copies (`ActionProcessor.ts`, `contracts.ts`, `dataLoader.ts`). All now derive from one `STRUCTURED_EFFECT_KEY_LIST` in `shared/types/gameTypes.ts` (zero-import leaf all three already imported, mirroring the `RequiresEntrySchema` pattern; contracts still don't pull in the engine). Byte-identical vs HEAD verified programmatically; the content pin in `engine-verbs-flags-keys.test.ts` is the lockstep guard.
+- **Debt logged** — **C104** (F2: `physical_inventory` knobs are a dormant 3× money printer — 0.12 × 12wk = 144% sell-through, +$8/unit guaranteed; knobs in `balance/markets.json` `market_formulas.physical_inventory` + `PHYSICAL_INVENTORY_DEFAULTS` in `flagsLedgers.ts`; MUST re-tune before any content wires `grant_inventory`; the five content-dead economy verbs are named in the entry). **C105** (F7: `schedule_event` enqueue at `ActionProcessor.ts` has no dedupe — re-drawable `machine_that_listens` can bank its verdict twice; fix = dedupe by eventId or story-flag gate).
+- **`[REFERENCE]` doc stale-id sweep complete** — every removed-v2-id citation updated or reframed as explicitly historical (`cmo_chart_debut_press` → successor `chart_debut_one_hour_window`, §4 mood roster rewritten to verified current facts, §10.3 hint list now the current 10, §3 "pending sweep" disclaimer replaced with a dated sweep-complete note).
+
+**Designer rulings (Nes, live), all applied:**
+- **F3a** — `one_that_got_away_again` is now **once-only**: `requires` gained `{flag: "one_that_got_away_resolved", is: false}` and all three choices set the flag. **First flag-gated `requires` in content** (mechanism existed since M16, previously unused). **F3b** — `demo_ethics_one` stays repeatable BY DESIGN.
+- **F6.1** — `full_spectrum_blitz` `promote_release` 30→**15** (exactly the cap, no silent clamp), `own_the_correction.plant_the_counter` 20→**8**. Spend ladder now reads honestly: 15 / 14 / 8.
+- **F6.2** — `full_spectrum_blitz` money −$180k → **−$150k**. **F6.3** — global-scope mood × roster-size scaling: LEFT AS-IS by ruling.
+- Reference doc tables synced to the new numbers + once-only gate in the same pass. Dominance test green post-retune.
+
+**NOT fixed, consciously shipped (review's low-severity tail):** artist picker on reactive `user_selected` meetings can pick a different artist than the fiction names; surprise-drop (budget-0) releases skip the press-scrutiny roll; five economy verbs content-dead (now at least named in C104).
+
+**Open threads / next steps:**
+- **Nes playtest checks (the two only-human items):** exec-card preview spot-check on a live trigger week; save→load round trip exercising the new flags — now including: resolve `one_that_got_away_again`, save/load, confirm it does NOT re-offer on the next chart debut. ⚠️ Dev-server restart required first (server-side content/engine, no tsx watch).
+- The rest of the content-integration wave continues per the July 12 entry (remaining pools' review verdicts, verdict/scheduled content, outcome_summary authoring).
+- Merge to main still pending the designer's overall say-so on the v3 direction.
 
 ## 📅 Session Log — July 12, 2026, late session (MEETING-CONTENT WORKING SESSION → v3 ground-up authoring + ENGINE VERBS Tier 1+2 — all on `content/meeting-content-session`, UNMERGED pending designer review)
 
