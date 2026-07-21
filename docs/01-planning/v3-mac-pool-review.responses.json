@@ -1,6 +1,6 @@
 {
   "formId": "v3-mac-pool-review",
-  "savedAt": "2026-07-16T14:44:16.746Z",
+  "savedAt": "2026-07-18T03:28:40.955Z",
   "meetings": {
     "wall_of_misses": {
       "verdict": "approve_with_edits",
@@ -51,15 +51,15 @@
       "notes": "Rewrite the opening text. \"The demo — the one that made me sign {artistName}. There's a co-writer on it: uncleared, uncredited, and as of this morning, lawyered. I played that tape for this whole building and said I'd found a complete artist. Turns out I found most of one. I can make this quiet, I can make it right, or we cut the song again from zero — but if it gets loud before the ink dries on the profile pieces, it isn't their name that eats it. It's mine.\""
     },
     "the_circuit": {
-      "verdict": null,
+      "verdict": "approve",
       "notes": ""
     },
     "second_pair_of_ears": {
-      "verdict": null,
+      "verdict": "approve",
       "notes": ""
     },
     "machine_that_listens": {
-      "verdict": null,
+      "verdict": "approve",
       "notes": ""
     }
   },

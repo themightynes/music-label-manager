@@ -1371,19 +1371,57 @@ export class ActionProcessor {
           // + the zero-out in processRecordingProjects). Stamps pendingQualityBonusWeek
           // so processDelayedEffects can expire an unconsumed bank after N weeks
           // (pending_quality_bonus_expiry_weeks, data/balance/quality.json).
+          //
+          // Meeting-content session — PER-ARTIST SCOPING ("hypeArtistPools treatment",
+          // mirroring the buzz-v2 awareness_boost fork above). When this meeting targets
+          // a specific artist (target_scope: user_selected, so `artistId` is the
+          // player-picked/named recording artist — e.g. the second_album_syndrome
+          // scenario), the bonus banks to THAT artist's pool
+          // (flags.qualityBonusArtistPools[artistId] = { amount, week }); only that
+          // artist's next recording session consumes it (SongGenerationProcessor keys
+          // on project.artistId). Truly global meetings (no user_selected artist) keep
+          // banking to the label-wide pool (flags.pendingQualityBonus), consumed by the
+          // first recording session ANY artist runs. Artist pools are a NEW additive
+          // key; the label pool keys are unchanged so old saves and existing v2 content
+          // behave identically (no SNAPSHOT_VERSION bump — the key is optional/additive).
           const flags = (ctx.gameState.flags || {}) as Record<string, any>;
-          const previous = typeof flags.pendingQualityBonus === 'number' ? flags.pendingQualityBonus : 0;
-          flags.pendingQualityBonus = previous + value;
-          flags.pendingQualityBonusWeek = ctx.gameState.currentWeek || 0;
+          const currentWeek = ctx.gameState.currentWeek || 0;
+          const artistScoped = targetScope === 'user_selected' && !!artistId;
+
+          let poolTotal: number;
+          let scopeLabel: string;
+          if (artistScoped) {
+            const pools = (flags.qualityBonusArtistPools && typeof flags.qualityBonusArtistPools === 'object')
+              ? flags.qualityBonusArtistPools as Record<string, { amount: number; week: number }>
+              : {};
+            const prev = typeof pools[artistId!]?.amount === 'number' ? pools[artistId!].amount : 0;
+            pools[artistId!] = { amount: prev + value, week: currentWeek };
+            flags.qualityBonusArtistPools = pools;
+            poolTotal = pools[artistId!].amount;
+            // Best-effort artist name for attribution (cosmetic; the pure per-key loop
+            // has no dbTransaction, and unit-test stubs pass storage:{}).
+            let artistName = 'this artist';
+            try {
+              const artist = await ctx.storage?.getArtist?.(artistId);
+              if (artist?.name) artistName = artist.name;
+            } catch { /* name is cosmetic — never block banking */ }
+            scopeLabel = `${artistName}'s next recording session`;
+          } else {
+            const previous = typeof flags.pendingQualityBonus === 'number' ? flags.pendingQualityBonus : 0;
+            flags.pendingQualityBonus = previous + value;
+            flags.pendingQualityBonusWeek = currentWeek;
+            poolTotal = flags.pendingQualityBonus;
+            scopeLabel = 'the next recording session';
+          }
           ctx.gameState.flags = flags;
 
           summary.changes.push({
             type: 'meeting',
-            description: `Studio focus ${value > 0 ? 'banked' : 'cost'} ${value > 0 ? '+' : ''}${value} quality for the next recording session`,
+            description: `Studio focus ${value > 0 ? 'banked' : 'cost'} ${value > 0 ? '+' : ''}${value} quality for ${scopeLabel}`,
             amount: value,
             appliedEffects: { quality_bonus: value }
           });
-          console.log(`[EFFECT PROCESSING] quality_bonus effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pendingQualityBonus}, stamped week ${flags.pendingQualityBonusWeek})`);
+          console.log(`[EFFECT PROCESSING] quality_bonus effect: ${value > 0 ? '+' : ''}${value} (${artistScoped ? `artist ${artistId} pool` : 'label pool'} now ${poolTotal}, stamped week ${currentWeek})`);
           break;
         }
 
@@ -2560,6 +2598,30 @@ export class ActionProcessor {
           console.log(`[QUALITY BONUS] Expired unconsumed bonus (${flags.pendingQualityBonus}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
           flags.pendingQualityBonus = 0;
           delete flags.pendingQualityBonusWeek;
+        }
+      }
+
+      // Meeting-content session — per-ARTIST quality-pool expiry ("hypeArtistPools
+      // treatment"). Each artist's quality pool ages independently from its own
+      // last-bank week (matching the single-pool stamp behavior above); a pool
+      // consumed at recording time (SongGenerationProcessor.processRecordingProjects)
+      // never reaches this sweep. Same expiry window/knob as the label pool
+      // (pending_quality_bonus_expiry_weeks). UNCONSUMED pools only; container is
+      // dropped when it empties so no-op games stay byte-stable.
+      if (flags.qualityBonusArtistPools && typeof flags.qualityBonusArtistPools === 'object') {
+        const pools = flags.qualityBonusArtistPools as Record<string, { amount: number; week: number }>;
+        const expiryWeeks = ctx.gameData.getQualityBonusConfigSync().pending_quality_bonus_expiry_weeks;
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        for (const [poolArtistId, pool] of Object.entries(pools)) {
+          if (!pool || typeof pool.amount !== 'number' || pool.amount === 0) continue;
+          const stampedWeek = typeof pool.week === 'number' ? pool.week : currentWeek;
+          if (currentWeek - stampedWeek >= expiryWeeks) {
+            console.log(`[QUALITY BONUS] Expired unconsumed artist pool for ${poolArtistId} (${pool.amount}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+            delete pools[poolArtistId];
+          }
+        }
+        if (Object.keys(pools).length === 0) {
+          delete flags.qualityBonusArtistPools;
         }
       }
 

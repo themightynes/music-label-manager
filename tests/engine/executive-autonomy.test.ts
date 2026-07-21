@@ -116,19 +116,14 @@ describe('loyal-scorer fix (2026-07-12): loyal picks are no longer in-fiction pe
     expect(picked).toBe('clear_the_schedule');
   });
 
-  it('cmo_viral: loyal cmo no longer copyright-strikes a viral moment just because it is free — embraces the remix', () => {
-    const picked = loyalPick('cmo_viral', 'cmo');
-    expect(picked).not.toBe('copyright_strike'); // pre-fix perverse pick (only $0 choice)
-    expect(picked).toBe('embrace_remix');
-  });
-
-  it('cmo_platform_exclusive: the two money choices no longer tie into a coin flip — spotify_exclusive wins uniquely', () => {
-    const choices = meetingChoices('cmo_platform_exclusive');
-    // Uniqueness: two different seeds → same pick (pre-fix this was a seeded coin flip).
-    const a = pick(choices, 75, 50, 'cmo', 'seed-A')?.id;
-    const b = pick(choices, 75, 50, 'cmo', 'seed-B')?.id;
-    expect(a).toBe('spotify_exclusive');
-    expect(b).toBe('spotify_exclusive');
+  it('platform_exclusive_bidding: loyal cmo no longer grabs the $40k check just because it is free money — refuses the windows', () => {
+    // v3 Sam-pool replacement for the removed cmo_viral case: take_the_check is a
+    // +$40k windfall that a money-clamp scorer would over-value, but it guts
+    // artist_mood (−6) and awareness (−4). The loyal-scorer fix correctly avoids
+    // it and picks the reputation/artist-positive refuse_windows.
+    const picked = loyalPick('platform_exclusive_bidding', 'cmo');
+    expect(picked).not.toBe('take_the_check'); // free-money trap the pre-fix clamp would grab
+    expect(picked).toBe('refuse_windows');
   });
 
   it('money de-degeneracy: a -$1,500 spend no longer scores identically to a -$20,000 spend', () => {

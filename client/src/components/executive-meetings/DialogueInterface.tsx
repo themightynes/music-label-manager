@@ -1,11 +1,60 @@
 import React from 'react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { TrendingUp, TrendingDown, Clock, Zap, Shuffle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, Zap, Shuffle, Sparkles } from 'lucide-react';
 import type { DialogueChoice } from '../../../../shared/types/gameTypes';
-import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
+import {
+  LIVE_EFFECT_KEYS,
+  STRUCTURED_EFFECT_KEYS,
+  EFFECT_CHANNEL_DESCRIPTIONS,
+} from '@shared/engine/processors/ActionProcessor';
 import { EffectBadgeTooltip } from './EffectBadgeTooltip';
 import { getChoiceCreativeCapitalCost } from '../../services/executiveAutoSelect';
+
+// C99 fix (v3 meeting-content wave): an authored effect VALUE is not always a
+// number — the STRUCTURED_EFFECT_KEYS carry objects/strings (e.g. schedule_event
+// = { event_id, defer_weeks }), and several live-economy verbs carry a raw
+// magnitude/units/fraction whose bare number would MISLEAD a player.
+type EffectValue = number | string | boolean | Record<string, unknown> | null | undefined;
+
+// Keys rendered as a QUALITATIVE, number-free badge — the label comes from
+// EFFECT_CHANNEL_DESCRIPTIONS[key].title and the full explanation rides the
+// existing EffectBadgeTooltip. Two families:
+//   1. STRUCTURED_EFFECT_KEYS — object/string-valued; a number is meaningless.
+//   2. live-economy + scrutiny keys whose raw numeric value would leak an
+//      internal magnitude/fraction (fork-E: no raw numbers on qualitative
+//      surfaces) — render the channel, not the knob.
+// CRITICAL (fork-E): none of these branches ever interpolate the value, so the
+// schedule_event target event_id can never leak onto the badge.
+const QUALITATIVE_EFFECT_KEYS: ReadonlySet<string> = new Set<string>([
+  ...Array.from(STRUCTURED_EFFECT_KEYS),
+  'press_scrutiny_flag',
+  'promote_release',
+  'catalog_damage',
+  'cancel_project',
+  'grant_inventory',
+  'transfer_revenue_stream',
+]);
+
+// Qualitative keys whose fiction is clearly adverse — colored negative for
+// legibility (still number-free). Everything else in QUALITATIVE_EFFECT_KEYS is
+// a beneficial/neutral move and gets the neutral qualitative treatment.
+const QUALITATIVE_NEGATIVE_KEYS: ReadonlySet<string> = new Set<string>([
+  'set_exec_absence',
+  'press_scrutiny_flag',
+  'catalog_damage',
+  'cancel_project',
+  'transfer_revenue_stream',
+]);
+
+function isQualitativeEffect(key: string, value: EffectValue): boolean {
+  return QUALITATIVE_EFFECT_KEYS.has(key) || typeof value !== 'number';
+}
+
+// Number-free label for a qualitative badge — the channel name, never the value.
+function qualitativeLabel(key: string): string {
+  return EFFECT_CHANNEL_DESCRIPTIONS[key]?.title ?? key.replace(/_/g, ' ');
+}
 
 // Badge honesty (exec-meetings-revival PR-2): only render a badge for a key the
 // engine actually implements (LIVE_EFFECT_KEYS) or 'executive_mood' (handled
@@ -47,27 +96,53 @@ function EffectBadge({
   selectedArtistName
 }: {
   effect: string;
-  value: number;
+  value: EffectValue;
   isDelayed?: boolean;
   targetScope?: 'global' | 'predetermined' | 'user_selected';
   selectedArtistName?: string;
 }) {
-  const isPositive = value > 0;
+  // C99: a structured/object value (or any non-numeric authored value) renders
+  // qualitatively — the channel name only, never the raw value.
+  const isQualitative = isQualitativeEffect(effect, value);
+  const numericValue = typeof value === 'number' ? value : 0;
+  const isPositive = numericValue > 0;
   // Exec-meetings-revival PR-6 (C4): variance_up is neither good nor bad — it's a
   // volatility knob, not a value delta — so it renders neutral instead of
   // green/red regardless of sign. rep_swing IS a directional value (a
   // reputation change, even if gambled), so it keeps the normal positive/
   // negative styling once resolved.
   const isNeutralEffect = effect === 'variance_up';
-  const Icon = isDelayed ? Clock : (isNeutralEffect ? Shuffle : (isPositive ? TrendingUp : TrendingDown));
-  const colorClass = isNeutralEffect
-    ? 'text-neon-amber bg-neon-amber/10 border-neon-amber/40'
-    : isPositive
-      ? 'text-positive bg-positive/10 border-positive/40'
-      : 'text-negative bg-negative/10 border-negative/40';
+  // Qualitative badges: adverse channels read negative; the rest get a neutral
+  // cyan "information" treatment (no value direction implied).
+  const isQualitativeNegative = isQualitative && QUALITATIVE_NEGATIVE_KEYS.has(effect);
+
+  const Icon = isDelayed
+    ? Clock
+    : isQualitative
+      ? (isQualitativeNegative ? TrendingDown : Sparkles)
+      : isNeutralEffect
+        ? Shuffle
+        : (isPositive ? TrendingUp : TrendingDown);
+
+  const colorClass = isQualitative
+    ? (isQualitativeNegative
+        ? 'text-negative bg-negative/10 border-negative/40'
+        : 'text-neon-cyan bg-neon-cyan/10 border-neon-cyan/40')
+    : isNeutralEffect
+      ? 'text-neon-amber bg-neon-amber/10 border-neon-amber/40'
+      : isPositive
+        ? 'text-positive bg-positive/10 border-positive/40'
+        : 'text-negative bg-negative/10 border-negative/40';
   const delayedClass = isDelayed ? 'border-neon-lilac/40 bg-neon-lilac/10 text-neon-lilac' : '';
 
-  const formatEffect = (key: string, val: number) => {
+  const formatEffect = (key: string, rawVal: EffectValue) => {
+    // C99: qualitative channels (structured values + misleading-numeric verbs)
+    // short-circuit to a number-free channel label BEFORE the numeric switch, so
+    // no branch can ever stringify an object or leak a knob/event_id.
+    if (isQualitativeEffect(key, rawVal)) {
+      return qualitativeLabel(key);
+    }
+    const val = rawVal as number;
     switch (key) {
       case 'money':
         return `${val > 0 ? '+' : ''}$${val.toLocaleString()}`;
@@ -180,7 +255,7 @@ export function ChoiceEffects({
               <EffectBadgeTooltip key={effect} effectKey={effect}>
                 <EffectBadge
                   effect={effect}
-                  value={value as number}
+                  value={value as EffectValue}
                   targetScope={targetScope}
                   selectedArtistName={selectedArtistName}
                 />
@@ -201,7 +276,7 @@ export function ChoiceEffects({
               <EffectBadgeTooltip key={effect} effectKey={effect}>
                 <EffectBadge
                   effect={effect}
-                  value={value as number}
+                  value={value as EffectValue}
                   isDelayed={true}
                   targetScope={targetScope}
                   selectedArtistName={selectedArtistName}

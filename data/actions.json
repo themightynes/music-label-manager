@@ -61,7 +61,9 @@
       "meeting_id": "mgr_expansion",
       "category": "business",
       "target_scope": "predetermined",
-      "requires": ["artist_signed"],
+      "requires": [
+        "artist_signed"
+      ],
       "prompt": "Three major festivals want your act for next summer. We can only do one without burning out.",
       "choices": [
         {
@@ -99,156 +101,6 @@
       ]
     },
     {
-      "id": "ar_single_choice",
-      "name": "A&R: Single Strategy",
-      "type": "role_meeting",
-      "icon": "fas fa-search",
-      "description": "Choose lead single approach with A&R",
-      "role_id": "head_ar",
-      "meeting_id": "anr_single_choice",
-      "category": "talent",
-      "target_scope": "user_selected",
-      "requires": ["artist_signed"],
-      "prompt_before_selection": "Which artist are you working with on single strategy?",
-      "prompt": "Pick the lead single approach for {artistName}.",
-      "choices": [
-        {
-          "id": "lean_commercial",
-          "label": "Lean commercial",
-          "effects_immediate": {
-            "artist_mood": -2
-          },
-          "effects_delayed": {
-            "awareness_boost": 4
-          }
-        },
-        {
-          "id": "split_test",
-          "label": "A/B campaign (two contenders)",
-          "effects_immediate": {
-            "money": -1000
-          },
-          "effects_delayed": {
-            "quality_bonus": 2,
-            "variance_up": 1
-          }
-        },
-        {
-          "id": "greenlight_weird",
-          "label": "Greenlight the weird one",
-          "effects_immediate": {
-            "creative_capital": -2
-          },
-          "effects_delayed": {
-            "variance_up": 1,
-            "quality_bonus": 4
-          }
-        }
-      ]
-    },
-    {
-      "id": "ar_discovery",
-      "name": "A&R: New Talent Discovery",
-      "type": "role_meeting",
-      "icon": "fas fa-search",
-      "description": "Evaluate potential new signing",
-      "role_id": "head_ar",
-      "meeting_id": "anr_discovery",
-      "category": "talent",
-      "target_scope": "global",
-      "prompt": "I found our next superstar - she's 16, brilliant, but her parents want creative control.",
-      "choices": [
-        {
-          "id": "accept_terms",
-          "label": "Accept their terms - worth the risk",
-          "self_serving_hint": true,
-          "effects_immediate": {
-            "money": -30000,
-            "creative_capital": -3,
-            "executive_mood": 8
-          },
-          "effects_delayed": {
-            "reputation": 3,
-            "artist_popularity": 2,
-            "variance_up": 2
-          }
-        },
-        {
-          "id": "negotiate_compromise",
-          "label": "Negotiate a compromise deal",
-          "effects_immediate": {
-            "money": -12000
-          },
-          "effects_delayed": {
-            "reputation": 1,
-            "artist_mood": 1
-          }
-        },
-        {
-          "id": "pass_on_talent",
-          "label": "Pass - and watch a rival announce her next month",
-          "effects_immediate": {
-            "reputation": -1,
-            "executive_mood": 2
-          },
-          "effects_delayed": {
-            "reputation": -2,
-            "press_story_flag": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "ar_genre_shift",
-      "name": "A&R: Genre Strategy",
-      "type": "role_meeting",
-      "icon": "fas fa-search",
-      "description": "Discuss genre positioning strategy",
-      "role_id": "head_ar",
-      "meeting_id": "anr_genre_shift",
-      "category": "talent",
-      "target_scope": "global",
-      "requires": ["artist_signed"],
-      "prompt": "The charts are moving away from our sound. Should we push toward what's trending?",
-      "choices": [
-        {
-          "id": "chase_trends",
-          "label": "Follow the money - chase the trend",
-          "effects_immediate": {
-            "artist_mood": -3,
-            "executive_mood": 8
-          },
-          "effects_delayed": {
-            "awareness_boost": 2,
-            "artist_mood": -1
-          }
-        },
-        {
-          "id": "double_down_rock",
-          "label": "Double down - our sound will come back",
-          "self_serving_hint": true,
-          "effects_immediate": {
-            "creative_capital": -2,
-            "money": -5000
-          },
-          "effects_delayed": {
-            "award_chances": 1
-          }
-        },
-        {
-          "id": "gradual_evolution",
-          "label": "Gradual evolution - keep our soul",
-          "effects_immediate": {
-            "money": -2000
-          },
-          "effects_delayed": {
-            "awareness_boost": 1,
-            "artist_mood": 1
-          }
-        }
-      ]
-    },
-    {
       "id": "cco_timeline",
       "name": "CCO: Production Timeline",
       "type": "role_meeting",
@@ -258,7 +110,9 @@
       "meeting_id": "prod_timeline",
       "category": "production",
       "target_scope": "global",
-      "requires": ["recording_project_active"],
+      "requires": [
+        "recording_project_active"
+      ],
       "prompt": "Timeline is tight—what's the call?",
       "choices": [
         {
@@ -304,7 +158,9 @@
       "meeting_id": "prod_creative_clash",
       "category": "production",
       "target_scope": "user_selected",
-      "requires": ["artist_signed"],
+      "requires": [
+        "artist_signed"
+      ],
       "prompt_before_selection": "Which artist is having creative differences?",
       "prompt": "{artistName} wants to keep everything raw and unpolished—says that's the artistic identity. I think we need a more produced sound to compete.",
       "choices": [
@@ -353,7 +209,9 @@
       "meeting_id": "prod_budget_crisis",
       "category": "production",
       "target_scope": "global",
-      "requires": ["recording_project_active"],
+      "requires": [
+        "recording_project_active"
+      ],
       "prompt": "We're over budget and the vocals still aren't right. The label is breathing down my neck.",
       "choices": [
         {
@@ -392,249 +250,6 @@
       ]
     },
     {
-      "id": "cmo_pr_angle",
-      "name": "CMO: PR Strategy",
-      "type": "role_meeting",
-      "icon": "fas fa-bullhorn",
-      "description": "Choose PR angle for campaign",
-      "role_id": "cmo",
-      "meeting_id": "pr_angle",
-      "category": "marketing",
-      "target_scope": "global",
-      "prompt": "Choose the story angle for this cycle.",
-      "choices": [
-        {
-          "id": "safe",
-          "label": "Safe: craft-focused rise",
-          "effects_immediate": {
-            "money": -1000
-          },
-          "effects_delayed": {
-            "press_momentum": 1
-          }
-        },
-        {
-          "id": "spicy",
-          "label": "Spicy: provocative narrative",
-          "effects_immediate": {
-            "money": -1500
-          },
-          "effects_delayed": {
-            "variance_up": 1,
-            "rep_swing": 1
-          }
-        },
-        {
-          "id": "community",
-          "label": "Community: local hero",
-          "effects_immediate": {
-            "money": -800
-          },
-          "effects_delayed": {
-            "reputation": 1,
-            "artist_popularity": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "cmo_scandal",
-      "name": "CMO: Scandal Management",
-      "type": "role_meeting",
-      "icon": "fas fa-bullhorn",
-      "description": "Handle brewing scandal",
-      "role_id": "cmo",
-      "meeting_id": "pr_scandal_brewing",
-      "category": "marketing",
-      "target_scope": "global",
-      "requires": ["artist_signed"],
-      "prompt": "Paparazzi caught your artist leaving a rival's studio at 3am. The rumors are flying.",
-      "choices": [
-        {
-          "id": "damage_control",
-          "label": "Full damage control - deny everything",
-          "effects_immediate": {
-            "money": -18000,
-            "reputation": -1
-          },
-          "effects_delayed": {
-            "press_momentum": -1
-          }
-        },
-        {
-          "id": "spin_collaboration",
-          "label": "Spin it as a surprise collaboration",
-          "self_serving_hint": true,
-          "effects_immediate": {
-            "creative_capital": -1,
-            "executive_mood": 8
-          },
-          "effects_delayed": {
-            "press_momentum": 2,
-            "artist_mood": -1,
-            "rep_swing": 2
-          }
-        },
-        {
-          "id": "ignore_let_fade",
-          "label": "Ignore it - let it fade naturally",
-          "effects_immediate": {
-            "reputation": -2
-          },
-          "effects_delayed": {
-            "reputation": -4,
-            "artist_mood": -4,
-            "press_story_flag": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "cmo_awards",
-      "name": "CMO: Awards Campaign",
-      "type": "role_meeting",
-      "icon": "fas fa-bullhorn",
-      "description": "Plan awards season strategy",
-      "role_id": "cmo",
-      "meeting_id": "pr_award_campaign",
-      "category": "marketing",
-      "target_scope": "global",
-      "requires": ["release_out"],
-      "prompt": "Award season is coming. Do we launch a campaign for the album or save money?",
-      "choices": [
-        {
-          "id": "full_campaign",
-          "label": "Full campaign - hire the best consultants",
-          "effects_immediate": {
-            "money": -20000,
-            "executive_mood": 8
-          },
-          "effects_delayed": {
-            "award_chances": 5
-          }
-        },
-        {
-          "id": "grassroots_push",
-          "label": "Grassroots push - work our contacts",
-          "effects_immediate": {
-            "money": -5000,
-            "creative_capital": -1
-          },
-          "effects_delayed": {
-            "award_chances": 3
-          }
-        },
-        {
-          "id": "skip_awards",
-          "label": "Skip it - focus on commercial success",
-          "effects_immediate": {
-            "money": 3000,
-            "executive_mood": -2
-          },
-          "effects_delayed": {
-            "award_chances": -1,
-            "awareness_boost": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "cmo_viral",
-      "name": "CMO: Viral Moment",
-      "type": "role_meeting",
-      "icon": "fas fa-chart-line",
-      "description": "Handle viral fan content",
-      "role_id": "cmo",
-      "meeting_id": "digital_viral_moment",
-      "category": "marketing",
-      "target_scope": "global",
-      "requires": ["release_out"],
-      "prompt": "A fan remix of your single is going viral on TikTok. Do we embrace it or shut it down?",
-      "choices": [
-        {
-          "id": "embrace_remix",
-          "label": "Embrace it - invite the fan to collaborate",
-          "effects_immediate": {
-            "money": -2000
-          },
-          "effects_delayed": {
-            "awareness_boost": 3,
-            "artist_popularity": 1
-          }
-        },
-        {
-          "id": "official_version",
-          "label": "Release our own official remix",
-          "effects_immediate": {
-            "money": -8000
-          },
-          "effects_delayed": {
-            "awareness_boost": 1,
-            "press_story_flag": 1
-          }
-        },
-        {
-          "id": "copyright_strike",
-          "label": "Copyright strike - protect the original",
-          "effects_immediate": {},
-          "effects_delayed": {
-            "awareness_boost": -2,
-            "artist_popularity": -1,
-            "reputation": -2,
-            "artist_mood": -2
-          }
-        }
-      ]
-    },
-    {
-      "id": "cmo_platform_exclusive",
-      "name": "CMO: Platform Strategy",
-      "type": "role_meeting",
-      "icon": "fas fa-chart-line",
-      "description": "Negotiate platform exclusivity",
-      "role_id": "cmo",
-      "meeting_id": "digital_platform_exclusive",
-      "category": "marketing",
-      "target_scope": "global",
-      "requires": ["release_planned"],
-      "prompt": "Spotify wants an exclusive window for the new album. Apple Music will match the offer.",
-      "choices": [
-        {
-          "id": "spotify_exclusive",
-          "label": "Take Spotify's deal - biggest reach",
-          "effects_immediate": {
-            "money": 15000
-          },
-          "effects_delayed": {
-            "awareness_boost": 2
-          }
-        },
-        {
-          "id": "apple_exclusive",
-          "label": "Apple Music - higher revenue per stream",
-          "effects_immediate": {
-            "money": 18000
-          },
-          "effects_delayed": {
-            "awareness_boost": -1
-          }
-        },
-        {
-          "id": "simultaneous_release",
-          "label": "Decline both - drop everywhere and throw our own launch spectacular",
-          "self_serving_hint": true,
-          "effects_immediate": {
-            "money": -15000
-          },
-          "effects_delayed": {
-            "awareness_boost": 1,
-            "reputation": 2,
-            "press_story_flag": 1
-          }
-        }
-      ]
-    },
-    {
       "id": "distribution_pitch",
       "name": "Distribution: Playlist Strategy",
       "type": "role_meeting",
@@ -644,7 +259,9 @@
       "meeting_id": "pitch_strategy",
       "category": "distribution",
       "target_scope": "global",
-      "requires": ["music_exists"],
+      "requires": [
+        "music_exists"
+      ],
       "prompt": "Which track and context for editorial pitch?",
       "choices": [
         {
@@ -686,7 +303,9 @@
       "meeting_id": "streaming_playlist_politics",
       "category": "distribution",
       "target_scope": "global",
-      "requires": ["music_exists"],
+      "requires": [
+        "music_exists"
+      ],
       "prompt": "The Today's Top Hits curator wants a 'favor' before considering our track. Wink, wink.",
       "choices": [
         {
@@ -734,7 +353,9 @@
       "meeting_id": "streaming_algorithm_hack",
       "category": "distribution",
       "target_scope": "global",
-      "requires": ["release_out"],
+      "requires": [
+        "release_out"
+      ],
       "prompt": "I found a loophole in the algorithm. We could game 10M streams, but it's ethically gray.",
       "choices": [
         {
@@ -782,7 +403,9 @@
       "meeting_id": "tour_scale",
       "category": "live",
       "target_scope": "global",
-      "requires": ["artist_signed"],
+      "requires": [
+        "artist_signed"
+      ],
       "prompt": "Mini-tour scale choice?",
       "choices": [
         {
@@ -831,7 +454,9 @@
       "meeting_id": "ops_supply_chain",
       "category": "distribution",
       "target_scope": "global",
-      "requires": ["release_planned"],
+      "requires": [
+        "release_planned"
+      ],
       "prompt": "Vinyl shortage is hitting everyone. We can get our allocation by paying 3x normal cost.",
       "choices": [
         {
@@ -876,7 +501,9 @@
       "meeting_id": "anr_recent_signing_plan",
       "category": "talent",
       "target_scope": "global",
-      "requires": ["artist_signed"],
+      "requires": [
+        "artist_signed"
+      ],
       "reactive_trigger": "recent_signing",
       "prompt": "The ink's dry on our newest signing. First week sets the tone - how do we start them off?",
       "choices": [
@@ -914,52 +541,6 @@
       ]
     },
     {
-      "id": "cmo_chart_debut_press",
-      "name": "CMO: We're On The Board",
-      "type": "role_meeting",
-      "icon": "fas fa-bullhorn",
-      "description": "Press-blitz options after a chart debut",
-      "role_id": "cmo",
-      "meeting_id": "pr_chart_debut_press",
-      "category": "marketing",
-      "target_scope": "global",
-      "requires": ["music_exists"],
-      "reactive_trigger": "chart_debut",
-      "prompt": "We're on the board - the charting debut is real leverage. How hard do we push the press cycle?",
-      "choices": [
-        {
-          "id": "full_blitz",
-          "label": "Full blitz - every outlet, right now",
-          "effects_immediate": {
-            "money": -6000
-          },
-          "effects_delayed": {
-            "press_momentum": 2,
-            "awareness_boost": 2
-          }
-        },
-        {
-          "id": "targeted_placements",
-          "label": "Targeted placements - the outlets that matter",
-          "effects_immediate": {
-            "money": -2500
-          },
-          "effects_delayed": {
-            "press_momentum": 1,
-            "reputation": 1
-          }
-        },
-        {
-          "id": "let_it_breathe",
-          "label": "Let it breathe - momentum without the spend",
-          "effects_immediate": {},
-          "effects_delayed": {
-            "press_story_flag": 1
-          }
-        }
-      ]
-    },
-    {
       "id": "ceo_chart_debut_strategy",
       "name": "CEO: What This Means For Us",
       "type": "role_meeting",
@@ -969,7 +550,9 @@
       "meeting_id": "mgr_chart_debut_strategy",
       "category": "business",
       "target_scope": "global",
-      "requires": ["music_exists"],
+      "requires": [
+        "music_exists"
+      ],
       "reactive_trigger": "chart_debut",
       "prompt": "We just put a song on the charts. Before marketing runs with it - what does this mean for the label's direction?",
       "choices": [
@@ -1016,7 +599,9 @@
       "meeting_id": "prod_mood_crater_intervention",
       "category": "production",
       "target_scope": "global",
-      "requires": ["artist_signed"],
+      "requires": [
+        "artist_signed"
+      ],
       "reactive_trigger": "mood_crater",
       "prompt": "They're cratering - burned out, checked out, or both. We need to step in before it costs us the work.",
       "choices": [
@@ -1064,7 +649,9 @@
       "meeting_id": "ops_release_out_numbers",
       "category": "distribution",
       "target_scope": "global",
-      "requires": ["music_exists"],
+      "requires": [
+        "music_exists"
+      ],
       "reactive_trigger": "release_out",
       "prompt": "First week numbers are in on the release. Do we chase the trend line or hold steady?",
       "choices": [
@@ -1110,7 +697,9 @@
       "meeting_id": "creative_recording",
       "category": "production",
       "target_scope": "user_selected",
-      "requires": ["artist_signed"],
+      "requires": [
+        "artist_signed"
+      ],
       "prompt": "Perfect, I'll get started. {artistName} is going to love this! How much do they have? Honestly, we're going to be able to use this strategy going forward.",
       "choices": [
         {
@@ -1152,6 +741,1337 @@
         }
       ],
       "prompt_before_selection": "Hi Boss! Got a good one for you - any artist on your mind that needs a little creative boost for their next recording session? Someone on my team just came up with the BEST idea!"
+    },
+    {
+      "id": "wall_of_misses",
+      "name": "Wall of Misses",
+      "type": "role_meeting",
+      "icon": "fas fa-search",
+      "description": "An artist Mac passed on is suddenly everywhere — and unreleased demos with your signee are gathering dust.",
+      "role_id": "head_ar",
+      "meeting_id": "wall_of_misses",
+      "category": "talent",
+      "target_scope": "user_selected",
+      "requires": [
+        "artist_signed"
+      ],
+      "prompt_before_selection": "Which artist's vault demos are we deciding on?",
+      "prompt": "You've seen the wall in my office. Every pass I ever regretted, framed, so I never get comfortable. One of them just went supernova — and here's the part nobody knows: before I passed, they cut a few late-night demos with {artistName}. Those tapes are sitting in our drawer. Two years ago they were a curiosity. This morning they're a decision.",
+      "choices": [
+        {
+          "id": "shelve_the_tapes",
+          "label": "Leave them in the drawer",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "artist_mood": 1
+          },
+          "outcome_summary": "Mac left the vault demos in the drawer — no money, no headlines, no mess."
+        },
+        {
+          "id": "shop_them_quietly",
+          "label": "Shop the tapes to their label, quietly",
+          "effects_immediate": {
+            "money": 10000
+          },
+          "effects_delayed": {
+            "artist_mood": -2
+          },
+          "outcome_summary": "Mac quietly sold the vault demos to the artist's new label — good money, and {artistName} wasn't told."
+        },
+        {
+          "id": "leak_the_heat",
+          "label": "Let the tapes find the press",
+          "effects_immediate": {
+            "money": -4000,
+            "grant_song": {
+              "quality_range": [
+                45,
+                70
+              ],
+              "artist": "targeted"
+            }
+          },
+          "effects_delayed": {
+            "variance_up": 1,
+            "press_story_flag": 1,
+            "awareness_boost": 3,
+            "artist_mood": -8,
+            "spawn_release": {
+              "songs": "granted",
+              "type": "single",
+              "defer_weeks": 2
+            }
+          },
+          "outcome_summary": "Mac let the vault demos slip to the press and cut a real \"From the Vault\" single out of them — his ear, on the record, and a genuine release banking for {artistName}'s catalog."
+        }
+      ]
+    },
+    {
+      "id": "the_3am_demo",
+      "name": "The 3 AM Demo",
+      "type": "role_meeting",
+      "icon": "fas fa-search",
+      "description": "Mac found something at 3 AM — wrong genre, undeniable, and he wants to move before anyone else wakes up.",
+      "role_id": "head_ar",
+      "meeting_id": "the_3am_demo",
+      "category": "talent",
+      "target_scope": "global",
+      "prompt": "My text log will show you I have no self-control: 3:04 AM, all caps, YOU NEED TO HEAR THIS. Listen — it's raw, it's the wrong genre for everything we've built, and it's undeniable. I've been wrong twice in my life. The wall in my office keeps the score. This isn't a wall one.",
+      "choices": [
+        {
+          "id": "pass_politely",
+          "label": "Not for us. Pass politely.",
+          "effects_immediate": {
+            "executive_mood": -3
+          },
+          "effects_delayed": {},
+          "outcome_summary": "Mac passed on the 3 AM find — politely, and he hasn't mentioned it since."
+        },
+        {
+          "id": "development_deal",
+          "label": "Development deal — keep them close",
+          "effects_immediate": {
+            "money": -6000,
+            "executive_mood": 2,
+            "spawn_prospect": {
+              "source": "mac_meeting"
+            },
+            "schedule_event": {
+              "event_id": "scheduled_mac_3am_demo_verdict",
+              "defer_weeks": 8
+            }
+          },
+          "effects_delayed": {},
+          "outcome_summary": "Mac locked the 3 AM find into a quiet development deal — close enough to watch, with a verdict due down the road."
+        },
+        {
+          "id": "full_pursuit",
+          "label": "Go get them. Full pursuit.",
+          "effects_immediate": {
+            "money": -18000,
+            "spawn_prospect": {
+              "quality_hint": 70,
+              "popularity_hint": 60,
+              "source": "mac_meeting"
+            }
+          },
+          "effects_delayed": {
+            "rep_swing": 2,
+            "press_story_flag": 1
+          },
+          "outcome_summary": "Mac went all-in courting the 3 AM find and landed a real prospect in the discovery pool — the whole industry heard about the chase."
+        }
+      ]
+    },
+    {
+      "id": "tuesday_superstition",
+      "name": "The Tuesday Superstition",
+      "type": "role_meeting",
+      "icon": "fas fa-search",
+      "description": "Mac's no-Tuesdays rule collides with a hot manager's take-it-or-leave-it Tuesday slot.",
+      "role_id": "head_ar",
+      "meeting_id": "tuesday_superstition",
+      "category": "talent",
+      "target_scope": "global",
+      "prompt": "I don't sign on Tuesdays. Go ahead and laugh — but the biggest name on my wall of misses shook my hand on a Tuesday, and I've buried two more Tuesday deals since. Now the manager for the best unsigned voice I've heard all year says Tuesday, ten a.m., take it or leave it. My gut's screaming. My gut is the job. So we move them, we send someone whose gut isn't haunted, or I walk in on the cursed day and trust the read anyway.",
+      "choices": [
+        {
+          "id": "move_the_meeting",
+          "label": "Work the calendar",
+          "effects_immediate": {
+            "money": -3000,
+            "reputation": 1,
+            "executive_mood": 4,
+            "spawn_prospect": {
+              "quality_hint": 55,
+              "popularity_hint": 50,
+              "source": "mac_meeting"
+            }
+          },
+          "effects_delayed": {
+            "awareness_boost": 1
+          },
+          "outcome_summary": "Mac charmed the meeting onto a Wednesday and walked out with a real prospect on the books — the superstition held, and the manager dined out on the story."
+        },
+        {
+          "id": "send_fresh_ears",
+          "label": "Send a junior scout",
+          "effects_immediate": {
+            "money": -6000,
+            "executive_mood": -2,
+            "spawn_prospect": {
+              "quality_hint": 45,
+              "source": "mac_meeting"
+            }
+          },
+          "effects_delayed": {
+            "quality_bonus": 2
+          },
+          "outcome_summary": "Mac benched himself and sent a junior scout — the kid came back with a real prospect, tape, and notes worth folding into the next sessions."
+        },
+        {
+          "id": "walk_in_on_tuesday",
+          "label": "Break the rule",
+          "effects_immediate": {
+            "money": -4000,
+            "rep_swing": 1,
+            "executive_mood": -2,
+            "spawn_prospect": {
+              "source": "mac_meeting"
+            }
+          },
+          "effects_delayed": {
+            "awareness_boost": 2
+          },
+          "outcome_summary": "Mac broke his own Tuesday rule and took the meeting rattled — the prospect he came back with will travel, one way or the other."
+        }
+      ]
+    },
+    {
+      "id": "reinvention_tape",
+      "name": "The Reinvention Tape",
+      "type": "role_meeting",
+      "icon": "fas fa-search",
+      "description": "The scene is shifting and {artistName} handed Mac a demo of a completely different self — breakthrough or costume.",
+      "role_id": "head_ar",
+      "meeting_id": "reinvention_tape",
+      "category": "talent",
+      "target_scope": "user_selected",
+      "requires": [
+        "artist_signed"
+      ],
+      "prompt_before_selection": "Which artist handed you the reinvention tape?",
+      "prompt": "The scene's rotating — I feel it the way you feel weather in a bad knee. And {artistName} feels it too, because last night they slid me a tape of themselves sounding like a completely different person. Not chasing the wave. Running from their own reflection. Here's my problem: it's good. Maybe. Or it's a costume. I passed on the last artist who tried to shed their skin mid-climb, and that one's framed on my wall. So we talk them home, we spend real money finding out who they're becoming, or we let them jump and trust the fall.",
+      "choices": [
+        {
+          "id": "talk_them_home",
+          "label": "Anchor them",
+          "effects_immediate": {
+            "artist_mood": 3,
+            "executive_mood": -1
+          },
+          "effects_delayed": {},
+          "outcome_summary": "Mac talked {artistName} back to the sound that signed them — steadier hands, and the new tape stays a secret between them."
+        },
+        {
+          "id": "pressure_test",
+          "label": "Fund a proper workshop",
+          "effects_immediate": {
+            "money": -6000,
+            "story_flag": "mac_reinvention_workshop"
+          },
+          "effects_delayed": {
+            "quality_bonus": 3
+          },
+          "outcome_summary": "Mac booked closed-door writing sessions to pressure-test {artistName}'s new direction before anyone bet the catalog on it."
+        },
+        {
+          "id": "back_the_jump",
+          "label": "Believe the tape",
+          "effects_immediate": {
+            "artist_mood": 2,
+            "executive_mood": 2,
+            "story_flag": "mac_reinvention_bet"
+          },
+          "effects_delayed": {
+            "quality_bonus": 3,
+            "variance_up": 1
+          },
+          "outcome_summary": "Mac heard the future in {artistName}'s reinvention tape and pointed the next sessions straight at it."
+        }
+      ]
+    },
+    {
+      "id": "showcase_slot",
+      "name": "Showcase Slot",
+      "type": "role_meeting",
+      "icon": "fas fa-search",
+      "description": "One showcase slot at the room Mac trusts — prime Friday money, early-doors lunch money, or skip it and keep cutting.",
+      "role_id": "head_ar",
+      "meeting_id": "showcase_slot",
+      "category": "talent",
+      "target_scope": "user_selected",
+      "requires": [
+        "artist_signed",
+        "music_exists"
+      ],
+      "prompt_before_selection": "Which artist are we deciding a showcase slot for?",
+      "prompt": "One slot left on the Foundry showcase — the room where I found half my wall, hits and misses both. Prime Friday costs real money and buys every set of ears that matters. Early doors costs lunch money and plays to the bartenders. Or we skip the circus, keep {artistName} in the studio, and let the work do the talking. I know what the data kids would say. I also know three careers that started in that room on a Friday.",
+      "choices": [
+        {
+          "id": "prime_friday",
+          "label": "Buy the Friday slot",
+          "self_serving_hint": true,
+          "effects_immediate": {
+            "money": -35000,
+            "artist_mood": 3,
+            "executive_mood": 2
+          },
+          "effects_delayed": {
+            "awareness_boost": 3
+          },
+          "outcome_summary": "Mac bought the prime Friday slot at the Foundry — {artistName} played to every set of ears that matters, and the room knew whose ear brought them."
+        },
+        {
+          "id": "early_doors",
+          "label": "Take the cheap slot",
+          "effects_immediate": {
+            "money": -10000,
+            "artist_mood": 1
+          },
+          "effects_delayed": {
+            "awareness_boost": 1
+          },
+          "outcome_summary": "Mac took the early-doors slot — a smaller room, a tight set, and most of the budget still in the drawer."
+        },
+        {
+          "id": "keep_cutting",
+          "label": "Skip it, bank the week",
+          "effects_immediate": {
+            "artist_mood": -8
+          },
+          "effects_delayed": {
+            "quality_bonus": 2
+          },
+          "outcome_summary": "Mac passed on the showcase and kept {artistName} in the studio — the stage can wait, the songs can't."
+        }
+      ]
+    },
+    {
+      "id": "vintage_speakers",
+      "name": "Vintage Speakers",
+      "type": "role_meeting",
+      "icon": "fas fa-search",
+      "description": "Mac blames two missed finds on his dead listening-room monitors and wants a vintage refit.",
+      "role_id": "head_ar",
+      "meeting_id": "vintage_speakers",
+      "category": "talent",
+      "target_scope": "global",
+      "prompt": "Nineteen-seventy-one Tannoy monitors. The pair in my listening room died in March and I've been auditioning demos on laptop speakers like an animal. You want to know why the last two finds slipped past me? Everything sounds like a ringtone now. Get me the Tannoys and I'll hear the grain again — the thing the wall taught me to listen for. Or tell me it's my ears and not the gear, and I'll do my best to forget you said it.",
+      "choices": [
+        {
+          "id": "buy_the_tannoys",
+          "label": "Buy the Tannoys",
+          "effects_immediate": {
+            "money": -8000,
+            "executive_mood": 5
+          },
+          "effects_delayed": {
+            "quality_bonus": 2,
+            "variance_up": 1
+          },
+          "outcome_summary": "Mac got his vintage Tannoys — the listening room hums again, and he swears the next sessions will prove it."
+        },
+        {
+          "id": "modern_nearfields",
+          "label": "Solid modern monitors",
+          "effects_immediate": {
+            "money": -4000,
+            "executive_mood": 2
+          },
+          "effects_delayed": {
+            "quality_bonus": 1
+          },
+          "outcome_summary": "Mac got competent modern monitors instead of the vintage grail — the room works, and he calls it adequate like it's a slur."
+        },
+        {
+          "id": "its_your_ears",
+          "label": "Tell him it's not the gear",
+          "effects_immediate": {
+            "reputation": 1,
+            "executive_mood": -4
+          },
+          "effects_delayed": {},
+          "outcome_summary": "Mac was told the misses were his ears, not his speakers — nothing was bought, and he went quiet for a day."
+        }
+      ]
+    },
+    {
+      "id": "second_album_syndrome",
+      "name": "Second Album Syndrome",
+      "type": "role_meeting",
+      "icon": "fas fa-search",
+      "description": "Your recording artist wants to scrap the sessions and start over — and Mac believes their gut over the schedule.",
+      "role_id": "head_ar",
+      "meeting_id": "second_album_syndrome",
+      "category": "talent",
+      "target_scope": "user_selected",
+      "requires": [
+        "artist_signed",
+        "music_exists",
+        "recording_project_active"
+      ],
+      "prompt_before_selection": "Which artist wants to torch their sessions?",
+      "prompt": "{artistName} called me at midnight — not Dante, me — and said the record is lying. Eleven tracks of professional, on-schedule lying. Here's my religion, same as it's ever been: the wall behind my desk isn't full of bad ears, it's full of times somebody's gut said GO and my spreadsheet said wait. The artist's gut is the only A&R instinct I've never seen miss twice. They want to torch the sessions and start clean. I say we hand them the match.",
+      "choices": [
+        {
+          "id": "back_the_restart",
+          "label": "Hand them the match",
+          "effects_immediate": {
+            "money": -15000,
+            "executive_mood": 4
+          },
+          "effects_delayed": {
+            "quality_bonus": 6,
+            "variance_up": 2,
+            "artist_mood": 6
+          },
+          "outcome_summary": "Mac torched the sessions and backed {artistName}'s restart — the gut says the real record is still coming."
+        },
+        {
+          "id": "hold_the_deadline",
+          "label": "Hold the deadline",
+          "effects_immediate": {
+            "reputation": 2,
+            "executive_mood": -3
+          },
+          "effects_delayed": {
+            "awareness_boost": 2,
+            "artist_mood": -6
+          },
+          "outcome_summary": "Mac held {artistName} to the deadline — the record ships on schedule, feelings notwithstanding."
+        },
+        {
+          "id": "bring_a_cowriter",
+          "label": "Bring in a co-writer",
+          "effects_immediate": {
+            "money": -10000,
+            "executive_mood": 1
+          },
+          "effects_delayed": {
+            "quality_bonus": 3,
+            "artist_mood": 2
+          },
+          "outcome_summary": "Mac brought a co-writer into {artistName}'s sessions — fresh ears, deadline intact, gut half-honored."
+        }
+      ]
+    },
+    {
+      "id": "one_that_got_away_again",
+      "name": "The One That Got Away, Again",
+      "type": "role_meeting",
+      "icon": "fas fa-search",
+      "description": "The artist Mac famously lost is finally calling — the week you charted, and at a price that dents the war chest.",
+      "role_id": "head_ar",
+      "meeting_id": "one_that_got_away_again",
+      "category": "talent",
+      "target_scope": "global",
+      "requires": [
+        "music_exists"
+      ],
+      "reactive_trigger": "chart_debut",
+      "prompt": "You know the name I don't say. The one that made me start the wall. Twenty minutes after {songTitle} charted, their manager called my cell — a number they've had for six years and never once used. They want in. The price is a war-chest number, and the memo has to be signed while the chart still has our name on it. I have waited two years for this phone to ring. Tell me what we do before I pick it up.",
+      "choices": [
+        {
+          "id": "pay_the_price",
+          "label": "Pay it — sign the memo tonight",
+          "effects_immediate": {
+            "money": -50000,
+            "spawn_prospect": {
+              "quality_hint": 80,
+              "popularity_hint": 80,
+              "source": "mac_meeting"
+            }
+          },
+          "effects_delayed": {
+            "variance_up": 2,
+            "quality_bonus": 3,
+            "awareness_boost": 3
+          },
+          "outcome_summary": "Mac paid the ask and papered the reunion deal the same night — announcement first, fine print later, and the returnee is a real name in the discovery pool waiting on ink."
+        },
+        {
+          "id": "feature_not_forever",
+          "label": "Counter with a feature",
+          "effects_immediate": {
+            "money": -15000,
+            "reputation": 2
+          },
+          "effects_delayed": {
+            "press_story_flag": 1,
+            "quality_bonus": 3
+          },
+          "outcome_summary": "Mac talked them down to a feature — one verse, one check, and the door left open."
+        },
+        {
+          "id": "let_mac_say_no",
+          "label": "Let Mac finally say no",
+          "effects_immediate": {
+            "executive_mood": 8,
+            "artist_mood": 3,
+            "reputation": 1
+          },
+          "effects_delayed": {},
+          "outcome_summary": "Mac took the call, said the no he'd rehearsed for two years, and hung up lighter."
+        }
+      ]
+    },
+    {
+      "id": "demo_ethics_one",
+      "name": "The Demo Ethics One",
+      "type": "role_meeting",
+      "icon": "fas fa-search",
+      "description": "The breakout demo that justified your newest signing has an uncleared co-writer — and Mac's reputation is welded to it.",
+      "role_id": "head_ar",
+      "meeting_id": "demo_ethics_one",
+      "category": "talent",
+      "target_scope": "user_selected",
+      "requires": [
+        "artist_signed",
+        "recording_project_active"
+      ],
+      "prompt_before_selection": "Whose signing demo has the co-writer problem?",
+      "prompt": "The demo — the one that made me sign {artistName}. There's a co-writer on it: uncleared, uncredited, and as of this morning, lawyered. I played that tape for this whole building and said I'd found a complete artist. Turns out I found most of one. I can make this quiet, I can make it right, or we cut the song again from zero — but if it gets loud before the ink dries on the profile pieces, it isn't their name that eats it. It's mine.",
+      "choices": [
+        {
+          "id": "settle_quietly",
+          "label": "Settle it quietly",
+          "self_serving_hint": true,
+          "effects_immediate": {
+            "money": -18000,
+            "executive_mood": 3
+          },
+          "effects_delayed": {
+            "artist_mood": 3
+          },
+          "outcome_summary": "Mac settled the co-writer claim quietly and buried the paperwork — the demo, and his ear, stay spotless."
+        },
+        {
+          "id": "credit_publicly",
+          "label": "Credit them publicly",
+          "effects_immediate": {
+            "money": -5000,
+            "reputation": 4
+          },
+          "effects_delayed": {
+            "press_story_flag": 1,
+            "artist_mood": -3
+          },
+          "outcome_summary": "Mac put the co-writer's name on the record and let the label wear the correction in public."
+        },
+        {
+          "id": "re_record",
+          "label": "Cut it again, clean",
+          "effects_immediate": {
+            "money": -8000,
+            "grant_song": {
+              "quality_range": [
+                55,
+                75
+              ],
+              "artist": "targeted"
+            }
+          },
+          "effects_delayed": {
+            "quality_bonus": 4,
+            "artist_mood": 2
+          },
+          "outcome_summary": "Mac booked the room and had {artistName} cut the song again — a real, clean recording this time, theirs, every bar."
+        }
+      ]
+    },
+    {
+      "id": "the_circuit",
+      "name": "The Circuit",
+      "type": "role_meeting",
+      "icon": "fas fa-search",
+      "description": "Mac wants a week and a budget to drive the small-venue circuit chasing a scene that hasn't surfaced yet.",
+      "role_id": "head_ar",
+      "meeting_id": "the_circuit",
+      "category": "talent",
+      "target_scope": "global",
+      "requires": [
+        "artist_signed"
+      ],
+      "prompt": "There's a scene forming out on the small-room circuit — four towns, maybe five, nothing the algorithms have smelled yet. I can hear it from here, which means in six months everyone can. I want a week, a rental car, and gas money. Last time somebody told me a trip like this wasn't in the budget, the kid I didn't drive out to see is on my wall now.",
+      "choices": [
+        {
+          "id": "fund_the_full_run",
+          "label": "Fund the full run",
+          "effects_immediate": {
+            "money": -6000,
+            "executive_mood": 4,
+            "spawn_prospect": {
+              "source": "mac_circuit"
+            }
+          },
+          "effects_delayed": {
+            "quality_bonus": 2,
+            "variance_up": 1
+          },
+          "outcome_summary": "Mac disappeared into the small-room circuit for a week, chasing a scene the algorithms haven't found yet — and came back with a real find, tagged as Mac's own."
+        },
+        {
+          "id": "two_nights_that_matter",
+          "label": "Two nights, two showcases",
+          "effects_immediate": {
+            "money": -2000,
+            "reputation": 2,
+            "executive_mood": 2
+          },
+          "effects_delayed": {
+            "award_chances": 1
+          },
+          "outcome_summary": "Mac hit the two showcases that mattered, worked the rooms, and was home by Sunday with his network warmer for it."
+        },
+        {
+          "id": "open_the_doors_instead",
+          "label": "Let the scene come to us",
+          "effects_immediate": {
+            "executive_mood": -3,
+            "artist_mood": 2,
+            "press_momentum": 1
+          },
+          "effects_delayed": {},
+          "outcome_summary": "Mac stayed off the road and the label opened its doors instead — a listening night with {artistName} playing host."
+        }
+      ]
+    },
+    {
+      "id": "second_pair_of_ears",
+      "name": "The Second Pair of Ears",
+      "type": "role_meeting",
+      "icon": "fas fa-search",
+      "description": "A junior scout Mac has been mentoring off-book just out-heard him. He wants the kid inside the building — on some terms or other.",
+      "role_id": "head_ar",
+      "meeting_id": "second_pair_of_ears",
+      "category": "talent",
+      "target_scope": "global",
+      "requires": [
+        "music_exists"
+      ],
+      "prompt": "There's a kid who's been sneaking into my listening sessions for three months. Last week they played me something I'd have passed on — and they were right and I was wrong, and you know how often I say that sentence. I was that kid once, before anyone paid me to be. I want to bring them in. The only question is whether we do it with a contract or a handshake — and whether I'm building an ear or a rival.",
+      "choices": [
+        {
+          "id": "hand_them_a_budget",
+          "label": "Give the kid a signing budget",
+          "effects_immediate": {
+            "money": -15000,
+            "executive_mood": 5,
+            "story_flag": "macs_protege"
+          },
+          "effects_delayed": {
+            "variance_up": 2,
+            "quality_bonus": 3
+          },
+          "outcome_summary": "Mac handed his protégé a real discovery budget and told them to trust the itch — two wild ears loose in the field now."
+        },
+        {
+          "id": "hire_them_properly",
+          "label": "Hire them into a real junior role",
+          "effects_immediate": {
+            "money": -10000,
+            "reputation": 2,
+            "executive_mood": 2,
+            "story_flag": "macs_protege"
+          },
+          "effects_delayed": {
+            "award_chances": 2
+          },
+          "outcome_summary": "Mac's protégé joined the label on a proper contract — a second pair of ears, with process wrapped around them."
+        },
+        {
+          "id": "keep_it_a_handshake",
+          "label": "No hire — keep it off the books",
+          "effects_immediate": {
+            "executive_mood": -2,
+            "creative_capital": 1
+          },
+          "effects_delayed": {
+            "quality_bonus": 1
+          },
+          "outcome_summary": "Mac took the no and kept mentoring the kid on handshakes and gas money — off the books, the way he started."
+        }
+      ]
+    },
+    {
+      "id": "machine_that_listens",
+      "name": "The Machine That Listens",
+      "type": "role_meeting",
+      "icon": "fas fa-search",
+      "description": "A predictive A&R platform — trained on your own catalog — is knocking, and Mac wants to fight it in public rather than share an office with it.",
+      "role_id": "head_ar",
+      "meeting_id": "machine_that_listens",
+      "category": "talent",
+      "target_scope": "global",
+      "requires": [
+        "release_out"
+      ],
+      "prompt": "The board sent me a demo login for a 'predictive A&R platform.' It's been trained on our release history. Our history. It scored everything I ever brought in, and it has opinions about what I should sign next. Every label that bought one of these fired somebody like me within two years. So here's my counter-offer: put me against it. My next call versus its next call, out loud, on the record. If a spreadsheet can hear what I hear, I'll carry it to the server room myself.",
+      "choices": [
+        {
+          "id": "token_pilot",
+          "label": "Run the free-tier pilot",
+          "effects_immediate": {
+            "money": -1000,
+            "reputation": 1,
+            "executive_mood": 1
+          },
+          "effects_delayed": {
+            "award_chances": 1
+          },
+          "outcome_summary": "Mac tolerated a token trial of the prediction engine — the board got its demo, and his gut kept the final say."
+        },
+        {
+          "id": "stake_mac_against_it",
+          "label": "Put Mac against the machine",
+          "effects_immediate": {
+            "money": -5000,
+            "executive_mood": 6,
+            "artist_mood": 1,
+            "schedule_event": {
+              "event_id": "scheduled_mac_machine_verdict",
+              "defer_weeks": 6
+            }
+          },
+          "effects_delayed": {
+            "variance_up": 2,
+            "quality_bonus": 2,
+            "press_story_flag": 1
+          },
+          "outcome_summary": "Mac staked his ear against the algorithm on the record — his next call versus the machine's, winner keeps the budget, verdict due in a few weeks."
+        },
+        {
+          "id": "buy_the_terminal",
+          "label": "License the full platform",
+          "effects_immediate": {
+            "money": -12000,
+            "reputation": 2,
+            "executive_mood": -5,
+            "artist_mood": -2
+          },
+          "effects_delayed": {
+            "quality_bonus": 3
+          },
+          "outcome_summary": "Mac signed off on the full prediction platform moving in down the hall — he calls it the obituary desk, but the data flows."
+        }
+      ]
+    },
+    {
+      "id": "slow_news_week",
+      "name": "Slow News Week",
+      "type": "role_meeting",
+      "icon": "fas fa-bullhorn",
+      "description": "A dead news cycle before your release — Sam wants to fill the vacuum before someone else does.",
+      "role_id": "cmo",
+      "meeting_id": "slow_news_week",
+      "category": "marketing",
+      "target_scope": "user_selected",
+      "requires": [
+        "artist_signed",
+        "release_planned"
+      ],
+      "prompt_before_selection": "Which artist's cycle are we protecting this week?",
+      "prompt": "Nothing is happening. I've read every trade twice, three group chats are arguing about a festival poster, and that's the whole industry this week. We might have an opportunity to fill the vacuum. I can start a fight, I can place a piece, or I can sit on my hands while someone else takes advantage.",
+      "choices": [
+        {
+          "id": "manufacture_the_feud",
+          "label": "Start a tasteful little war",
+          "effects_immediate": {
+            "rep_swing": 1
+          },
+          "effects_delayed": {
+            "awareness_boost": 3,
+            "press_momentum": 1
+          },
+          "outcome_summary": "Sam lit a controlled feud in a dead news cycle — the industry picked a side, and the label was suddenly the story."
+        },
+        {
+          "id": "seed_the_profile",
+          "label": "Commission the long-lens profile",
+          "effects_immediate": {
+            "money": -8000,
+            "reputation": 1
+          },
+          "effects_delayed": {
+            "press_story_flag": 1,
+            "awareness_boost": 1,
+            "artist_mood": 1
+          },
+          "outcome_summary": "Sam bought {artistName} a long-lens prestige profile — real money for the kind of piece that gets cited for years."
+        },
+        {
+          "id": "hold_fire",
+          "label": "Hold fire, keep the powder dry",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "press_momentum": 1,
+            "artist_mood": 1
+          },
+          "outcome_summary": "Sam sat the dead week out and banked the quiet — no spend, no noise, powder dry for the rollout."
+        }
+      ]
+    },
+    {
+      "id": "journalist_favor_called_in",
+      "name": "Journalist Favor Called In",
+      "type": "role_meeting",
+      "icon": "fas fa-bullhorn",
+      "description": "A critic who owes Sam everything wants first listen to music you're still holding.",
+      "role_id": "cmo",
+      "meeting_id": "journalist_favor_called_in",
+      "category": "marketing",
+      "target_scope": "global",
+      "requires": [
+        "music_exists"
+      ],
+      "prompt": "Remember the review that put us on the map before we deserved it? That critic just called in the marker. They want first listen — to the thing we're still holding, the one nobody outside this building has heard. In my old life a favor was currency and I never bounced a check. But it's not my song. So: we open the vault, we hand them something shiny that isn't the vault, or I call them back and burn twelve years of goodwill in one sentence.",
+      "choices": [
+        {
+          "id": "grant_first_listen",
+          "label": "Open the vault",
+          "self_serving_hint": true,
+          "effects_immediate": {
+            "executive_mood": 3,
+            "artist_mood": -1
+          },
+          "effects_delayed": {
+            "press_story_flag": 1,
+            "awareness_boost": 3
+          },
+          "outcome_summary": "Sam opened the vault and gave her critic first listen — the debt is paid and the first word on the record is theirs."
+        },
+        {
+          "id": "grant_a_decoy",
+          "label": "Hand them something shiny",
+          "effects_immediate": {
+            "rep_swing": 1,
+            "executive_mood": -2
+          },
+          "effects_delayed": {
+            "press_momentum": 1
+          },
+          "outcome_summary": "Sam fed the critic a decoy exclusive — a real story, just not the one they were owed, and decoys get noticed."
+        },
+        {
+          "id": "burn_the_favor",
+          "label": "Burn the favor",
+          "effects_immediate": {
+            "executive_mood": -4,
+            "reputation": 1
+          },
+          "effects_delayed": {
+            "artist_mood": 2,
+            "story_flag": "journalist_favor_burned"
+          },
+          "outcome_summary": "Sam called her oldest marker void and kept the vault shut — the critic heard 'no' and the artist never heard about it. The burned bridge is a debt the industry will remember."
+        }
+      ]
+    },
+    {
+      "id": "crisis_retainer",
+      "name": "Crisis Retainer",
+      "type": "role_meeting",
+      "icon": "fas fa-bullhorn",
+      "description": "Sam wants a standing crisis-PR retainer funded before anyone needs it.",
+      "role_id": "cmo",
+      "meeting_id": "crisis_retainer",
+      "category": "marketing",
+      "target_scope": "global",
+      "prompt": "Every label thinks it doesn't need crisis PR until the night it needs crisis PR, and by then the good firms are conflicted out and you're paying triple for someone who learned your artist's name in the cab. I want a retainer. Standing, boring, invisible — the fire department you resent every month there isn't a fire. I know what next quarter looks like from the inside of a story you never saw coming. Fund it, halve it, or tell me I'm the retainer.",
+      "choices": [
+        {
+          "id": "fund_the_retainer",
+          "label": "Fund the fire department",
+          "effects_immediate": {
+            "money": -40000,
+            "executive_mood": 5,
+            "artist_mood": 5
+          },
+          "effects_delayed": {
+            "press_momentum": 2
+          },
+          "outcome_summary": "Sam put a crisis firm on full standing retainer — an invisible line item until the night it's the only one that matters."
+        },
+        {
+          "id": "fund_half",
+          "label": "Fund the hotline, not the firm",
+          "effects_immediate": {
+            "money": -15000,
+            "reputation": 1
+          },
+          "effects_delayed": {
+            "press_momentum": 1
+          },
+          "outcome_summary": "Sam negotiated a half-retainer — first-forty-eight-hours crisis coverage on a scoped check, professionalism without the gold plate."
+        },
+        {
+          "id": "she_is_the_retainer",
+          "label": "Tell her she IS the retainer",
+          "effects_immediate": {
+            "executive_mood": -10
+          },
+          "effects_delayed": {},
+          "outcome_summary": "Sam was told she IS the crisis plan — the retainer stayed unfunded and she filed the compliment under 'cheap'."
+        }
+      ]
+    },
+    {
+      "id": "own_the_correction",
+      "name": "Own the Correction",
+      "type": "role_meeting",
+      "icon": "fas fa-bullhorn",
+      "description": "An outlet ran numbers that undersell your release — demand the fix, bury it, or let it fade.",
+      "role_id": "cmo",
+      "meeting_id": "own_the_correction",
+      "category": "marketing",
+      "target_scope": "global",
+      "requires": [
+        "release_out"
+      ],
+      "prompt": "A mid-size outlet ran our numbers this morning and undersold the release by a margin I'd call malicious if I thought they could count. Here's what I know from the other side of the byline: a correction runs at the bottom of the page, but a better story runs at the top of someone else's. We can make them fix it, we can make it irrelevant, or we can let it die in the archive where — I'll be honest — most numbers live.",
+      "choices": [
+        {
+          "id": "demand_the_correction",
+          "label": "Make them print the correction",
+          "effects_immediate": {
+            "reputation": 3,
+            "artist_mood": 3,
+            "executive_mood": 3
+          },
+          "effects_delayed": {},
+          "outcome_summary": "Sam made the outlet print the correction — bottom of the page, but every desk in town saw the label check its receipts."
+        },
+        {
+          "id": "plant_the_counter",
+          "label": "Plant the better story",
+          "effects_immediate": {
+            "money": -10000,
+            "reputation": 3
+          },
+          "effects_delayed": {
+            "promote_release": 20,
+            "press_momentum": 3
+          },
+          "outcome_summary": "Sam planted a bigger counter-story over the bad math — the wrong number died under a better headline, and the release's own numbers moved to prove it."
+        },
+        {
+          "id": "let_it_die",
+          "label": "Let it die in the archive",
+          "effects_immediate": {
+            "executive_mood": -5,
+            "artist_mood": -3
+          },
+          "effects_delayed": {},
+          "outcome_summary": "Sam let the underselling piece die unanswered in the archive — no spend, no fight, and no one on record defending the number."
+        }
+      ]
+    },
+    {
+      "id": "the_dossier",
+      "name": "The Dossier",
+      "type": "role_meeting",
+      "icon": "fas fa-bullhorn",
+      "description": "A journalist is sitting on an unflattering story about one of your artists — and Sam is holding leverage she's itching to spend.",
+      "role_id": "cmo",
+      "meeting_id": "the_dossier",
+      "category": "marketing",
+      "target_scope": "user_selected",
+      "requires": [
+        "artist_signed"
+      ],
+      "prompt_before_selection": "Which artist is the story about?",
+      "prompt": "There's a journalist sitting on a story about {artistName} — how we signed them, what we knew and when. Not fatal, just ugly enough to shadow the whole rollout. Here's what I never put in a memo: I know how that byline gets made. Sourcing they'd rather keep quiet. It's leverage, not blackmail — I checked with myself twice. I can make this disappear by Friday, we can trade our way out like civilians, or we eat it. Your label, your stomach.",
+      "choices": [
+        {
+          "id": "spend_the_leverage",
+          "label": "Let Sam spend the leverage",
+          "self_serving_hint": true,
+          "effects_immediate": {
+            "rep_swing": 2,
+            "executive_mood": 3
+          },
+          "effects_delayed": {
+            "press_momentum": 2,
+            "story_flag": "journalist_burned",
+            "artist_mood": -1
+          },
+          "outcome_summary": "Sam spent her leverage on the journalist — the story about {artistName} died, and everyone on that beat noticed how."
+        },
+        {
+          "id": "trade_the_exclusive",
+          "label": "Trade an exclusive instead",
+          "effects_immediate": {
+            "money": -10000,
+            "reputation": 2
+          },
+          "effects_delayed": {
+            "press_story_flag": 1,
+            "story_flag": "journalist_owed",
+            "artist_mood": 1
+          },
+          "outcome_summary": "Sam traded the journalist first access to {artistName}'s next release — the story got shelved for a better one."
+        },
+        {
+          "id": "let_it_run",
+          "label": "Let the story run",
+          "effects_immediate": {
+            "reputation": -2,
+            "executive_mood": -3,
+            "award_chances": 1
+          },
+          "effects_delayed": {
+            "artist_mood": 2
+          },
+          "outcome_summary": "Sam let the story about {artistName} run untouched — a bruise in print, and the label's hands stayed clean."
+        }
+      ]
+    },
+    {
+      "id": "awards_whisper_campaign",
+      "name": "Awards Whisper Campaign",
+      "type": "role_meeting",
+      "icon": "fas fa-bullhorn",
+      "description": "The trades say {artistName}'s release has award heat — Sam wants to decide, this week, how hard the label whispers.",
+      "role_id": "cmo",
+      "meeting_id": "awards_whisper_campaign",
+      "category": "marketing",
+      "target_scope": "user_selected",
+      "requires": [
+        "artist_signed",
+        "release_out"
+      ],
+      "prompt_before_selection": "Which artist's release are we whispering for?",
+      "prompt": "Three trades used the word 'contender' about {artistName}'s release this month. That word doesn't happen by accident — somebody's whispering, and right now it isn't us. There's a consultant who runs these campaigns; his fee is obscene and his win rate is why. Or I burn my own book — every favor I banked in ten years of bylines — and we whisper for ourselves. Or we go the other way entirely: announce we don't campaign, and let the abstention BE the story. Awards season only knocks once per record.",
+      "choices": [
+        {
+          "id": "hire_the_consultant",
+          "label": "Hire the campaign consultant",
+          "effects_immediate": {
+            "money": -25000,
+            "executive_mood": 2
+          },
+          "effects_delayed": {
+            "award_chances": 4,
+            "awareness_boost": 1,
+            "artist_mood": 2
+          },
+          "outcome_summary": "Sam hired the awards consultant — the quiet-money kind whose fee never appears on any ballot, and {artistName} felt the label spending on them."
+        },
+        {
+          "id": "work_her_contacts",
+          "label": "Sam works her own book",
+          "effects_immediate": {
+            "money": -8000,
+            "reputation": 1,
+            "executive_mood": 4
+          },
+          "effects_delayed": {
+            "award_chances": 3,
+            "artist_mood": 2
+          },
+          "outcome_summary": "Sam worked her own contacts for the award push — favors called, dinners booked, no consultants."
+        },
+        {
+          "id": "refuse_to_campaign",
+          "label": "Publicly refuse to campaign",
+          "effects_immediate": {
+            "reputation": 1,
+            "award_chances": -1,
+            "executive_mood": -2
+          },
+          "effects_delayed": {
+            "artist_mood": 1,
+            "press_momentum": 1
+          },
+          "outcome_summary": "Sam announced the label doesn't campaign for awards — the work speaks, and the trades quoted it."
+        }
+      ]
+    },
+    {
+      "id": "platform_exclusive_bidding",
+      "name": "Platform Exclusive Bidding",
+      "type": "role_meeting",
+      "icon": "fas fa-bullhorn",
+      "description": "Two platforms are bidding for an exclusive window on {artistName}'s planned release — the check, the reach, or no window at all.",
+      "role_id": "cmo",
+      "meeting_id": "platform_exclusive_bidding",
+      "category": "marketing",
+      "target_scope": "user_selected",
+      "requires": [
+        "artist_signed",
+        "release_planned"
+      ],
+      "prompt_before_selection": "Which artist's release are the platforms bidding on?",
+      "prompt": "Two platforms want an exclusive window on {artistName}'s release. One is waving the bigger check — take the money, wall the release off from half its audience for a month. The other pays nothing but puts us on every screen they own, and they'll co-brand the announcement if we fund the launch moment — my copy, our logo, their reach. Or we tell both of them windows are a scam and ship everywhere at once. The check is real. The reach is real. The principle is also, annoyingly, real.",
+      "choices": [
+        {
+          "id": "take_the_check",
+          "label": "Take the bigger check",
+          "effects_immediate": {
+            "money": 40000,
+            "artist_mood": -6
+          },
+          "effects_delayed": {
+            "awareness_boost": -4
+          },
+          "outcome_summary": "Sam took the bigger check and windowed {artistName}'s release behind the platform's wall for launch month."
+        },
+        {
+          "id": "take_the_reach",
+          "label": "Take the reach, fund the moment",
+          "effects_immediate": {
+            "money": -24000,
+            "artist_mood": 4,
+            "executive_mood": 8
+          },
+          "effects_delayed": {
+            "awareness_boost": 8,
+            "press_momentum": 2
+          },
+          "outcome_summary": "Sam took the reach deal and funded a co-branded launch — the announcement carried the label's name everywhere."
+        },
+        {
+          "id": "refuse_windows",
+          "label": "Refuse windows on principle",
+          "effects_immediate": {
+            "reputation": 4,
+            "artist_mood": 2
+          },
+          "effects_delayed": {
+            "press_momentum": 2
+          },
+          "outcome_summary": "Sam turned down both windows — {artistName}'s release ships everywhere at once, on principle, on record."
+        }
+      ]
+    },
+    {
+      "id": "the_documentary_ask",
+      "name": "The Documentary Ask",
+      "type": "role_meeting",
+      "icon": "fas fa-bullhorn",
+      "description": "A streamer wants a warts-and-all documentary of the tour — full access money, a sanitized cut, or closed doors.",
+      "role_id": "cmo",
+      "meeting_id": "the_documentary_ask",
+      "category": "marketing",
+      "target_scope": "global",
+      "requires": [
+        "release_out",
+        "tour_active"
+      ],
+      "prompt": "A streamer wants a tour documentary. Warts and all — the fights, the flat nights, the 4 AM load-outs. They're paying real money for full access, less for a cut we control. Here's my bias, stated for the record: sanitized tour docs are furniture. The raw one is the only one anyone screenshots. But it's not my bus, and it's not my breakdown on camera in episode three. Full access, approved cut, or we keep the doors closed.",
+      "choices": [
+        {
+          "id": "full_access",
+          "label": "Sell full access",
+          "self_serving_hint": true,
+          "effects_immediate": {
+            "money": 60000,
+            "artist_mood": -8,
+            "schedule_event": {
+              "event_id": "scheduled_sam_documentary_release",
+              "defer_weeks": 7
+            }
+          },
+          "effects_delayed": {
+            "press_momentum": 4
+          },
+          "outcome_summary": "Sam sold the streamer full access — cameras on everything, the raw tour story with her framing on it. What actually ships is a verdict seven weeks out."
+        },
+        {
+          "id": "sanitized_cut",
+          "label": "Negotiate the approved cut",
+          "effects_immediate": {
+            "money": 32000,
+            "artist_mood": -2,
+            "executive_mood": -4
+          },
+          "effects_delayed": {
+            "awareness_boost": 4
+          },
+          "outcome_summary": "Sam negotiated a sanitized cut of the tour doc — decent money, approvals on every frame."
+        },
+        {
+          "id": "decline_the_cameras",
+          "label": "Keep the doors closed",
+          "effects_immediate": {
+            "artist_mood": 10,
+            "artist_energy": 4,
+            "executive_mood": -8
+          },
+          "effects_delayed": {},
+          "outcome_summary": "Sam declined the documentary — no cameras on the bus, and the tour stayed the band's own story."
+        }
+      ]
+    },
+    {
+      "id": "chart_debut_one_hour_window",
+      "name": "Chart Debut, One Hour Window",
+      "type": "role_meeting",
+      "icon": "fas fa-bullhorn",
+      "description": "{songTitle} charted and Sam wants to convert the debut into the label's story before the cycle turns.",
+      "role_id": "cmo",
+      "meeting_id": "chart_debut_one_hour_window",
+      "category": "marketing",
+      "target_scope": "global",
+      "requires": [
+        "music_exists"
+      ],
+      "reactive_trigger": "chart_debut",
+      "prompt": "The number is real — I had it triple-checked before I called you. Now understand what a debut actually is: it's not a result, it's a credential, and credentials expire. Every editor in my phone is deciding right now whether this was a moment or the start of one — and whatever we do with the next record launches off that answer. I can spend an hour writing the ending for them, or we can find out what the universe thinks. You have until I finish this coffee.",
+      "choices": [
+        {
+          "id": "full_spectrum_blitz",
+          "label": "Spend the moment — everywhere",
+          "effects_immediate": {
+            "money": -180000,
+            "executive_mood": 6,
+            "artist_mood": 4,
+            "artist_popularity": 4,
+            "promote_release": 30
+          },
+          "effects_delayed": {
+            "awareness_boost": 14,
+            "press_momentum": 4,
+            "variance_up": 1
+          },
+          "outcome_summary": "Sam bought the debut wall-to-wall — outlets asking for exclusives were told to take the package, and {songTitle}'s own numbers got a real push while the debut was still hot."
+        },
+        {
+          "id": "prestige_exclusive",
+          "label": "One definitive story",
+          "effects_immediate": {
+            "money": -72000,
+            "reputation": 6,
+            "artist_mood": 4,
+            "artist_popularity": 2,
+            "promote_release": 14
+          },
+          "effects_delayed": {
+            "press_story_flag": 1
+          },
+          "outcome_summary": "Sam gave the debut to one prestige outlet and held the rest back for the next record's runway — a smaller, targeted push on {songTitle} itself."
+        },
+        {
+          "id": "ride_organic",
+          "label": "Let the number talk",
+          "effects_immediate": {
+            "artist_mood": 8,
+            "executive_mood": -6
+          },
+          "effects_delayed": {
+            "press_momentum": 2
+          },
+          "outcome_summary": "Sam let the chart speak for itself — no buys, no placements, and the phone kept ringing anyway."
+        }
+      ]
+    },
+    {
+      "id": "old_tweets_surface",
+      "name": "Old Tweets Surface",
+      "type": "role_meeting",
+      "icon": "fas fa-bullhorn",
+      "description": "{artistName}'s past just resurfaced with a release in the field, and Sam is holding three very different responses.",
+      "role_id": "cmo",
+      "meeting_id": "old_tweets_surface",
+      "category": "marketing",
+      "target_scope": "global",
+      "requires": [
+        "music_exists"
+      ],
+      "reactive_trigger": "release_out",
+      "prompt": "Someone ran an archaeology dig on {artistName}'s old accounts and the screenshots are already moving — mid-cycle, of course; it's always mid-cycle, that's how you know it was commissioned. I know who paid for the shovel, and I keep a folder of my own for exactly this weather. So: do we bow, do we build, or do we burn? I'd like an answer before the quote-tweets hit five figures.",
+      "choices": [
+        {
+          "id": "measured_containment",
+          "label": "Starve it of oxygen",
+          "effects_immediate": {
+            "money": -10000,
+            "reputation": 1,
+            "artist_mood": 2,
+            "executive_mood": -2
+          },
+          "effects_delayed": {},
+          "outcome_summary": "Sam issued one short statement and starved the story of oxygen — {artistName} kept their head down."
+        },
+        {
+          "id": "redemption_arc",
+          "label": "Build the growth story",
+          "effects_immediate": {
+            "money": -30000,
+            "creative_capital": -1,
+            "artist_mood": 6,
+            "reputation": 3,
+            "promote_release": 6
+          },
+          "effects_delayed": {
+            "press_story_flag": 1,
+            "awareness_boost": 4
+          },
+          "outcome_summary": "Sam turned the dig into a growth story — full interview, receipts, a real bump to the record that's out right now, and a feature banked for the next one."
+        },
+        {
+          "id": "scorched_earth",
+          "label": "Open the folder",
+          "self_serving_hint": true,
+          "effects_immediate": {
+            "money": -15000,
+            "executive_mood": 4,
+            "artist_mood": -4
+          },
+          "effects_delayed": {
+            "rep_swing": 2,
+            "press_momentum": 2
+          },
+          "outcome_summary": "Sam answered the dig with a counter-dossier — the story died, and two press friendships went with it."
+        }
+      ]
+    },
+    {
+      "id": "the_engagement_farm",
+      "name": "The Engagement Farm",
+      "type": "role_meeting",
+      "icon": "fas fa-bullhorn",
+      "description": "An engagement farm has priced a manufactured \"organic\" moment for your upcoming release. Sam distrusts it — and brought the invoice anyway.",
+      "role_id": "cmo",
+      "meeting_id": "the_engagement_farm",
+      "category": "marketing",
+      "target_scope": "user_selected",
+      "requires": [
+        "artist_signed",
+        "release_planned"
+      ],
+      "prompt_before_selection": "Which artist's single are we deciding on?",
+      "prompt": "There's a collective — forty accounts, one invoice — promising they can make the single 'happen organically.' I've watched them fake three moments this year, and two of them stuck. I hate everything about it, which is why I did my job and priced it anyway: if we don't buy the swarm, somebody else's release will. Here's the quote. Tell me what we are.",
+      "choices": [
+        {
+          "id": "buy_the_swarm",
+          "label": "Buy the swarm",
+          "effects_immediate": {
+            "money": -72000
+          },
+          "effects_delayed": {
+            "awareness_boost": 4,
+            "artist_mood": -6
+          },
+          "outcome_summary": "Sam signed the engagement farm's invoice — the single started 'happening,' and {artistName} could tell it was bought."
+        },
+        {
+          "id": "one_true_fan",
+          "label": "Back one real creator",
+          "effects_immediate": {
+            "money": -24000,
+            "reputation": 1
+          },
+          "effects_delayed": {
+            "awareness_boost": 2,
+            "artist_mood": 6
+          },
+          "outcome_summary": "Sam skipped the farm and funded one true fan instead — a smaller wave, but a real one, and {artistName} reposted it first."
+        },
+        {
+          "id": "hold_the_line",
+          "label": "Refuse to buy fake",
+          "effects_immediate": {
+            "reputation": 1,
+            "executive_mood": 2
+          },
+          "effects_delayed": {
+            "press_momentum": 1
+          },
+          "outcome_summary": "Sam passed on the engagement farm and put the refusal in writing — slower build, clean hands."
+        }
+      ]
     }
   ],
   "action_categories": [

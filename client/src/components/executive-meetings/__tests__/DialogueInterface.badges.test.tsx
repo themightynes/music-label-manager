@@ -191,6 +191,121 @@ describe('ChoiceEffects badge honesty', () => {
   // LEGIBILITY Slice A — the effect badges are now wrapped in an explanation
   // tooltip. Assert the tooltip trigger is wired (data-effect-key + aria-label)
   // for both an immediate and a delayed badge, without driving Radix's portal.
+  // C99 — structured / object-valued effect keys render a qualitative,
+  // number-free badge (never `[object Object]`), and never leak an event_id.
+  describe('structured (object-valued) effect keys render qualitative copy', () => {
+    it('renders "Consequence" for an object-valued schedule_event, not [object Object] and no event_id', () => {
+      render(
+        <ChoiceEffects
+          choice={buildChoice({
+            effects_delayed: { schedule_event: { event_id: 'crisis_botched_launch', defer_weeks: 3 } },
+          })}
+        />
+      );
+      expect(screen.getByText('Consequence')).toBeInTheDocument();
+      expect(screen.queryByText(/\[object Object\]/)).not.toBeInTheDocument();
+      // The target event_id must never surface on the badge (fork-E).
+      expect(screen.queryByText(/crisis_botched_launch/)).not.toBeInTheDocument();
+      expect(document.body.textContent).not.toContain('crisis_botched_launch');
+      expect(document.body.textContent).not.toContain('3');
+    });
+
+    it('renders "New Recording" for an object-valued grant_song', () => {
+      render(
+        <ChoiceEffects
+          choice={buildChoice({ effects_immediate: { grant_song: { quality: 65, artist: 'targeted' } } })}
+        />
+      );
+      expect(screen.getByText('New Recording')).toBeInTheDocument();
+      expect(screen.queryByText(/\[object Object\]/)).not.toBeInTheDocument();
+      expect(document.body.textContent).not.toContain('65');
+    });
+
+    it('renders "Story" for a string-valued story_flag (no raw key leak)', () => {
+      render(<ChoiceEffects choice={buildChoice({ effects_immediate: { story_flag: 'sold_out_arena' } })} />);
+      expect(screen.getByText('Story')).toBeInTheDocument();
+      expect(document.body.textContent).not.toContain('sold_out_arena');
+    });
+
+    it('renders "New Prospect" for spawn_prospect and "Surprise Release" for spawn_release', () => {
+      render(
+        <ChoiceEffects
+          choice={buildChoice({
+            effects_immediate: { spawn_prospect: { archetype: 'visionary' } },
+            effects_delayed: { spawn_release: { songs: 'latest_recorded', type: 'single' } },
+          })}
+        />
+      );
+      expect(screen.getByText('New Prospect')).toBeInTheDocument();
+      expect(screen.getByText('Surprise Release')).toBeInTheDocument();
+    });
+
+    it('renders "Exec Away" for set_exec_absence and "Distribution" for distribution_efficiency', () => {
+      render(
+        <ChoiceEffects
+          choice={buildChoice({
+            effects_immediate: { set_exec_absence: { role: 'head_ar', weeks: 4 } },
+            effects_delayed: { distribution_efficiency: { amount: 0.15, weeks: 6 } },
+          })}
+        />
+      );
+      expect(screen.getByText('Exec Away')).toBeInTheDocument();
+      expect(screen.getByText('Distribution')).toBeInTheDocument();
+      // No raw magnitudes/weeks leaked.
+      expect(document.body.textContent).not.toContain('0.15');
+    });
+  });
+
+  // C99 — live-economy verbs whose raw numeric value would MISLEAD render
+  // qualitatively (number-free) too.
+  describe('misleading-numeric verbs render qualitative copy (no raw number)', () => {
+    it('renders "Catalog Push" for promote_release without its magnitude', () => {
+      render(<ChoiceEffects choice={buildChoice({ effects_immediate: { promote_release: 20 } })} />);
+      expect(screen.getByText('Catalog Push')).toBeInTheDocument();
+      expect(screen.queryByText(/20/)).not.toBeInTheDocument();
+    });
+
+    it('renders "Catalog Share Sale" for a fractional transfer_revenue_stream without the fraction', () => {
+      render(<ChoiceEffects choice={buildChoice({ effects_delayed: { transfer_revenue_stream: 0.25 } })} />);
+      expect(screen.getByText('Catalog Share Sale')).toBeInTheDocument();
+      expect(document.body.textContent).not.toContain('0.25');
+    });
+
+    it('renders "Press Scrutiny" for press_scrutiny_flag', () => {
+      render(<ChoiceEffects choice={buildChoice({ effects_delayed: { press_scrutiny_flag: 1 } })} />);
+      expect(screen.getByText('Press Scrutiny')).toBeInTheDocument();
+    });
+  });
+
+  // C99 — numeric channels keep their EXACT prior rendering (regression guard).
+  describe('numeric effect keys are unchanged by the C99 qualitative pass', () => {
+    it('money / reputation / creative_capital render exactly as before', () => {
+      render(
+        <ChoiceEffects
+          choice={buildChoice({
+            effects_immediate: { money: -500, reputation: 3, creative_capital: 2 },
+          })}
+        />
+      );
+      expect(screen.getByText('$-500')).toBeInTheDocument();
+      expect(screen.getByText('+3 Rep')).toBeInTheDocument();
+      expect(screen.getByText('+2 Creative')).toBeInTheDocument();
+    });
+
+    it('quality_bonus / awareness_boost / award_chances still show their signed magnitude', () => {
+      render(
+        <ChoiceEffects
+          choice={buildChoice({
+            effects_delayed: { quality_bonus: 5, awareness_boost: -1, award_chances: 3 },
+          })}
+        />
+      );
+      expect(screen.getByText('+5 Quality')).toBeInTheDocument();
+      expect(screen.getByText('-1 Buzz')).toBeInTheDocument();
+      expect(screen.getByText('+3 Prestige')).toBeInTheDocument();
+    });
+  });
+
   it('wraps each live badge in an explanation tooltip trigger (immediate + delayed)', () => {
     render(
       <ChoiceEffects

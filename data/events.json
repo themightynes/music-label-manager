@@ -621,6 +621,149 @@
           }
         }
       ]
+    },
+    {
+      "id": "scheduled_mac_3am_demo_verdict",
+      "role_hint": "Mac (Head of A&R)",
+      "category": "industry_drama",
+      "scheduled_only": true,
+      "prompt": "Eight weeks ago you fronted a quiet development deal on the 3 AM find — a check, studio hours, no announcement, and a promise to check back in. Mac just walked the tapes into your office. 'So. Daylight happened.' There's a blank space on his wall he keeps glancing at. Whatever the sessions became, the option comes due this week: commit real money before a major smells it, let it lapse, or keep them parked.",
+      "choices": [
+        {
+          "id": "sign_at_premium",
+          "label": "Sign them now — pay the premium before a major does",
+          "effects_immediate": {
+            "money": -22000,
+            "reputation": 2,
+            "spawn_prospect": {
+              "quality_hint": 72,
+              "popularity_hint": 58,
+              "source": "mac_3am_verdict"
+            }
+          },
+          "effects_delayed": {
+            "press_story_flag": 1
+          },
+          "outcome_summary": "You paid the premium and the 3 AM find lands in the discovery pool ready to sign — Mac finally gets to fill the blank space on his wall, and the trades noticed."
+        },
+        {
+          "id": "let_it_lapse",
+          "label": "Let the option lapse — the magic didn't survive daylight",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "reputation": -1,
+            "story_flag": "mac_3am_miss"
+          },
+          "outcome_summary": "You let the 3 AM option lapse — another name for the Wall of Misses, and Mac writes it up there himself."
+        },
+        {
+          "id": "keep_parked",
+          "label": "Keep them on the bench — no premium, no goodbye",
+          "effects_immediate": {
+            "money": -4000,
+            "spawn_prospect": {
+              "quality_hint": 54,
+              "source": "mac_3am_verdict"
+            }
+          },
+          "effects_delayed": {},
+          "outcome_summary": "You extended the quiet deal — the 3 AM find sits in the pool as an ordinary prospect, no windfall, no funeral."
+        }
+      ]
+    },
+    {
+      "id": "scheduled_mac_machine_verdict",
+      "role_hint": "Mac (Head of A&R)",
+      "category": "industry_drama",
+      "scheduled_only": true,
+      "prompt": "Six weeks ago Mac bet his ear against the prediction engine — his next call versus the algorithm's, out loud, on the record. The trades kept score. The board kept score. The roster definitely kept score. This morning the numbers that settle it are on your desk, and the read is close enough that the story is still yours to write. Mac's already got a jacket on — for the server-room walk of shame, or the victory lap.",
+      "choices": [
+        {
+          "id": "declare_victory",
+          "label": "Declare it clean — Mac won, put it on the record",
+          "effects_immediate": {
+            "money": -4000,
+            "reputation": 2
+          },
+          "effects_delayed": {
+            "press_story_flag": 1,
+            "story_flag": "mac_beat_the_machine",
+            "artist_mood": 2
+          },
+          "outcome_summary": "You put Mac's win on the record — the roster loved the swagger, the trades ran 'Mac vs. the Machine,' and the terminal stays in its box."
+        },
+        {
+          "id": "concede_terminal",
+          "label": "Concede gracefully — license the platform the board wanted",
+          "effects_immediate": {
+            "money": -12000,
+            "reputation": 2
+          },
+          "effects_delayed": {
+            "quality_bonus": 2,
+            "artist_mood": -2
+          },
+          "outcome_summary": "You conceded the bet and licensed the platform — the data moved in down the hall, Mac calls it the obituary desk, and the sessions genuinely got sharper."
+        },
+        {
+          "id": "call_it_draw",
+          "label": "Call it a draw — keep the rivalry running",
+          "effects_immediate": {
+            "money": -1000
+          },
+          "effects_delayed": {
+            "variance_up": 1,
+            "press_story_flag": 1
+          },
+          "outcome_summary": "You called the showdown a draw — no victory lap, no funeral, and Mac versus the machine rolls on as an open question."
+        }
+      ]
+    },
+    {
+      "id": "scheduled_sam_documentary_release",
+      "role_hint": "Sam (CMO)",
+      "category": "industry_drama",
+      "scheduled_only": true,
+      "target": "predetermined",
+      "prompt": "Seven weeks ago you sold the streamer full access to the tour — the fights, the flat nights, the 4 AM load-outs, the whole raw cut. It drops Friday. Sam has seen the rough edit and won't say which version of the truth made it in, only that 'the thing everyone screenshots is in there, and so is the thing nobody should have filmed.' Episode three exists. How the label meets the release is the last call that's actually yours.",
+      "choices": [
+        {
+          "id": "lean_into_raw",
+          "label": "Lean all the way in — sell it as the real story",
+          "effects_immediate": {
+            "money": -6000,
+            "reputation": 1
+          },
+          "effects_delayed": {
+            "press_momentum": 2,
+            "awareness_boost": 2,
+            "artist_mood": 1
+          },
+          "outcome_summary": "You leaned into the raw cut and sold it as the real story — the rawness read as authenticity, the band ended up owning their own myth, and the next release inherits the buzz."
+        },
+        {
+          "id": "buy_back_approvals",
+          "label": "Work the edit — buy back approvals on the worst of it",
+          "effects_immediate": {
+            "money": -11000,
+            "reputation": 1
+          },
+          "effects_delayed": {
+            "artist_mood": 3,
+            "awareness_boost": 1
+          },
+          "outcome_summary": "You spent to claw back approvals on the ugliest footage — the doc landed softer, the band exhaled and remembered you had their back, and the next setup still caught a little heat."
+        },
+        {
+          "id": "let_it_air",
+          "label": "Say nothing — let it air and move to the next thing",
+          "effects_immediate": {},
+          "effects_delayed": {
+            "press_momentum": 1
+          },
+          "outcome_summary": "You let the doc air without comment — competent, forgettable, a small press bump and no lasting damage."
+        }
+      ]
     }
   ]
 }

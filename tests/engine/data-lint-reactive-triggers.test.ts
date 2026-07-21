@@ -118,9 +118,27 @@ describe('Data lint — reactive triggers (Tier 2, PR-1, dark launch)', () => {
     ).toEqual([]);
   });
 
-  it('sanity: PR-2 authored exactly 5 reactive meetings, one per exec', () => {
-    expect(reactiveMeetings).toHaveLength(5);
-    const roleIds = reactiveMeetings.map((m) => m.role_id).sort();
-    expect(roleIds).toEqual(['ceo', 'cco', 'cmo', 'head_ar', 'head_distribution'].sort());
+  it('sanity: the authored reactive set covers every exec (v3 Mac/Sam pools add a second reactive meeting to head_ar and cmo)', () => {
+    // PR-2 dark-launched 5 reactive meetings (one per exec). The v3 Mac pool
+    // adds head_ar × chart_debut (one_that_got_away_again) and the v3 Sam pool
+    // swaps cmo × chart_debut to chart_debut_one_hour_window and adds
+    // cmo × release_out (old_tweets_surface) — so head_ar and cmo now each own
+    // two reactive triggers. Per-(role,trigger) uniqueness is still guarded by
+    // the test above; here we assert every exec keeps at least one reactive
+    // meeting and the (role,trigger) pairs are exactly the authored set.
+    const roleIds = Array.from(new Set(reactiveMeetings.map((m) => m.role_id)));
+    expect(roleIds.sort()).toEqual(['ceo', 'cco', 'cmo', 'head_ar', 'head_distribution'].sort());
+    const pairs = reactiveMeetings.map((m) => `${m.role_id}:${m.reactive_trigger}`).sort();
+    expect(pairs).toEqual(
+      [
+        'ceo:chart_debut',
+        'cco:mood_crater',
+        'cmo:chart_debut',
+        'cmo:release_out',
+        'head_ar:chart_debut',
+        'head_ar:recent_signing',
+        'head_distribution:release_out',
+      ].sort()
+    );
   });
 });
