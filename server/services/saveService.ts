@@ -129,6 +129,9 @@ const convertTimestamps = (obj: any): any => {
   return converted;
 };
 
+// HARDCODED: autosave retention per game; make configurable if players ask for it
+export const AUTOSAVE_RETENTION = 3;
+
 export class SaveService {
   constructor(
     private storage = storageSingleton,
@@ -156,7 +159,7 @@ export class SaveService {
     });
 
     if (validatedData.isAutosave) {
-      await this.storage.purgeOldAutosaves(userId, snapshotGameId, 3);
+      await this.storage.purgeOldAutosaves(userId, snapshotGameId, AUTOSAVE_RETENTION);
     }
 
     return save;

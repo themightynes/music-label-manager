@@ -113,6 +113,58 @@ const router = Router();
     }
   });
 
+  router.patch("/api/saves/:saveId", requireClerkUser, async (req, res) => {
+    const renameRequestSchema = z.object({
+      name: z.string().trim().min(1).max(100),
+    });
+
+    try {
+      const { name } = renameRequestSchema.parse(req.body ?? {});
+
+      const save = await storage.getGameSaveForUser(req.params.saveId, req.userId!);
+      if (!save) {
+        return res.status(404).json({
+          error: 'SAVE_NOT_FOUND',
+          message: 'Save file not found or does not belong to this user',
+        });
+      }
+      if (save.isAutosave) {
+        return res.status(400).json({
+          error: 'AUTOSAVE_RENAME_FORBIDDEN',
+          message: 'Autosaves are named automatically and cannot be renamed',
+        });
+      }
+
+      const renamed = await storage.renameGameSave(req.params.saveId, req.userId!, name);
+      res.json({ id: renamed!.id, name: renamed!.name });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid rename request", errors: error.errors });
+      }
+      console.error('[API] Failed to rename save:', error);
+      res.status(500).json({ message: "Failed to rename save" });
+    }
+  });
+
+  // Bulk-delete every save belonging to one playthrough (gameId lives inside
+  // the snapshot JSONB, not as a column). Registered above the single-save
+  // delete for readability; the two patterns cannot collide (different depth).
+  router.delete("/api/saves/by-game/:gameId", requireClerkUser, async (req, res) => {
+    try {
+      const deletedCount = await storage.deleteGameSavesByGameId(req.userId!, req.params.gameId);
+      if (deletedCount === 0) {
+        return res.status(404).json({
+          error: 'SAVES_NOT_FOUND',
+          message: 'No saves found for this playthrough',
+        });
+      }
+      res.json({ message: 'Playthrough saves deleted successfully', deletedCount });
+    } catch (error) {
+      console.error('[API] Failed to delete playthrough saves:', error);
+      res.status(500).json({ message: "Failed to delete playthrough saves" });
+    }
+  });
+
   router.delete("/api/saves/:saveId", requireClerkUser, async (req, res) => {
     try {
       const result = await saveService.deleteSave(req.params.saveId, req.userId!);
