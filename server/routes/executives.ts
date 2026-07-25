@@ -5,6 +5,7 @@ import { requireClerkUser } from '../auth';
 import { requireGameOwner } from '../middleware/requireGameOwner';
 import { generateMeetingSeed } from '@shared/utils/seededRandom';
 import { buildRelevanceInput, deriveRelevanceState, selectWeeklyMeetingWithHappenings } from '@shared/engine/meetingSelection';
+import { pickBoundArtist } from '@shared/engine/artistBinding';
 import { deriveWeekHappenings } from '@shared/engine/weekHappenings';
 import { ChartService } from '@shared/engine/ChartService';
 import { gameDataLoader } from '@shared/utils/dataLoader';
@@ -164,6 +165,24 @@ router.get("/api/roles/:roleId", requireClerkUser, async (req, res) => {
             };
             console.log(`[MEETING API] 🔔 Reactive meeting selected for ${req.params.roleId}:`, selectedMeeting.id, reactiveContext);
             roleMeetings = [{ ...selectedMeeting, reactiveContext }];
+          } else if (
+            selectedMeeting &&
+            (selectedMeeting as any).target_scope === 'user_selected' &&
+            (selectedMeeting as any).auto_bind_artist
+          ) {
+            // Item 5 (2026-07-25): fiction-driven user_selected meeting — the
+            // exec walks in already naming the subject artist. Seeded weighted
+            // draw off the SAME base seed the engine's autonomous path uses
+            // (two-site parity — shared/engine/artistBinding.ts).
+            const bound = pickBoundArtist(artists, seed);
+            if (bound) {
+              console.log(`[MEETING API] 🎯 Artist-bound meeting for ${req.params.roleId}:`, selectedMeeting.id, bound.name);
+              roleMeetings = [{ ...selectedMeeting, boundArtist: { artistId: bound.id, artistName: bound.name } }];
+            } else {
+              // No signed artist to bind — offer the meeting with its picker
+              // (requires: artist_signed should prevent this in practice).
+              roleMeetings = [selectedMeeting];
+            }
           } else {
             roleMeetings = selectedMeeting ? [selectedMeeting] : [];
           }

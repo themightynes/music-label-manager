@@ -341,6 +341,21 @@ export interface RoleMeeting {
     artistName?: string;
     songTitle?: string;
   };
+  /**
+   * Item 5 (2026-07-25): authored opt-in — a fiction-driven user_selected
+   * meeting whose subject artist the game names up front (seeded weighted
+   * draw) instead of asking the player to pick. See shared/engine/artistBinding.ts.
+   */
+  auto_bind_artist?: boolean;
+  /**
+   * Item 5: server-attached bound artist on the SELECTED meeting (response-side
+   * only, never authored) — present when auto_bind_artist drew the subject.
+   * The client skips the picker and renders the named prompt as the brief.
+   */
+  boundArtist?: {
+    artistId: string;
+    artistName: string;
+  };
   choices: DialogueChoice[];
 }
 
