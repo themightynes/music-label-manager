@@ -147,8 +147,9 @@ describe('WeekSummary side-event beat', () => {
     expect(screen.getByText('Decline')).toBeInTheDocument();
 
     // Whitelisted effect badges render (money/reputation are in LIVE_EFFECT_KEYS).
+    // Round-4 honest preview: authored reputation 1 renders as the scaled +3 Rep.
     expect(screen.getByText(/\+\$5,000/)).toBeInTheDocument();
-    expect(screen.getByText(/\+1 Rep/)).toBeInTheDocument();
+    expect(screen.getByText(/\+3 Rep/)).toBeInTheDocument();
   });
 
   it('never renders a badge for a key outside LIVE_EFFECT_KEYS', () => {

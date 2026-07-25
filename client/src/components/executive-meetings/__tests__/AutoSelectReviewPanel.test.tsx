@@ -60,7 +60,8 @@ describe('AutoSelectReviewPanel', () => {
     const cmoRow = screen.getByTestId('auto-review-row-cmo');
     expect(within(cmoRow).getByText(/PR Angle/)).toBeInTheDocument();
     expect(within(cmoRow).getByText('Play it safe')).toBeInTheDocument();
-    expect(within(cmoRow).getByText('+3 Rep')).toBeInTheDocument();
+    // Round-4 honest preview: badge shows the SCALED delta (authored 3 x3 = 9).
+    expect(within(cmoRow).getByText('+9 Rep')).toBeInTheDocument();
 
     const ccoRow = screen.getByTestId('auto-review-row-cco');
     expect(within(ccoRow).getByText(/Timeline Talk/)).toBeInTheDocument();
@@ -77,7 +78,8 @@ describe('AutoSelectReviewPanel', () => {
       <AutoSelectReviewPanel options={options} onConfirmAll={vi.fn()} onCancel={vi.fn()} onOverrideRow={vi.fn()} />
     );
 
-    expect(screen.getByText('+2 Rep')).toBeInTheDocument();
+    // Round-4 honest preview: authored 2 renders as the scaled +6 Rep.
+    expect(screen.getByText('+6 Rep')).toBeInTheDocument();
     expect(screen.queryByText(/Market Data/)).not.toBeInTheDocument();
   });
 
