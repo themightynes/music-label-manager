@@ -15,7 +15,15 @@
  *     byte-for-byte below: same PAYOFF_KEYS, same EXCLUDED_KEYS, same weaklyDominates rule).
  */
 import { LIVE_EFFECT_KEYS } from '@shared/engine/processors/ActionProcessor';
-import { RELEVANCE_TAGS, HAPPENING_TYPES, SIDE_EVENT_CATEGORIES } from '@shared/types/gameTypes';
+import {
+  RELEVANCE_TAGS,
+  REQUIRES_STAT_NAMES,
+  HAPPENING_TYPES,
+  SIDE_EVENT_CATEGORIES,
+  EFFECT_TARGETING_DIRECTIVE_KEYS,
+  EXEC_MOOD_TARGET_ROLE_IDS,
+  EXEC_MOOD_TARGET_BROADCAST,
+} from '@shared/types/gameTypes';
 import type { WeeklyAction, DialogueChoiceContract, SideEventContract } from '@shared/api/contracts';
 
 export interface LintIssue {
@@ -36,9 +44,71 @@ export const CANONICAL_EFFECT_KEYS: readonly string[] = Array.from(
 ).sort();
 
 const RELEVANCE_TAG_SET: ReadonlySet<string> = new Set(RELEVANCE_TAGS);
+const REQUIRES_STAT_NAME_SET: ReadonlySet<string> = new Set(REQUIRES_STAT_NAMES);
 const HAPPENING_TYPE_SET: ReadonlySet<string> = new Set(HAPPENING_TYPES);
 const CANONICAL_EFFECT_KEY_SET: ReadonlySet<string> = new Set(CANONICAL_EFFECT_KEYS);
 const SIDE_EVENT_CATEGORY_SET: ReadonlySet<string> = new Set(SIDE_EVENT_CATEGORIES);
+
+// SLICE 5 (M13/M14): string-valued targeting DIRECTIVE keys — not effect
+// channels; excluded from the unknown-key check and validated by the dedicated
+// rules below (MIRROR of tests/engine/data-lint-effect-keys.test.ts's
+// targeting-directive suite — keep in lockstep).
+const TARGETING_DIRECTIVE_KEY_SET: ReadonlySet<string> = new Set(EFFECT_TARGETING_DIRECTIVE_KEYS);
+const VALID_EXEC_TARGETS: readonly string[] = [...EXEC_MOOD_TARGET_ROLE_IDS, EXEC_MOOD_TARGET_BROADCAST];
+const VALID_EXEC_TARGET_SET: ReadonlySet<string> = new Set(VALID_EXEC_TARGETS);
+const VALID_ARTIST_TARGET_SET: ReadonlySet<string> = new Set(['predetermined', 'global']);
+
+/**
+ * SLICE 5 (M13): shared exec-targeting rules for the surfaces where
+ * target_executive IS legal (CEO meetings + side events). Mirrors
+ * lintExecTargetingSurface in tests/engine/data-lint-effect-keys.test.ts.
+ */
+function lintExecTargeting(
+  scope: string,
+  choice: Pick<DialogueChoiceContract, 'effects_immediate' | 'effects_delayed'>,
+  issues: LintIssue[],
+): void {
+  const imm = (choice.effects_immediate ?? {}) as Record<string, unknown>;
+  const del = (choice.effects_delayed ?? {}) as Record<string, unknown>;
+  if ('executive_mood' in imm && !('target_executive' in imm)) {
+    issues.push({
+      severity: 'error',
+      scope,
+      message: `executive_mood needs a target_executive sibling here — this surface has no implicit executive, so the key would be silently dropped.`,
+    });
+  }
+  if ('target_executive' in imm) {
+    if (!('executive_mood' in imm)) {
+      issues.push({
+        severity: 'error',
+        scope,
+        message: `target_executive without an executive_mood sibling routes nothing — add the executive_mood value or remove the directive.`,
+      });
+    }
+    const v = imm.target_executive;
+    if (typeof v !== 'string' || !VALID_EXEC_TARGET_SET.has(v)) {
+      issues.push({
+        severity: 'error',
+        scope,
+        message: `target_executive must be one of: ${VALID_EXEC_TARGETS.join(', ')} (got ${JSON.stringify(v)}).`,
+      });
+    }
+  }
+  if ('executive_mood' in del) {
+    issues.push({
+      severity: 'error',
+      scope,
+      message: `executive_mood in effects_delayed is a dead key — it only applies from effects_immediate.`,
+    });
+  }
+  if ('target_executive' in del) {
+    issues.push({
+      severity: 'error',
+      scope,
+      message: `target_executive in effects_delayed is a dead directive — targeted exec mood is immediate-only.`,
+    });
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Dominance model — mirrored EXACTLY from tests/engine/meeting-dominance.test.ts.
@@ -120,14 +190,50 @@ export function lintMeetings(actions: WeeklyAction[]): LintIssue[] {
       });
     }
 
-    // requires: must be a subset of RELEVANCE_TAGS.
+    // requires: plain tags must be RELEVANCE_TAGS; M16 threshold/flag objects
+    // must be well-formed (mirrors RequiresEntrySchema in shared/api/contracts.ts
+    // and the data-lint suite — keep the three surfaces in lockstep).
     if (action.requires) {
-      for (const tag of action.requires) {
-        if (!RELEVANCE_TAG_SET.has(tag)) {
+      for (const entry of action.requires) {
+        if (typeof entry === 'string') {
+          if (!RELEVANCE_TAG_SET.has(entry)) {
+            issues.push({
+              severity: 'error',
+              scope: action.id,
+              message: `Action '${action.id}' has an unknown requires tag '${entry}' — must be one of: ${RELEVANCE_TAGS.join(', ')}.`,
+            });
+          }
+        } else if (entry && typeof entry === 'object' && 'stat' in entry) {
+          const stat = (entry as { stat?: unknown }).stat;
+          if (!REQUIRES_STAT_NAME_SET.has(String(stat))) {
+            issues.push({
+              severity: 'error',
+              scope: action.id,
+              message: `Action '${action.id}' has a requires threshold with unknown stat '${String(stat)}' — must be one of: ${REQUIRES_STAT_NAMES.join(', ')}.`,
+            });
+          }
+          const { gte, lte } = entry as { gte?: unknown; lte?: unknown };
+          if (gte === undefined && lte === undefined) {
+            issues.push({
+              severity: 'error',
+              scope: action.id,
+              message: `Action '${action.id}' has a requires threshold on '${String(stat)}' with no bound — provide gte and/or lte.`,
+            });
+          }
+        } else if (entry && typeof entry === 'object' && 'flag' in entry) {
+          const flag = (entry as { flag?: unknown }).flag;
+          if (typeof flag !== 'string' || !/^[a-z][a-z0-9_]*$/.test(flag)) {
+            issues.push({
+              severity: 'error',
+              scope: action.id,
+              message: `Action '${action.id}' has a requires flag gate with invalid key '${String(flag)}' — story-flag keys must be snake_case identifiers.`,
+            });
+          }
+        } else {
           issues.push({
             severity: 'error',
             scope: action.id,
-            message: `Action '${action.id}' has an unknown requires tag '${tag}' — must be one of: ${RELEVANCE_TAGS.join(', ')}.`,
+            message: `Action '${action.id}' has an unrecognized requires entry ${JSON.stringify(entry)} — must be a relevance tag, {stat, gte/lte} or {flag, is?}.`,
           });
         }
       }
@@ -155,10 +261,11 @@ export function lintMeetings(actions: WeeklyAction[]): LintIssue[] {
       }
       seenChoiceIds.add(choice.id);
 
-      // Effect keys must be canonical.
+      // Effect keys must be canonical (targeting directives are validated separately below).
       for (const block of ['effects_immediate', 'effects_delayed'] as const) {
         const effects = choice[block] || {};
         for (const key of Object.keys(effects)) {
+          if (TARGETING_DIRECTIVE_KEY_SET.has(key)) continue;
           if (!CANONICAL_EFFECT_KEY_SET.has(key)) {
             issues.push({
               severity: 'error',
@@ -166,6 +273,36 @@ export function lintMeetings(actions: WeeklyAction[]): LintIssue[] {
               message: `Choice '${choice.id}' in action '${action.id}' uses unknown effect key '${key}' — must be one of the canonical effect channels.`,
             });
           }
+        }
+      }
+
+      // SLICE 5 (M13): exec-mood targeting rules.
+      //  - CEO meetings have no implicit executive → executive_mood REQUIRES a
+      //    target_executive directive (and the directive must be valid).
+      //  - Role meetings' executive is implicit (metadata.executiveId) → the
+      //    directive is forbidden (the engine ignores it there).
+      if (action.role_id === 'ceo') {
+        lintExecTargeting(scope, choice, issues);
+      } else {
+        for (const block of ['effects_immediate', 'effects_delayed'] as const) {
+          if ('target_executive' in ((choice[block] ?? {}) as Record<string, unknown>)) {
+            issues.push({
+              severity: 'error',
+              scope,
+              message: `target_executive is not allowed on a role meeting — the meeting's own executive is implicit; the directive only works on CEO meetings and side events.`,
+            });
+          }
+        }
+      }
+
+      // M14: target_artist is an event-choice-only directive (meetings target via target_scope).
+      for (const block of ['effects_immediate', 'effects_delayed'] as const) {
+        if ('target_artist' in ((choice[block] ?? {}) as Record<string, unknown>)) {
+          issues.push({
+            severity: 'error',
+            scope,
+            message: `target_artist is not allowed on a meeting — meetings target artists via target_scope; the directive only works on side-event choices.`,
+          });
         }
       }
     }
@@ -269,15 +406,37 @@ export function lintSideEvents(
       }
       seenChoiceIds.add(choice.id);
 
-      // Effect keys must be canonical.
+      // Effect keys must be canonical (targeting directives are validated separately below).
       for (const block of ['effects_immediate', 'effects_delayed'] as const) {
         const effects = choice[block] || {};
         for (const key of Object.keys(effects)) {
+          if (TARGETING_DIRECTIVE_KEY_SET.has(key)) continue;
           if (!CANONICAL_EFFECT_KEY_SET.has(key)) {
             issues.push({
               severity: 'error',
               scope,
               message: `Choice '${choice.id}' in event '${event.id}' uses unknown effect key '${key}' — must be one of the canonical effect channels.`,
+            });
+          }
+        }
+      }
+
+      // SLICE 5 (M13): event choices have no implicit executive → executive_mood
+      // requires (and validates) a target_executive directive, immediate-only.
+      lintExecTargeting(scope, choice, issues);
+
+      // M14: target_artist value check ('predetermined' routes the block's
+      // artist-scoped effects to the event's resolved artist; 'global' forces
+      // the legacy all-signed-artists application).
+      for (const block of ['effects_immediate', 'effects_delayed'] as const) {
+        const effects = (choice[block] ?? {}) as Record<string, unknown>;
+        if ('target_artist' in effects) {
+          const v = effects.target_artist;
+          if (typeof v !== 'string' || !VALID_ARTIST_TARGET_SET.has(v)) {
+            issues.push({
+              severity: 'error',
+              scope,
+              message: `target_artist must be 'predetermined' or 'global' (got ${JSON.stringify(v)}).`,
             });
           }
         }

@@ -13,7 +13,7 @@
  */
 
 import { seededRandomPick, seededWeightedPick } from '../utils/seededRandom';
-import type { RelevanceTag, HappeningType } from '../types/gameTypes';
+import type { RelevanceTag, RequiresEntry, HappeningType } from '../types/gameTypes';
 import type { WeekHappening } from './weekHappenings';
 
 /**
@@ -52,7 +52,51 @@ export interface MeetingRelevanceState {
    * column — shared/schema.ts `artists`).
    */
   artistSignedRecently: boolean;
+
+  // -------------------------------------------------------------------------
+  // Engine-verbs M16 (requires-gates) — all OPTIONAL so pre-M16 call sites and
+  // hand-built test states keep compiling (this interface's extension rule).
+  // -------------------------------------------------------------------------
+  /**
+   * Label money (gameState.money) for `{stat:'cash'}` thresholds. UNDEFINED =
+   * unknown → every cash threshold fails CLOSED (the meeting is ineligible),
+   * never spuriously offered.
+   */
+  cash?: number;
+  /** Label reputation (gameState.reputation) for `{stat:'reputation'}` thresholds. Undefined fails closed. */
+  reputation?: number;
+  /**
+   * Story flags (gameState.flags.story — M3's write key, read defensively).
+   * Absent map or absent key both read as "flag not set".
+   */
+  storyFlags?: Record<string, unknown>;
+  /** ≥1 artist with mood < artist_state_thresholds.low_mood_lt. Undefined = false. */
+  anyArtistLowMood?: boolean;
+  /** ≥1 artist with popularity >= artist_state_thresholds.high_popularity_gte. Undefined = false. */
+  anyArtistHighPopularity?: boolean;
+  /** ≥1 artist with energy < artist_state_thresholds.low_energy_lt. Undefined = false. */
+  anyArtistLowEnergy?: boolean;
 }
+
+/**
+ * Engine-verbs M16 — per-artist-state tag thresholds. Config knobs in
+ * data/balance/progression.json `weekly_meeting_selection.artist_state_thresholds`
+ * (server/data/gameData.ts getWeeklyMeetingSelectionConfigSync). The comparator
+ * is encoded in each knob name (`_lt` = strictly below, `_gte` = at or above).
+ */
+export interface ArtistStateThresholds {
+  low_mood_lt: number;
+  high_popularity_gte: number;
+  low_energy_lt: number;
+}
+
+// HARDCODED fallback mirroring data/balance/progression.json's authored values
+// (used only when a caller doesn't thread the config — behavior identical).
+export const DEFAULT_ARTIST_STATE_THRESHOLDS: ArtistStateThresholds = {
+  low_mood_lt: 40,
+  high_popularity_gte: 70,
+  low_energy_lt: 30,
+};
 
 // ---------------------------------------------------------------------------
 // Plain structural input shapes — intentionally minimal supersets of the
@@ -64,6 +108,12 @@ export interface RelevanceArtistInput {
   id?: string | null;
   /** Week the artist was signed (artists.signedWeek, shared/schema.ts). */
   signedWeek?: number | null;
+  /** M16 per-artist-state tags: artists.mood (0-100). Missing = not counted. */
+  mood?: number | null;
+  /** M16 per-artist-state tags: artists.energy (0-100). Missing = not counted. */
+  energy?: number | null;
+  /** M16 per-artist-state tags: artists.popularity (0-100). Missing = not counted. */
+  popularity?: number | null;
 }
 
 export interface RelevanceProjectInput {
@@ -98,6 +148,52 @@ export interface DeriveRelevanceStateInput {
    * the exact Tier 0 snapshot shape.
    */
   recencyWindowWeeks?: number;
+  /** M16: label money (gameState.money) — undefined/null ⇒ cash thresholds fail closed. */
+  cash?: number | null;
+  /** M16: label reputation (gameState.reputation) — undefined/null ⇒ reputation thresholds fail closed. */
+  reputation?: number | null;
+  /**
+   * M16: the raw gameState.flags JSONB — `flags.story` is read defensively
+   * (absent/non-object ⇒ no story flags set).
+   */
+  flags?: unknown;
+  /** M16: per-artist-state tag thresholds; defaults to DEFAULT_ARTIST_STATE_THRESHOLDS. */
+  artistStateThresholds?: ArtistStateThresholds;
+}
+
+/**
+ * M16 two-site lockstep helper — the ONE place that maps a gameState-shaped
+ * record onto DeriveRelevanceStateInput's new fields. BOTH call sites (the
+ * /api/roles route in server/routes/executives.ts AND the engine's autonomous
+ * re-derivation in shared/engine/game-engine.ts resolveAutonomousExecMeetings)
+ * MUST build their input through this helper so the offered meeting and the
+ * autonomous resolution can never diverge on how cash/reputation/flags are
+ * threaded (parity test: tests/engine/meeting-selection-two-site-parity.test.ts).
+ */
+export function buildRelevanceInput(params: {
+  artists: RelevanceArtistInput[];
+  projects: RelevanceProjectInput[];
+  releases: RelevanceReleaseInput[];
+  songs: RelevanceSongInput[];
+  currentWeek: number;
+  /** gameState-shaped record: money/reputation/flags (all read defensively). */
+  gameState?: { money?: number | null; reputation?: number | null; flags?: unknown } | null;
+  recencyWindowWeeks?: number;
+  artistStateThresholds?: ArtistStateThresholds;
+}): DeriveRelevanceStateInput {
+  const gs = params.gameState ?? {};
+  return {
+    artists: params.artists,
+    projects: params.projects,
+    releases: params.releases,
+    songs: params.songs,
+    currentWeek: params.currentWeek,
+    recencyWindowWeeks: params.recencyWindowWeeks,
+    cash: typeof gs.money === 'number' ? gs.money : undefined,
+    reputation: typeof gs.reputation === 'number' ? gs.reputation : undefined,
+    flags: gs.flags,
+    artistStateThresholds: params.artistStateThresholds,
+  };
 }
 
 /**
@@ -136,6 +232,15 @@ function isTourProjectActive(project: RelevanceProjectInput, currentWeek: number
  */
 export function deriveRelevanceState(input: DeriveRelevanceStateInput): MeetingRelevanceState {
   const { artists, projects, releases, songs, currentWeek, recencyWindowWeeks = 0 } = input;
+  const thresholds = input.artistStateThresholds ?? DEFAULT_ARTIST_STATE_THRESHOLDS;
+
+  // M16: flags.story read defensively — absent/non-object ⇒ no story flags set
+  // (the write key ships in a sibling slice; this read must never throw).
+  const rawStory = (input.flags as { story?: unknown } | null | undefined)?.story;
+  const storyFlags: Record<string, unknown> | undefined =
+    rawStory && typeof rawStory === 'object' && !Array.isArray(rawStory)
+      ? (rawStory as Record<string, unknown>)
+      : undefined;
 
   // Past-facing window: the event happened up to N weeks AGO (signings).
   const withinPastWindow = (weekValue: number | null | undefined): boolean => {
@@ -168,12 +273,31 @@ export function deriveRelevanceState(input: DeriveRelevanceStateInput): MeetingR
       (r) => r.status === 'planned' && withinUpcomingWindow(r.releaseWeek)
     ),
     artistSignedRecently: artists.some((a) => withinPastWindow(a.signedWeek)),
+    // M16 (requires-gates): stat values + story flags for the threshold/flag
+    // grammar, and the per-artist-state boolean tags. A missing per-artist
+    // field is simply not counted (never a throw, never a spurious true).
+    cash: typeof input.cash === 'number' ? input.cash : undefined,
+    reputation: typeof input.reputation === 'number' ? input.reputation : undefined,
+    storyFlags,
+    anyArtistLowMood: artists.some(
+      (a) => typeof a.mood === 'number' && a.mood < thresholds.low_mood_lt
+    ),
+    anyArtistHighPopularity: artists.some(
+      (a) => typeof a.popularity === 'number' && a.popularity >= thresholds.high_popularity_gte
+    ),
+    anyArtistLowEnergy: artists.some(
+      (a) => typeof a.energy === 'number' && a.energy < thresholds.low_energy_lt
+    ),
   };
 }
 
-/** Minimal shape a pool item needs for eligibility filtering. */
+/**
+ * Minimal shape a pool item needs for eligibility filtering. M16 widened the
+ * entry type from RelevanceTag to RequiresEntry (plain tags + threshold/flag
+ * objects) — plain-string arrays remain valid, so pre-M16 pools keep compiling.
+ */
 export interface RelevanceTaggable {
-  requires?: RelevanceTag[];
+  requires?: RequiresEntry[];
 }
 
 /** Minimal shape a pool item needs for Tier 1 (PR-2) weighting. */
@@ -257,6 +381,14 @@ export function isTagSatisfied(tag: RelevanceTag, state: MeetingRelevanceState):
       return state.recordingProjectActive;
     case 'tour_active':
       return state.tourActive;
+    // M16 per-artist-state tags: optional booleans on the state (undefined =
+    // false) so hand-built pre-M16 state literals keep behaving.
+    case 'any_artist_low_mood':
+      return state.anyArtistLowMood === true;
+    case 'any_artist_high_popularity':
+      return state.anyArtistHighPopularity === true;
+    case 'any_artist_low_energy':
+      return state.anyArtistLowEnergy === true;
     default: {
       // Exhaustiveness guard: a new tag added to RELEVANCE_TAGS without a
       // predicate here is a compile error, not a silent always-false.
@@ -267,15 +399,52 @@ export function isTagSatisfied(tag: RelevanceTag, state: MeetingRelevanceState):
 }
 
 /**
+ * Engine-verbs M16: evaluate ONE `requires` entry (any grammar form) against
+ * the state snapshot. Grammar (see RequiresEntry in shared/types/gameTypes.ts):
+ *  - plain string ⇒ the original relevance-tag predicate (isTagSatisfied);
+ *  - `{stat, gte?, lte?}` ⇒ inclusive threshold(s) on 'week' (state.currentWeek),
+ *    'cash' (state.cash) or 'reputation' (state.reputation). An UNKNOWN stat
+ *    value (caller didn't thread it) fails CLOSED;
+ *  - `{flag, is?}` ⇒ story-flag gate: `state.storyFlags[flag] === true` must
+ *    equal `is` (default true). Absent map/key reads as "not set".
+ * Any other shape fails closed (the Zod schemas + data lint prevent authoring one).
+ */
+export function isRequirementSatisfied(entry: RequiresEntry, state: MeetingRelevanceState): boolean {
+  if (typeof entry === 'string') {
+    return isTagSatisfied(entry, state);
+  }
+  if (entry && typeof entry === 'object' && 'stat' in entry) {
+    const value =
+      entry.stat === 'week'
+        ? state.currentWeek
+        : entry.stat === 'cash'
+          ? state.cash
+          : entry.stat === 'reputation'
+            ? state.reputation
+            : undefined;
+    if (typeof value !== 'number' || !Number.isFinite(value)) return false; // fail closed
+    if (entry.gte !== undefined && !(value >= entry.gte)) return false;
+    if (entry.lte !== undefined && !(value <= entry.lte)) return false;
+    return true;
+  }
+  if (entry && typeof entry === 'object' && 'flag' in entry) {
+    const isSet = state.storyFlags?.[entry.flag] === true;
+    return isSet === (entry.is ?? true);
+  }
+  return false; // unknown shape — fail closed
+}
+
+/**
  * Tier 0 eligibility filter: `requires` has AND semantics; an absent (or empty)
- * `requires` means always eligible.
+ * `requires` means always eligible. M16: entries may be plain tags OR
+ * threshold/flag objects — see isRequirementSatisfied.
  */
 export function filterEligible<T extends RelevanceTaggable>(
   pool: T[],
   state: MeetingRelevanceState
 ): T[] {
   return pool.filter((meeting) =>
-    (meeting.requires ?? []).every((tag) => isTagSatisfied(tag, state))
+    (meeting.requires ?? []).every((entry) => isRequirementSatisfied(entry, state))
   );
 }
 
@@ -354,12 +523,16 @@ export interface ReactiveMatch<T> {
  *    meetings whose `reactive_trigger` matches ANY current happening's type.
  * 2. Among matches, pick the happening/meeting pair whose trigger has the
  *    highest `REACTIVE_TRIGGER_PRIORITY` rank.
- * 3. Ties within the same priority level (e.g. two different happenings of
- *    the SAME trigger type both matching, which the per-(exec,trigger) data
- *    lint makes rare but not impossible if the pool ever holds >1 meeting per
- *    trigger) are broken by a seeded pick using an ISOLATED seed
- *    (`${seed}-reactive-tiebreak`) — NEVER `ctx.getRandom`, so the engine's
- *    RNG stream stays untouched.
+ * 3. Ties within the same priority level are broken by a seeded pick using an
+ *    ISOLATED seed (`${seed}-reactive-tiebreak`) — NEVER `ctx.getRandom`, so
+ *    the engine's RNG stream stays untouched. This is also the SHARED-TRIGGER
+ *    random-ownership rule (designer decision, 2026-07-20): multiple meetings
+ *    in one exec's pool may own the SAME `reactive_trigger` (e.g. head_ar's
+ *    ar_recent_signing_plan + demo_ethics_one both own recent_signing); when
+ *    the trigger fires and more than one owner is eligible, exactly one is
+ *    picked uniformly at random via this seeded tie-break — deterministic per
+ *    (gameId, week, roleId) seed, varying across weeks/games. Single-owner
+ *    triggers are unaffected (a lone candidate wins outright, no draw).
  *
  * Returns null when no happening matches any pool meeting's trigger — the
  * caller then runs the existing Tier 0+1 pipeline unchanged.

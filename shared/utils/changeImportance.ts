@@ -160,6 +160,20 @@ export function classifyChange(
     case 'flop':
       return 'notable';
 
+    // PENDING-DECISIONS #9: a chart milestone granting Creative Capital is a
+    // meaningful, attributable beat — the positive sibling of the reputation
+    // milestone line it rides alongside (both render on the Achievements card).
+    case 'creative_capital':
+      return 'notable';
+
+    // Engine-verbs M1a/M1b (tangible catalog): a meeting choice materializing a
+    // REAL recorded song ('song_granted') or a REAL scheduled release
+    // ('release_spawned') is a meaningful, attributable beat — notable-stage
+    // lines, never lost in routine churn.
+    case 'song_granted':
+    case 'release_spawned':
+      return 'notable';
+
     default:
       return assertNever(change.type);
   }

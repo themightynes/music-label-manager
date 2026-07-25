@@ -136,7 +136,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     body: [
       'You run on three resources, and they do different jobs. [[money]] is the obvious one — it pays for everything you set in motion. [[reputation]] is your standing in the industry, and it is what unlocks access: better playlists, real press attention, bigger venues. [[creative-capital|Creative capital]] is the fuel for the art itself; you spend it to start projects and to plan releases.',
       'The trap is treating them as interchangeable. They are not. Money you can win back in a good week. Reputation you build slowly and cannot buy — it is the gate in front of the moves that actually grow a label, so protect it. Creative capital is the quiet limiter; run dry and you cannot make anything, no matter how full your bank account is.',
-      'Creative capital does not just drain — it comes back. Your executives are the tap: the right meeting choice, backing an artist with the pricier creative call instead of the cheap one, refills it. Watch for those moments in your weekly meetings — they are the only place the well gets topped back up.',
+      'Creative capital does not just drain — it comes back, two ways. Your executives are one tap: the right meeting choice, backing an artist with the pricier creative call instead of the cheap one, refills it. The other is the charts themselves — a record cracking the top ten for the first time, or reaching number one, puts a little back in the well. Success feeds the art.',
       'Most weeks you are trading. Chase money now and you may stall your reputation climb. Push for standing and you may spend past what is comfortable. There is no correct ratio — there is only what this week needs.',
     ],
     rules: [

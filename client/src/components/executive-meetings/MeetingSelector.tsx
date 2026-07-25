@@ -4,6 +4,7 @@ import { Badge } from '../ui/badge';
 import { Globe, Star, User, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { RoleMeeting, GameArtist } from '../../../../shared/types/gameTypes';
 import { formatWhyNow } from '../../utils/reactiveContextCopy';
+import { resolveMeetingPromptPlaceholders } from '../../utils/meetingPromptPlaceholders';
 
 /**
  * Exec Console redesign (2026-07-11): the meeting step renders as the solo
@@ -171,12 +172,26 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
   const safeIndex = Math.min(meetingIndex, filteredMeetings.length - 1);
   const meeting = filteredMeetings[safeIndex];
   const isUserSelected = meeting.target_scope === 'user_selected' && signedArtists.length > 0;
-  const briefPrompt = meeting.target_scope === 'user_selected' && meeting.prompt_before_selection
-    ? meeting.prompt_before_selection
-    : meeting.prompt;
+  // Resolve {artistName}/{songTitle} against the reactive happening's names
+  // (global-scope reactive meetings — e.g. chart_debut_one_hour_window — know
+  // WHICH song charted via reactiveContext), with graceful fallbacks so
+  // literal braces never render (see meetingPromptPlaceholders.ts).
+  const briefPrompt = resolveMeetingPromptPlaceholders(
+    meeting.target_scope === 'user_selected' && meeting.prompt_before_selection
+      ? meeting.prompt_before_selection
+      : meeting.prompt,
+    meeting.reactiveContext ?? {}
+  );
 
   const handleStart = () => {
-    if (isUserSelected) {
+    // Reactive user_selected meetings bind the TRIGGERING artist — the fiction
+    // already chose ("the one that made me sign {artistName}"), so offering a
+    // picker both breaks fiction and lets the player contradict it (2026-07-25
+    // playtest). Non-reactive user_selected meetings keep the picker.
+    const boundArtistId = meeting.reactiveContext?.artistId;
+    if (isUserSelected && boundArtistId) {
+      onSelectMeeting(meeting, boundArtistId);
+    } else if (isUserSelected) {
       setPickingArtistFor(meeting);
     } else {
       onSelectMeeting(meeting);
@@ -205,7 +220,9 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
           onClick={handleStart}
           className="w-[340px] max-w-full rounded-button bg-gradient-to-br from-action-pink to-action-purple py-6 text-[15px] font-semibold text-white shadow-action hover:opacity-90"
         >
-          {isUserSelected ? 'Start Meeting — pick an artist' : 'Start Meeting'}
+          {isUserSelected && !meeting.reactiveContext?.artistId
+            ? 'Start Meeting — pick an artist'
+            : 'Start Meeting'}
         </Button>
         {filteredMeetings.length > 1 && (
           <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted">

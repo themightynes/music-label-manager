@@ -2,8 +2,9 @@ import React from 'react';
 import { Badge } from '../ui/badge';
 import { HoloDisc } from '../ui/holo-disc';
 import { Users, Brain, DollarSign, Star, Check } from 'lucide-react';
-import type { Executive } from '../../../../shared/types/gameTypes';
+import type { Executive, RoleMeeting } from '../../../../shared/types/gameTypes';
 import { getMoodModifiers, isNeutral } from '@shared/utils/executiveMoodModifier';
+import { resolveMeetingPromptPlaceholders } from '../../utils/meetingPromptPlaceholders';
 
 /**
  * Exec Console redesign (2026-07-11, from the claude.ai/design "Exec Meetings —
@@ -133,6 +134,27 @@ export function snippetOf(text: string | undefined | null, max: number = MEETING
   const cut = clean.slice(0, max + 1);
   const lastSpace = cut.lastIndexOf(' ');
   return `${cut.slice(0, lastSpace > 40 ? lastSpace : max).trimEnd()}…`;
+}
+
+/**
+ * Card-preview snippet for a meeting — the ONLY correct way to build the
+ * exec-card/grid preview text. Resolves {artistName}/{songTitle} against the
+ * meeting's reactiveContext BEFORE truncating (same invocation as
+ * MeetingSelector's brief), so a literal `{songTitle}` can never leak onto a
+ * card before the meeting is opened. Missing context degrades via the
+ * utility's own fallback contract (never literal braces).
+ */
+export function meetingPreviewSnippet(
+  meeting: Pick<RoleMeeting, 'prompt' | 'prompt_before_selection' | 'reactiveContext'>,
+  max: number = MEETING_SNIPPET_MAX
+): string {
+  return snippetOf(
+    resolveMeetingPromptPlaceholders(
+      meeting.prompt_before_selection || meeting.prompt,
+      meeting.reactiveContext ?? {}
+    ),
+    max
+  );
 }
 
 function VerticalFader({ value, label, fillClass, valueClass }: {

@@ -130,6 +130,74 @@ describe('matchReactiveMeeting — priority + requires', () => {
     }
   });
 
+  it('shared-trigger random ownership: with TWO eligible owners of one trigger, exactly one is picked and BOTH are reachable across seeds', () => {
+    // Designer decision 2026-07-20: multiple meetings may own the SAME
+    // reactive_trigger; the seeded tie-break picks one uniformly at random.
+    // Mirrors the real head_ar pool: ar_recent_signing_plan + demo_ethics_one
+    // both own recent_signing.
+    const pool: Pool = [
+      { id: 'ar_recent_signing_plan', reactive_trigger: 'recent_signing' },
+      { id: 'demo_ethics_one', reactive_trigger: 'recent_signing' },
+    ];
+    const happenings = [happening('recent_signing')];
+    const picked = new Set<string>();
+    for (let week = 1; week <= 60; week++) {
+      const seed = generateMeetingSeed('game-1', week, 'head_ar');
+      const match = matchReactiveMeeting(pool, happenings, seed);
+      expect(match).not.toBeNull();
+      expect(['ar_recent_signing_plan', 'demo_ethics_one']).toContain(match!.meeting.id);
+      picked.add(match!.meeting.id);
+    }
+    // 60 independent weekly seeds: both owners must have come up at least once
+    // (a single owner monopolizing every draw would mean the tie-break is dead).
+    expect(picked).toEqual(new Set(['ar_recent_signing_plan', 'demo_ethics_one']));
+  });
+
+  it('single-owner triggers behave exactly as before: the lone owner wins on EVERY seed, no draw involved', () => {
+    const pool: Pool = [
+      { id: 'normal' },
+      { id: 'lone-reactive', reactive_trigger: 'release_out' },
+    ];
+    const happenings = [happening('release_out')];
+    for (let week = 1; week <= 40; week++) {
+      const seed = generateMeetingSeed('game-1', week, 'head_distribution');
+      const match = matchReactiveMeeting(pool, happenings, seed);
+      expect(match?.meeting.id).toBe('lone-reactive');
+      expect(match?.happening.type).toBe('release_out');
+    }
+  });
+
+  it('shared-trigger ownership flows through selectWeeklyMeetingWithHappenings (end-to-end replace-the-draw)', () => {
+    const pool: Pool = [
+      { id: 'normal-meeting' },
+      { id: 'owner-a', reactive_trigger: 'recent_signing', requires: ['artist_signed'] },
+      { id: 'owner-b', reactive_trigger: 'recent_signing', requires: ['artist_signed'] },
+    ];
+    const state = fullState(); // artist_signed satisfied
+    const picked = new Set<string>();
+    for (let week = 1; week <= 60; week++) {
+      const seed = generateMeetingSeed('game-2', week, 'head_ar');
+      const result = selectWeeklyMeetingWithHappenings(pool, state, seed, [happening('recent_signing')]);
+      expect(['owner-a', 'owner-b']).toContain(result.meeting?.id);
+      expect(result.reactiveHappening?.type).toBe('recent_signing');
+      picked.add(result.meeting!.id);
+    }
+    expect(picked).toEqual(new Set(['owner-a', 'owner-b']));
+  });
+
+  it('shared-trigger ownership respects requires: an ineligible co-owner never wins, the eligible one always does', () => {
+    const pool: Pool = [
+      { id: 'eligible-owner', reactive_trigger: 'recent_signing' },
+      { id: 'gated-owner', reactive_trigger: 'recent_signing', requires: ['tour_active'] },
+    ];
+    const state = emptyState(); // tour_active false → gated-owner filtered out upstream
+    for (let week = 1; week <= 40; week++) {
+      const seed = generateMeetingSeed('game-3', week, 'head_ar');
+      const result = selectWeeklyMeetingWithHappenings(pool, state, seed, [happening('recent_signing')]);
+      expect(result.meeting?.id).toBe('eligible-owner');
+    }
+  });
+
   it('a matching trigger whose meeting requires unsatisfied tags is excluded (eligiblePool is pre-filtered by the caller)', () => {
     // matchReactiveMeeting only sees the ALREADY Tier-0-filtered pool, so a
     // meeting requiring an unmet tag simply never appears in eligiblePool —

@@ -104,24 +104,28 @@ function forceCrisisGameData(gd: any): any {
 }
 
 // Executive Delegation arc (Tier 1, §10.2): a pool where the loyal (safety) band
-// TIES between two gamble-free choices differing only in money spend (clamped in
-// the safety score) — so mood risk-appetite decides. One meeting per role.
+// TIES between two gamble-free choices differing only in money spend — so mood
+// risk-appetite decides. Loyal-scorer fix (2026-07-12): spends now score
+// per-$1000, so a tie needs BOTH spends beyond the money_spend_cap ($20k-worth
+// of score); riskScore (raw spend) still differs, so mood breaks the tie.
 const MOOD_RISK_POOL: any[] = ['head_ar', 'cmo'].map((role) => ({
   type: 'role_meeting', id: `mr_${role}`, role_id: role, name: `${role} call`,
   target_scope: 'global', requires: [], choices: [
-    { id: 'cheap', label: 'Cheap', effects_immediate: { money: -3000 }, effects_delayed: {} },
-    { id: 'pricey', label: 'Pricey', effects_immediate: { money: -9000 }, effects_delayed: {} },
+    { id: 'cheap', label: 'Cheap', effects_immediate: { money: -25000 }, effects_delayed: {} },
+    { id: 'pricey', label: 'Pricey', effects_immediate: { money: -40000 }, effects_delayed: {} },
   ],
 }));
 
 // Escalation arc (Tier 2, §10.2/§10.4): the real events.json escalation event
-// for head_ar (ESCALATION_EVENT_BY_ROLE is the shared role→eventId constant the
-// engine itself reads — imported, not re-literaled, so the test stays coupled
-// to the real mapping). A minimal single-choice stand-in mirroring the real
+// for head_ar (ESCALATION_EVENT_BY_ROLE is the shared role→event-pool constant
+// the engine itself reads — imported, not re-literaled, so the test stays
+// coupled to the real mapping; head_ar's pool is currently a singleton, so [0]
+// is exactly what the engine's seeded pick resolves to).
+// A minimal single-choice stand-in mirroring the real
 // event's shape (id/prompt/category/choices) is enough to pin the payload; the
 // authored content itself is covered by data-lint + JSON validation, not here.
 const ESCALATION_TEST_EVENT = {
-  id: ESCALATION_EVENT_BY_ROLE.head_ar,
+  id: ESCALATION_EVENT_BY_ROLE.head_ar[0],
   role_hint: 'Mac (Head of A&R)',
   category: 'industry_drama' as const,
   escalation_only: true,
