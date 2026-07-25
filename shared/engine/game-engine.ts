@@ -20,6 +20,7 @@ import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence, GameArtist,
 import { ArtistChangeHelpers, isScheduleEventEffect } from '../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../utils/seasonalCalculations';
 import { scaleReputationGain } from '../utils/reputationScaling';
+import { pickBoundArtist, resolveBindStrategy } from './artistBinding';
 import { selectSideEvent } from './sideEventSelection';
 import { classifyChange, classifyChartUpdate } from '../utils/changeImportance';
 import { AROfficeProcessor } from './processors/AROfficeProcessor';
@@ -943,13 +944,27 @@ export class GameEngine {
 
       // user_selected meetings: a REACTIVE pick binds the triggering happening's
       // artist (the fiction already chose — same binding the player path uses);
-      // otherwise autonomous resolution falls back to predetermined targeting
+      // an auto_bind_artist meeting binds via the SAME seeded weighted draw the
+      // offer route uses (item 5 two-site parity — artistBinding.ts); otherwise
+      // autonomous resolution falls back to predetermined targeting
       // (highest-popularity artist) — the exec picks the obvious artist in
       // character (§4.3.4). This is the one place autonomous diverges from AUTO
       // (which skips user_selected entirely).
       if ((meeting as any).target_scope === 'user_selected') {
         if (reactiveHappening?.artistId) {
           metadata.selectedArtistId = reactiveHappening.artistId;
+        } else if ((meeting as any).auto_bind_artist) {
+          // `artists`/`releases` were loaded above with the same rows the
+          // route reads — same list + same seed + same strategy = same bound
+          // artist at both sites.
+          const bound = pickBoundArtist(
+            artists as any[],
+            seed,
+            resolveBindStrategy((meeting as any).auto_bind_artist),
+            releases as any[],
+          );
+          if (!bound) continue; // no signed artist to bind → sit out
+          metadata.selectedArtistId = bound.id;
         } else {
           const artist = await new ArtistStateProcessor().selectHighestPopularityArtist(
             this.weekContext(summary, dbTransaction),
