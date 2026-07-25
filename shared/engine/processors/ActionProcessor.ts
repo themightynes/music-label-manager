@@ -40,11 +40,29 @@
  * via `(engine as any).applyEffects`) keep working byte-for-byte.
  */
 import type { WeekContext } from './types';
-import type { WeekSummary } from '../../types/gameTypes';
-import { ArtistChangeHelpers } from '../../types/gameTypes';
+import type { WeekSummary, ScheduleEventEffect, ScheduledEventEntry } from '../../types/gameTypes';
+import {
+  ArtistChangeHelpers,
+  isScheduleEventEffect,
+  EFFECT_TARGETING_DIRECTIVE_KEYS,
+  STRUCTURED_EFFECT_KEY_LIST,
+  EXEC_MOOD_TARGET_ROLE_IDS,
+  EXEC_MOOD_TARGET_BROADCAST,
+} from '../../types/gameTypes';
 import type { GameEngineAction } from '../game-engine';
 import { ArtistStateProcessor } from './ArtistStateProcessor';
-import { seededRandom } from '../../utils/seededRandom';
+import { seededRandom, seededRandomPick } from '../../utils/seededRandom';
+import { createReleaseWithSongs, type ReleaseCreationOps } from '../releaseCreation';
+import { pickTargetReleasedSong, pickLatestReleasedRelease } from '../releaseTargeting';
+import {
+  readInventoryLedger,
+  readRevenueTransfers,
+  normalizeTransferFraction,
+  PHYSICAL_INVENTORY_DEFAULTS,
+  REVENUE_TRANSFER_DEFAULTS,
+  type InventoryLedgerEntry,
+  type RevenueTransferEntry,
+} from '../flagsLedgers';
 import { scaleReputationGain } from '../../utils/reputationScaling';
 import {
   getMoodModifiers,
@@ -79,8 +97,59 @@ export const LIVE_EFFECT_KEYS: ReadonlySet<string> = new Set([
   'variance_up',
   'rep_swing',
   // Exec-meetings-revival PR-7 (C5 — prestige/award track):
-  'award_chances'
+  'award_chances',
+  // Engine-verbs Slice 1 (M4 — chained/scheduled events): value shape
+  // { event_id, defer_weeks } — banks an entry into flags.scheduled_events[];
+  // GameEngine.promoteScheduledEvents lands it as a mandatory crisis once due
+  // AND the crisis slot is free.
+  'schedule_event',
+  // Engine-verbs arc (2026-07-12) — Tier 1/2 mechanism keys (feat/ev-flags-keys):
+  // Slice 3-WRITE (M3): namespaced narrative memory — flags.story[key] = true.
+  'story_flag',
+  // Slice 2 (M2): inject a prospect into the A&R discovered pool.
+  'spawn_prospect',
+  // Slice 11-WRITE (M7): bench an executive — flags.execAbsence[role] = untilWeek.
+  'set_exec_absence',
+  // Slice 12 (M10): persistent label streaming-revenue modifier.
+  'distribution_efficiency',
+  // Slice 13 (M15): negative sibling of press_story_flag (next-release liability).
+  'press_scrutiny_flag',
+  // Engine-verbs M1a (tangible catalog — grant a real recorded song). OBJECT-valued:
+  // { title_hint?, quality?, quality_range?, artist: 'targeted' }.
+  'grant_song',
+  // Engine-verbs M1b (tangible catalog — spawn a real planned release). OBJECT-valued:
+  // { songs: 'granted' | 'latest_recorded', type: 'single', defer_weeks? }.
+  'spawn_release',
+  // Engine-verbs arc Tier 2 (live-economy verbs — the first BACKWARD-acting
+  // channels): value = magnitude/units/fraction (NUMERIC by design; multi-param
+  // shapes live in balance knobs).
+  'promote_release',
+  'catalog_damage',
+  'cancel_project',
+  'grant_inventory',
+  'transfer_revenue_stream'
 ]);
+
+/**
+ * Engine-verbs arc — effect keys whose authored VALUE is structured (a string or
+ * an object), not a plain number. Every effects pipeline entry point filters
+ * authored values with `typeof value === 'number'` (a PR-1-era guard against
+ * garbage); these keys are the sanctioned exceptions, so those filters admit
+ * them too. Value shapes (enforced by tests/engine/data-lint-effect-keys.test.ts):
+ *   - schedule_event:          { event_id: string, defer_weeks: int >= 0 }
+ *   - story_flag:              string key, or { key: string, value?: boolean }
+ *   - spawn_prospect:          { name?, archetype?, quality_hint?, popularity_hint?, source? }
+ *   - set_exec_absence:        { role: string, weeks: number > 0 }
+ *   - distribution_efficiency: { amount: number, weeks: number > 0 }
+ *   - grant_song:              { title_hint?, quality?, quality_range?, artist: 'targeted' }
+ *   - spawn_release:           { songs: 'granted'|'latest_recorded', type: 'single', defer_weeks? }
+ * (press_scrutiny_flag is numeric, like press_story_flag — not listed here.)
+ *
+ * The key list itself is canonical in shared/types/gameTypes.ts
+ * (STRUCTURED_EFFECT_KEY_LIST) so the Zod mirrors in shared/api/contracts.ts and
+ * shared/utils/dataLoader.ts derive from the SAME list instead of hand-copies.
+ */
+export const STRUCTURED_EFFECT_KEYS: ReadonlySet<string> = new Set(STRUCTURED_EFFECT_KEY_LIST);
 
 /**
  * Player-facing explanations for every effect channel, keyed by effect key.
@@ -179,6 +248,61 @@ export const EFFECT_CHANNEL_DESCRIPTIONS: Readonly<Record<string, EffectChannelD
   award_chances: {
     title: 'Prestige',
     text: 'Prestige points toward the end-of-campaign awards. They accumulate all game long, never expire, and pay off in one roll at the finish — more prestige, better odds of winning an award.',
+  },
+  schedule_event: {
+    title: 'Consequence',
+    text: 'Sets something in motion behind the scenes. A few weeks from now this decision comes back around as an event on your desk — you\'ll deal with it when it lands.',
+  },
+  // --- Engine-verbs arc channels (feat/ev-flags-keys) ---
+  story_flag: {
+    title: 'Story',
+    text: 'The label remembers this decision. It changes nothing today, but future meetings and events can hinge on it.',
+  },
+  spawn_prospect: {
+    title: 'New Prospect',
+    text: 'Puts a new artist on your radar, applied instantly. They land in your A&R office\'s discovered pool, ready to sign whenever you are.',
+  },
+  set_exec_absence: {
+    title: 'Exec Away',
+    text: 'Sends this executive away from the label for a stretch. While they\'re out, they won\'t be around for meetings.',
+  },
+  distribution_efficiency: {
+    title: 'Distribution',
+    text: 'Shifts how efficiently your catalog reaches listeners for a while — streaming payouts run higher (or lower) every week until the arrangement runs its course.',
+  },
+  press_scrutiny_flag: {
+    title: 'Press Scrutiny',
+    text: 'The press is watching for a stumble. Your next release faces a harder crowd — coverage and the standing it brings are dulled. Fires once, then the heat moves on; fades if you lie low long enough.',
+  },
+  // --- Engine-verbs tangible-catalog channels (M1a / M1b) ---
+  grant_song: {
+    title: 'New Recording',
+    text: 'A finished recording lands in the targeted artist\'s vault this week — real, recorded, and ready to plan a release with. No studio time or recording budget spent.',
+  },
+  spawn_release: {
+    title: 'Surprise Release',
+    text: 'Puts a release on the schedule immediately — the track ships to the airwaves within the week and enters the normal streaming, chart, and revenue cycle, with no marketing spend behind it.',
+  },
+  // --- Engine-verbs arc Tier 2 (live-economy verbs) ---
+  promote_release: {
+    title: 'Catalog Push',
+    text: 'A promotional push behind music you already have out. It lifts the buzz of your hottest released song right away — when this meeting targets an artist, it lifts THAT artist\'s hottest released track — feeding its streams from here on. Does nothing if nothing is out yet.',
+  },
+  catalog_damage: {
+    title: 'Catalog Hit',
+    text: 'Damage to music you already have out. Your hottest released song loses buzz immediately — when this targets an artist, it\'s THAT artist\'s hottest released track — and its streams suffer from here on. Does nothing if nothing is out yet.',
+  },
+  cancel_project: {
+    title: 'Project Shutdown',
+    text: 'Pulls the plug on the targeted artist\'s active recording project, effective now. Money already spent stays spent, and any songs already recorded are kept — but no more will come from that project.',
+  },
+  grant_inventory: {
+    title: 'Physical Pressing',
+    text: 'Presses a physical run tied to the latest release — you pay manufacturing up front, then units sell week by week (faster while the release is buzzing) until they sell out. Stock left on the shelf too long gets written off.',
+  },
+  transfer_revenue_stream: {
+    title: 'Catalog Share Sale',
+    text: 'Sells a slice of a released record\'s future streaming income. Every week for the term of the deal, that share of the release\'s streaming revenue goes to the buyer instead of you.',
   },
 };
 
@@ -352,11 +476,18 @@ export class ActionProcessor {
     // entry below can carry the actual numeric effects passed to applyEffects, even
     // when effects_immediate is empty (appliedEffects then stays {}).
     const appliedEffects: Record<string, number> = {};
+    // Engine-verbs arc: structured-value keys (story_flag, spawn_prospect, ...)
+    // are collected SEPARATELY — they flow to applyEffects but stay out of the
+    // numeric appliedEffects badge record (their cases push their own qualitative
+    // summary lines) and out of the mood-modifier transform (numbers only).
+    const structuredEffects: Record<string, any> = {};
     if (choice.effects_immediate) {
       // Convert to Record<string, number> for applyEffects
       for (const [key, value] of Object.entries(choice.effects_immediate)) {
         if (typeof value === 'number') {
           appliedEffects[key] = value;
+        } else if (STRUCTURED_EFFECT_KEYS.has(key)) {
+          structuredEffects[key] = value;
         }
       }
       // PR-9: transform through the shared mood util BEFORE applyEffects so the
@@ -371,7 +502,15 @@ export class ActionProcessor {
           appliedEffects[key] = immediateToApply[key];
         }
       }
-      await this.applyEffects(ctx, immediateToApply, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
+      // Engine-verbs arc: structured-value effects (schedule_event, story_flag,
+      // grant_song, spawn_release, …) ride along un-scaled — collected into
+      // structuredEffects above (via STRUCTURED_EFFECT_KEYS), re-attached AFTER
+      // mood scaling so the exec-mood multiplier never touches their payloads,
+      // and kept out of appliedEffects so badge records stay numeric. Authored
+      // order is preserved (author grant_song BEFORE spawn_release when pairing
+      // — the spawn's 'granted' mode consumes the song granted earlier in the
+      // same effects block).
+      await this.applyEffects(ctx, { ...immediateToApply, ...structuredEffects }, targetArtistId, targetScope, meetingName, choiceId); // Pass all context for logging
 
       // Volatility-economy slice 3: applyEffects throttles POSITIVE reputation
       // gains through the global scaling helper. Reflect the SAME scaled value back
@@ -393,6 +532,31 @@ export class ActionProcessor {
       // would show a PHANTOM exec-mood delta. Drop it from the display record; the
       // real self-effect (0 for neglect) rides on execResult.moodChange.
       delete (appliedEffects as any).executive_mood;
+    }
+
+    // Engine-verbs SLICE 5 (M13): TARGETED executive_mood from CEO meetings.
+    // CEO meetings have no executive row (processExecutiveActions returns null),
+    // so an authored executive_mood was historically DEAD there. With a
+    // target_executive directive sibling, the delta now routes to the named
+    // exec(s) through the shared clamp/persist path. Role meetings never enter
+    // this branch (roleId !== 'ceo'; the data-lint also forbids the directive
+    // on them — their exec is implicit). CEO meetings never have moodModifiers
+    // (no exec row), so the authored value applies unscaled by construction.
+    {
+      const rawImmediate = (choice.effects_immediate ?? {}) as Record<string, unknown>;
+      if (
+        roleId === 'ceo' &&
+        typeof rawImmediate.executive_mood === 'number' &&
+        typeof rawImmediate.target_executive === 'string'
+      ) {
+        await this.applyTargetedExecutiveMood(
+          ctx,
+          rawImmediate.executive_mood,
+          rawImmediate.target_executive,
+          dbTransaction,
+          `meeting:${meetingName}/${choiceId}`
+        );
+      }
     }
 
     // Queue delayed effects with artist targeting support (Task 2.5, FR-19)
@@ -465,6 +629,13 @@ export class ActionProcessor {
       meetingId: actionId,
       choiceId: choiceId,
       choiceLabel: (choice as any).label,
+      // C92: authored past-tense outcome line. CONDITIONAL spread — an
+      // always-present undefined key would diff every golden-master fixture
+      // (WeekSummary is snapshotted verbatim; see the _pendingEscalation
+      // precedent in game-engine.ts).
+      ...((choice as any).outcome_summary
+        ? { outcomeSummary: (choice as any).outcome_summary }
+        : {}),
       appliedEffects,
       // Playtest bug #1 fix: fold the exec mood/loyalty deltas onto this single
       // 'meeting' entry (CEO meetings have no executive → execResult is null).
@@ -529,7 +700,9 @@ export class ActionProcessor {
         meetingLabel = actionData?.name;
         if (choiceId) {
           const choice = await ctx.gameData.getChoiceById(meetingName, choiceId);
-          choiceLabel = (choice as any)?.label;
+          // C92: prefer the authored past-tense outcome line for payoff
+          // attribution; fall back to the raw option label.
+          choiceLabel = (choice as any)?.outcome_summary ?? (choice as any)?.label;
         }
       } catch {
         // Resolution is best-effort — fall through to the generic label below.
@@ -637,7 +810,7 @@ export class ActionProcessor {
       console.log('[GAME-ENGINE] Applied default executive interaction boost:', moodChange);
     }
 
-    const newMood = Math.max(0, Math.min(100, executive.mood + moodChange));
+    const newMood = this.clampExecutiveMood(executive.mood + moodChange);
 
     // Loyalty gain for engagement (§4.5): a player-attended / AUTO-endorsed
     // meeting grants loyalty_on_use; a NEGLECTED (autonomously self-served)
@@ -663,11 +836,13 @@ export class ActionProcessor {
       lastActionWeek: isAutonomous ? '(unchanged — neglect)' : currentWeek,
     });
 
-    // Save changes to database
-    await ctx.storage.updateExecutive(
-      executive.id,
+    // Save changes to database (SLICE 5/M13: through the ONE shared clamp+persist
+    // path — persistExecutiveMoodUpdate — which applyTargetedExecutiveMood reuses).
+    await this.persistExecutiveMoodUpdate(
+      ctx,
+      executive,
+      moodChange,
       {
-        mood: newMood,
         loyalty: newLoyalty,
         // Neglect leaves lastActionWeek untouched so decay continues to accrue.
         ...(isAutonomous ? {} : { lastActionWeek: currentWeek }),
@@ -684,6 +859,131 @@ export class ActionProcessor {
   }
 
   /**
+   * SLICE 5 (M13): the 0–100 executive-mood clamp — the SAME clamp
+   * processExecutiveActions has always applied. One definition so the targeted
+   * resolver below can never drift from the role-meeting path.
+   */
+  private clampExecutiveMood(mood: number): number {
+    return Math.max(0, Math.min(100, mood));
+  }
+
+  /**
+   * SLICE 5 (M13): the ONE clamp+persist path for an executive mood delta.
+   * Extracted VERBATIM from processExecutiveActions' update (clamp to 0–100,
+   * then ctx.storage.updateExecutive within the advance-week transaction) so
+   * both the implicit role-meeting self-effect and the new targeted resolver
+   * share it — reuse, not a fork. `extraUpdates` carries the role-meeting
+   * path's loyalty/lastActionWeek fields; the targeted path passes none.
+   * Returns the clamped mood that was persisted.
+   */
+  private async persistExecutiveMoodUpdate(
+    ctx: WeekContext,
+    executive: any,
+    moodChange: number,
+    extraUpdates: Record<string, any>,
+    dbTransaction?: any
+  ): Promise<number> {
+    const newMood = this.clampExecutiveMood((executive.mood ?? 0) + moodChange);
+    await ctx.storage.updateExecutive(
+      executive.id,
+      { mood: newMood, ...extraUpdates },
+      dbTransaction
+    );
+    return newMood;
+  }
+
+  /**
+   * Engine-verbs SLICE 5 (M13) — TARGETED executive-mood resolver.
+   *
+   * `executive_mood` historically only landed via processExecutiveActions +
+   * `action.metadata.executiveId` (role meetings; CEO meetings return null,
+   * side/random events drop the key silently). This resolver makes the key
+   * routable from BOTH of those dead surfaces via an authored
+   * `target_executive` directive sibling in effects_immediate:
+   *
+   *   "effects_immediate": { "executive_mood": -5, "target_executive": "cmo" }
+   *   "effects_immediate": { "executive_mood": 3,  "target_executive": "all" }
+   *
+   * Call sites: processRoleMeeting (CEO meetings only — role meetings' exec is
+   * implicit and the data-lint forbids the directive there) and
+   * game-engine.processPendingSideEventResolution (side/escalation event
+   * choices). Fetches the executive row(s) BY ROLE within the advance-week
+   * transaction and applies the delta through the SAME clamp+persist path the
+   * role-meeting self-effect uses ({@link persistExecutiveMoodUpdate}).
+   * Loyalty and lastActionWeek are deliberately untouched — an external mood
+   * hit is not player engagement.
+   *
+   * GM: no current content authors target_executive, so this never fires in
+   * golden-master fixtures (byte-identical by construction). No RNG.
+   */
+  async applyTargetedExecutiveMood(
+    ctx: WeekContext,
+    moodDelta: number,
+    targetExecutive: string,
+    dbTransaction?: any,
+    sourceLabel?: string
+  ): Promise<void> {
+    const { summary } = ctx;
+    const suffix = sourceLabel ? ` (source: ${sourceLabel})` : '';
+
+    const isBroadcast = targetExecutive === EXEC_MOOD_TARGET_BROADCAST;
+    if (!isBroadcast && !(EXEC_MOOD_TARGET_ROLE_IDS as readonly string[]).includes(targetExecutive)) {
+      // Defensive — the data-lint guards authored content; this catches runtime-
+      // supplied garbage without crashing the week.
+      console.warn(`[EXEC MOOD TARGETING] Unknown target_executive "${targetExecutive}" — dropped${suffix}`);
+      return;
+    }
+    if (!ctx.storage?.getExecutivesByGame) {
+      console.warn(`[EXEC MOOD TARGETING] storage.getExecutivesByGame unavailable — targeted executive_mood dropped${suffix}`);
+      return;
+    }
+
+    const executives = (await ctx.storage.getExecutivesByGame(ctx.gameState.id, dbTransaction)) || [];
+    const targets = executives.filter(
+      (e: any) => e && e.role !== 'ceo' && (isBroadcast || e.role === targetExecutive)
+    );
+    if (targets.length === 0) {
+      console.warn(`[EXEC MOOD TARGETING] No executive row found for target "${targetExecutive}" — dropped${suffix}`);
+      return;
+    }
+
+    for (const executive of targets) {
+      const previousMood = executive.mood ?? 0;
+      // SAME clamp/persist path as the role-meeting self-effect (reuse, not fork).
+      const newMood = await this.persistExecutiveMoodUpdate(ctx, executive, moodDelta, {}, dbTransaction);
+      const appliedDelta = newMood - previousMood; // what actually landed after the clamp
+
+      console.log(
+        `[EXEC MOOD TARGETING] ${executive.role}: mood ${previousMood} -> ${newMood} ` +
+        `(authored ${moodDelta > 0 ? '+' : ''}${moodDelta}, applied ${appliedDelta > 0 ? '+' : ''}${appliedDelta})${suffix}`
+      );
+
+      // Qualitative prose (house rule: numbers ride the structured fields, not the
+      // description); 'executive_interaction' routes to the meetings bucket in
+      // categorizeWeekChanges and classifies routine (no loyaltyChange field).
+      summary.changes.push({
+        type: 'executive_interaction',
+        description: `${this.execRoleDisplayName(executive.role)} ${moodDelta >= 0 ? 'appreciated how you handled this' : 'took this one personally'}`,
+        roleId: executive.role,
+        moodChange: appliedDelta,
+        newMood,
+        ...(sourceLabel ? { source: sourceLabel } : {}),
+      });
+    }
+  }
+
+  /** Human display name for an executive role slug (SLICE 5 change-entry prose). */
+  private execRoleDisplayName(role: string): string {
+    switch (role) {
+      case 'head_ar': return 'Your Head of A&R';
+      case 'cmo': return 'Your CMO';
+      case 'cco': return 'Your CCO';
+      case 'head_distribution': return 'Your Head of Distribution';
+      default: return 'Your executive';
+    }
+  }
+
+  /**
    * Applies immediate effects to game state
    * @param effects - Effects to apply
    * @param summary - Week summary to update
@@ -691,10 +991,68 @@ export class ActionProcessor {
    * @param targetScope - Optional scope for validation ('global' | 'predetermined' | 'user_selected' | 'dialogue')
    * @param meetingName - Optional meeting name for logging
    * @param choiceId - Optional choice ID for logging
+   *
+   * Engine-verbs M1a/M1b: `effects` is typed `Record<string, any>` (was
+   * `Record<string, number>`) because 'grant_song' and 'spawn_release' carry
+   * OBJECT values; every pre-existing key is still numeric and every numeric
+   * case below still treats `value` as a number.
    */
-  async applyEffects(ctx: WeekContext, effects: Record<string, number>, artistId?: string, targetScope?: string, meetingName?: string, choiceId?: string): Promise<void> {
+  // Engine-verbs arc: `effects` is Record<string, any> (was Record<string, number>)
+  // because STRUCTURED_EFFECT_KEYS carry string/object values. Every numeric case
+  // below still receives numbers — the entry-point filters only admit non-number
+  // values for the structured keys.
+  async applyEffects(ctx: WeekContext, effects: Record<string, any>, artistId?: string, targetScope?: string, meetingName?: string, choiceId?: string): Promise<void> {
     const { summary } = ctx;
-    for (const [key, value] of Object.entries(effects)) {
+    // Engine-verbs M1a→M1b handoff: the song row created by a 'grant_song' key in
+    // THIS effects block, so a sibling 'spawn_release' with songs:'granted' can
+    // release it. Scoped per applyEffects call — never persisted.
+    let grantedSong: any = null;
+    for (const [key, rawValue] of Object.entries(effects)) {
+      // Engine-verbs Slice 1 (M4): `schedule_event` is the ONE structured
+      // (non-numeric) effect — handled before the numeric switch. Banks an entry
+      // into the flags.scheduled_events[] queue (additive flags key, NO
+      // SNAPSHOT_VERSION bump); GameEngine.promoteScheduledEvents promotes the
+      // earliest DUE entry into flags.pending_side_event each advance when the
+      // crisis slot is free (escalations + already-pending crises keep priority).
+      if (key === 'schedule_event') {
+        if (!isScheduleEventEffect(rawValue)) {
+          console.warn(
+            `[EFFECT VALIDATION] schedule_event with invalid payload ${JSON.stringify(rawValue)} dropped` +
+            `${meetingName ? ` — meeting: ${meetingName}` : ''}${choiceId ? `, choice: ${choiceId}` : ''}`
+          );
+          continue;
+        }
+        const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+        const queue: ScheduledEventEntry[] = Array.isArray(flags.scheduled_events)
+          ? flags.scheduled_events
+          : [];
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        const entry: ScheduledEventEntry = {
+          eventId: rawValue.event_id,
+          landsOnWeek: currentWeek + rawValue.defer_weeks,
+          source: meetingName || 'unknown',
+          // Thread the resolved artist target through the queue so a
+          // predetermined-target verdict event resolves against the SAME artist
+          // the scheduling choice was about (conditional spread — absent key,
+          // not undefined, so flag shape stays lean).
+          ...(artistId ? { artistId } : {}),
+        };
+        flags.scheduled_events = [...queue, entry];
+        ctx.gameState.flags = flags;
+
+        // Qualitative foreshadow only — no numbers, no event identity leak.
+        summary.changes.push({
+          type: 'meeting',
+          description: 'Consequences set in motion — this will come back around',
+          amount: 0,
+          appliedEffects: {}
+        });
+        console.log(
+          `[EFFECT PROCESSING] schedule_event: "${entry.eventId}" queued (lands week ${entry.landsOnWeek}, source: ${entry.source})`
+        );
+        continue;
+      }
+      const value = rawValue as number;
       switch (key) {
         case 'money':
           // Note: Money changes will be handled by consolidated financial calculation
@@ -1010,19 +1368,57 @@ export class ActionProcessor {
           // + the zero-out in processRecordingProjects). Stamps pendingQualityBonusWeek
           // so processDelayedEffects can expire an unconsumed bank after N weeks
           // (pending_quality_bonus_expiry_weeks, data/balance/quality.json).
+          //
+          // Meeting-content session — PER-ARTIST SCOPING ("hypeArtistPools treatment",
+          // mirroring the buzz-v2 awareness_boost fork above). When this meeting targets
+          // a specific artist (target_scope: user_selected, so `artistId` is the
+          // player-picked/named recording artist — e.g. the second_album_syndrome
+          // scenario), the bonus banks to THAT artist's pool
+          // (flags.qualityBonusArtistPools[artistId] = { amount, week }); only that
+          // artist's next recording session consumes it (SongGenerationProcessor keys
+          // on project.artistId). Truly global meetings (no user_selected artist) keep
+          // banking to the label-wide pool (flags.pendingQualityBonus), consumed by the
+          // first recording session ANY artist runs. Artist pools are a NEW additive
+          // key; the label pool keys are unchanged so old saves and existing v2 content
+          // behave identically (no SNAPSHOT_VERSION bump — the key is optional/additive).
           const flags = (ctx.gameState.flags || {}) as Record<string, any>;
-          const previous = typeof flags.pendingQualityBonus === 'number' ? flags.pendingQualityBonus : 0;
-          flags.pendingQualityBonus = previous + value;
-          flags.pendingQualityBonusWeek = ctx.gameState.currentWeek || 0;
+          const currentWeek = ctx.gameState.currentWeek || 0;
+          const artistScoped = targetScope === 'user_selected' && !!artistId;
+
+          let poolTotal: number;
+          let scopeLabel: string;
+          if (artistScoped) {
+            const pools = (flags.qualityBonusArtistPools && typeof flags.qualityBonusArtistPools === 'object')
+              ? flags.qualityBonusArtistPools as Record<string, { amount: number; week: number }>
+              : {};
+            const prev = typeof pools[artistId!]?.amount === 'number' ? pools[artistId!].amount : 0;
+            pools[artistId!] = { amount: prev + value, week: currentWeek };
+            flags.qualityBonusArtistPools = pools;
+            poolTotal = pools[artistId!].amount;
+            // Best-effort artist name for attribution (cosmetic; the pure per-key loop
+            // has no dbTransaction, and unit-test stubs pass storage:{}).
+            let artistName = 'this artist';
+            try {
+              const artist = await ctx.storage?.getArtist?.(artistId);
+              if (artist?.name) artistName = artist.name;
+            } catch { /* name is cosmetic — never block banking */ }
+            scopeLabel = `${artistName}'s next recording session`;
+          } else {
+            const previous = typeof flags.pendingQualityBonus === 'number' ? flags.pendingQualityBonus : 0;
+            flags.pendingQualityBonus = previous + value;
+            flags.pendingQualityBonusWeek = currentWeek;
+            poolTotal = flags.pendingQualityBonus;
+            scopeLabel = 'the next recording session';
+          }
           ctx.gameState.flags = flags;
 
           summary.changes.push({
             type: 'meeting',
-            description: `Studio focus ${value > 0 ? 'banked' : 'cost'} ${value > 0 ? '+' : ''}${value} quality for the next recording session`,
+            description: `Studio focus ${value > 0 ? 'banked' : 'cost'} ${value > 0 ? '+' : ''}${value} quality for ${scopeLabel}`,
             amount: value,
             appliedEffects: { quality_bonus: value }
           });
-          console.log(`[EFFECT PROCESSING] quality_bonus effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pendingQualityBonus}, stamped week ${flags.pendingQualityBonusWeek})`);
+          console.log(`[EFFECT PROCESSING] quality_bonus effect: ${value > 0 ? '+' : ''}${value} (${artistScoped ? `artist ${artistId} pool` : 'label pool'} now ${poolTotal}, stamped week ${currentWeek})`);
           break;
         }
 
@@ -1221,11 +1617,809 @@ export class ActionProcessor {
           break;
         }
 
+        case 'story_flag': {
+          // Engine-verbs slice 3-WRITE (M3) — namespaced narrative memory. Value is
+          // a string key (or { key, value? }) → flags.story[key] = true (or the
+          // explicit boolean, so content can also CLEAR a flag). WRITE ONLY: the
+          // `requires` read gate ships in a sibling slice (M16 shares the plumbing).
+          // Additive flags key — no SNAPSHOT_VERSION bump.
+          const raw = value as any;
+          const storyKey: string | null =
+            typeof raw === 'string' && raw.trim().length > 0
+              ? raw.trim()
+              : raw && typeof raw === 'object' && typeof raw.key === 'string' && raw.key.trim().length > 0
+                ? raw.key.trim()
+                : null;
+          if (!storyKey) {
+            console.warn(`[EFFECT VALIDATION] story_flag effect with invalid value (${JSON.stringify(raw)}) ignored${meetingName ? ` — meeting: ${meetingName}` : ''}`);
+            break;
+          }
+          const storyValue: boolean =
+            raw && typeof raw === 'object' && 'value' in raw ? raw.value !== false : true;
+
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          const story = (flags.story && typeof flags.story === 'object' && !Array.isArray(flags.story))
+            ? flags.story as Record<string, boolean>
+            : {};
+          story[storyKey] = storyValue;
+          flags.story = story;
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: 'The label will remember this decision',
+            amount: 0,
+            appliedEffects: { story_flag: 1 }
+          });
+          console.log(`[EFFECT PROCESSING] story_flag effect: flags.story['${storyKey}'] = ${storyValue}`);
+          break;
+        }
+
+        case 'spawn_prospect': {
+          // Engine-verbs slice 2 (M2) — prospect-pool MVP. Value is a descriptor
+          // { name?, archetype?, quality_hint?, popularity_hint?, source? }. Picks a
+          // REAL unsigned/undiscovered artist from the game-data catalog (so the
+          // existing sign-from-discovery flow — id-keyed enrichment in
+          // GET /ar-office/artists + server-derived signingCost in artistService —
+          // just works) and pushes a record in EXACTLY the shape
+          // AROfficeProcessor.processAROfficeWeekly writes (~204–220). Any rolled
+          // targeting uses an ISOLATED seed (seededRandom) — never ctx.getRandom,
+          // so the engine's pinned RNG stream is undisturbed.
+          const desc = (value && typeof value === 'object' && !Array.isArray(value)) ? value as any : {};
+          try {
+            const allArtists = await ctx.gameData.getAllArtists();
+            if (!allArtists || allArtists.length === 0) {
+              console.warn('[EFFECT PROCESSING] spawn_prospect: no artists available in game data — effect skipped');
+              break;
+            }
+
+            const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+
+            // Mirror AROfficeProcessor's exclusion set: signed (by name) + already discovered (by name).
+            const excludedNames = new Set<string>();
+            try {
+              if (ctx.storage?.getArtistsByGame) {
+                const signed = await ctx.storage.getArtistsByGame(ctx.gameState.id, ctx.dbTransaction);
+                (signed || []).forEach((a: any) => excludedNames.add(String(a.name || '').toLowerCase()));
+              }
+            } catch (storageErr) {
+              console.warn('[EFFECT PROCESSING] spawn_prospect: failed to load signed artists, continuing without that filter:', storageErr);
+            }
+            if (Array.isArray(flags.ar_office_discovered_artists)) {
+              flags.ar_office_discovered_artists.forEach((d: any) => {
+                if (d?.name) excludedNames.add(String(d.name).toLowerCase());
+              });
+            }
+
+            let candidates = allArtists.filter((a: any) => !excludedNames.has(String(a?.name || '').toLowerCase()));
+            if (candidates.length === 0) {
+              console.warn('[EFFECT PROCESSING] spawn_prospect: every catalog artist is already signed or discovered — effect skipped');
+              break;
+            }
+
+            const gameId = ctx.gameState.id || 'unknown-game';
+            const currentWeek = ctx.gameState.currentWeek || 0;
+            const seedBase = `${gameId}-week${currentWeek}-spawnprospect-${meetingName || 'unknown-meeting'}-${choiceId || 'unknown-choice'}`;
+
+            let picked: any | undefined;
+            // 1) Exact name request wins when that artist is still available.
+            if (typeof desc.name === 'string' && desc.name.trim()) {
+              const wantedLc = desc.name.trim().toLowerCase();
+              picked = candidates.find((a: any) => String(a?.name || '').toLowerCase() === wantedLc);
+              if (!picked) {
+                console.warn(`[EFFECT PROCESSING] spawn_prospect: requested artist "${desc.name}" unavailable — falling back to hint targeting`);
+              }
+            }
+            if (!picked) {
+              // 2) Archetype filter (soft — falls back to the full pool when empty).
+              if (typeof desc.archetype === 'string' && desc.archetype.trim()) {
+                const archLc = desc.archetype.trim().toLowerCase();
+                const archMatches = candidates.filter((a: any) => String(a?.archetype || '').toLowerCase() === archLc);
+                if (archMatches.length > 0) candidates = archMatches;
+              }
+              // 3) Nearest match to the talent/popularity targets. Missing hints roll
+              //    a target inside the config ranges (isolated seed, one draw each).
+              //    CONFIG: data/balance/artists.json artist_stats.prospect_spawn.
+              const spawnCfg = (ctx.gameData as any).getProspectSpawnConfigSync?.() ?? {
+                default_talent_range: [40, 85],
+                default_popularity_range: [5, 40]
+              };
+              const rollInRange = (range: [number, number], seed: string) => {
+                const [lo, hi] = Array.isArray(range) && range.length === 2 ? range : [40, 85];
+                return lo + seededRandom(seed) * (hi - lo);
+              };
+              const talentTarget = typeof desc.quality_hint === 'number'
+                ? desc.quality_hint
+                : rollInRange(spawnCfg.default_talent_range, `${seedBase}-talent`);
+              const popularityTarget = typeof desc.popularity_hint === 'number'
+                ? desc.popularity_hint
+                : rollInRange(spawnCfg.default_popularity_range, `${seedBase}-popularity`);
+
+              let bestDistance = Number.POSITIVE_INFINITY;
+              let bestMatches: any[] = [];
+              for (const artist of candidates) {
+                const distance =
+                  Math.abs((artist?.talent ?? 0) - talentTarget) +
+                  Math.abs((artist?.popularity ?? 0) - popularityTarget);
+                if (distance < bestDistance) {
+                  bestDistance = distance;
+                  bestMatches = [artist];
+                } else if (distance === bestDistance) {
+                  bestMatches.push(artist);
+                }
+              }
+              picked = bestMatches.length > 1
+                ? seededRandomPick(bestMatches, `${seedBase}-tiebreak`)
+                : bestMatches[0];
+            }
+            if (!picked) {
+              console.warn('[EFFECT PROCESSING] spawn_prospect: no candidate selected — effect skipped');
+              break;
+            }
+
+            // Push in EXACTLY the AROfficeProcessor descriptor shape (~204–220).
+            if (!flags.ar_office_discovered_artists) {
+              flags.ar_office_discovered_artists = [];
+            }
+            flags.ar_office_discovered_artists.push({
+              id: picked.id,
+              name: picked.name,
+              archetype: picked.archetype,
+              talent: picked.talent || 0,
+              popularity: picked.popularity || 0,
+              genre: picked.genre || null,
+              discoveryTime: currentWeek, // sim-time week (save-restore reproducibility)
+              sourcingType: typeof desc.source === 'string' && desc.source.trim() ? desc.source.trim() : 'story',
+              genreUsed: null
+            });
+            ctx.gameState.flags = flags;
+
+            summary.changes.push({
+              type: 'meeting',
+              description: `🔍 A new artist surfaced on your radar — ${picked.name} is waiting in your A&R office`,
+              amount: 0,
+              appliedEffects: { spawn_prospect: 1 }
+            });
+            console.log(`[EFFECT PROCESSING] spawn_prospect effect: added ${picked.name} (${picked.id}) to discovered pool (source: ${desc.source ?? 'story'}, seed: ${seedBase})`);
+          } catch (spawnErr) {
+            console.warn('[EFFECT PROCESSING] spawn_prospect failed (effect skipped, never fatal):', spawnErr);
+          }
+          break;
+        }
+
+        case 'set_exec_absence': {
+          // Engine-verbs slice 11-WRITE (M7) — bench an executive. Value is
+          // { role, weeks } → flags.execAbsence[role] = currentWeek + weeks (the
+          // first week the exec is BACK; absent while currentWeek < untilWeek).
+          // WRITE ONLY: the meeting-candidate read filters (route candidate list +
+          // resolveAutonomousExecMeetings) ship in a sibling slice.
+          const raw = value as any;
+          if (
+            !raw || typeof raw !== 'object' ||
+            typeof raw.role !== 'string' || !raw.role.trim() ||
+            typeof raw.weeks !== 'number' || !(raw.weeks > 0)
+          ) {
+            console.warn(`[EFFECT VALIDATION] set_exec_absence effect with invalid value (${JSON.stringify(raw)}) ignored${meetingName ? ` — meeting: ${meetingName}` : ''}`);
+            break;
+          }
+          const role = raw.role.trim();
+          const weeks = Math.max(1, Math.floor(raw.weeks));
+          const currentWeek = ctx.gameState.currentWeek || 0;
+
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          const execAbsence = (flags.execAbsence && typeof flags.execAbsence === 'object' && !Array.isArray(flags.execAbsence))
+            ? flags.execAbsence as Record<string, number>
+            : {};
+          // Longest bench wins if something re-benches an already-absent exec.
+          execAbsence[role] = Math.max(execAbsence[role] || 0, currentWeek + weeks);
+          flags.execAbsence = execAbsence;
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: `An executive is stepping away from the label for a stretch`,
+            amount: 0,
+            appliedEffects: { set_exec_absence: weeks }
+          });
+          console.log(`[EFFECT PROCESSING] set_exec_absence effect: flags.execAbsence['${role}'] = ${execAbsence[role]} (back week ${execAbsence[role]}, ${weeks} week(s) from week ${currentWeek})`);
+          break;
+        }
+
+        case 'distribution_efficiency': {
+          // Engine-verbs slice 12 (M10) — persistent label modifier. Value is
+          // { amount, weeks } banked into flags.distributionEfficiency
+          // { amount, untilWeek } (mirrors the pressMomentum/pendingAwarenessBoost
+          // flags-bank pattern). READ as a ×(1 + amount) multiplier — clamped to
+          // ±efficiency_amount_cap (data/balance/markets.json market_formulas.
+          // distribution) — on weekly ongoing streaming revenue in
+          // ReleaseProcessor.calculateOngoingSongRevenue while
+          // currentWeek < untilWeek; expired in processDelayedEffects.
+          const raw = value as any;
+          if (
+            !raw || typeof raw !== 'object' ||
+            typeof raw.amount !== 'number' || raw.amount === 0 ||
+            typeof raw.weeks !== 'number' || !(raw.weeks > 0)
+          ) {
+            console.warn(`[EFFECT VALIDATION] distribution_efficiency effect with invalid value (${JSON.stringify(raw)}) ignored${meetingName ? ` — meeting: ${meetingName}` : ''}`);
+            break;
+          }
+          const weeks = Math.max(1, Math.floor(raw.weeks));
+          const currentWeek = ctx.gameState.currentWeek || 0;
+
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          const previous = (flags.distributionEfficiency && typeof flags.distributionEfficiency === 'object')
+            ? flags.distributionEfficiency as { amount?: number; untilWeek?: number }
+            : null;
+          // Stack amounts while a modifier is live; the longest expiry wins.
+          const previousAmount = previous && typeof previous.amount === 'number' && (previous.untilWeek ?? 0) > currentWeek
+            ? previous.amount
+            : 0;
+          flags.distributionEfficiency = {
+            amount: previousAmount + raw.amount,
+            untilWeek: Math.max(previous?.untilWeek ?? 0, currentWeek + weeks)
+          };
+          ctx.gameState.flags = flags;
+
+          summary.changes.push({
+            type: 'meeting',
+            description: raw.amount > 0
+              ? 'Distribution pipeline running hotter — streaming payouts lifted while it lasts'
+              : 'Distribution pipeline snarled — streaming payouts squeezed while it lasts',
+            amount: 0,
+            appliedEffects: { distribution_efficiency: raw.amount }
+          });
+          console.log(`[EFFECT PROCESSING] distribution_efficiency effect: ${raw.amount > 0 ? '+' : ''}${raw.amount} for ${weeks} week(s) (pool now ${flags.distributionEfficiency.amount}, until week ${flags.distributionEfficiency.untilWeek})`);
+          break;
+        }
+
+        case 'press_scrutiny_flag': {
+          // Engine-verbs slice 13 (M15) — negative sibling of press_story_flag.
+          // Any positive authored value banks a next-release LIABILITY: the next
+          // release's press roll (ReleaseProcessor.calculatePressOutcome) has its
+          // pickups + press reputation gain scaled down by
+          // press_scrutiny_penalty_factor, fires ONCE, then clears. Same stamp +
+          // expiry discipline as pressStoryFlag (press_scrutiny_flag_expiry_weeks).
+          const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+          if (value > 0) {
+            flags.pressScrutinyFlag = true;
+            flags.pressScrutinyFlagWeek = ctx.gameState.currentWeek || 0;
+            ctx.gameState.flags = flags;
+
+            summary.changes.push({
+              type: 'meeting',
+              description: 'Press scrutiny mounting — your next release will face a harder crowd',
+              amount: 0,
+              appliedEffects: { press_scrutiny_flag: 1 }
+            });
+            console.log('[EFFECT PROCESSING] press_scrutiny_flag set (flags.pressScrutinyFlag = true)');
+          } else {
+            console.log(`[EFFECT PROCESSING] press_scrutiny_flag effect with non-positive value (${value}) ignored`);
+          }
+          break;
+        }
+
+        case 'grant_song': {
+          // Engine-verbs M1a (tangible catalog) — grants a REAL recorded song row
+          // via the engine-threaded ctx.gameData.createSong (the exact persistence
+          // seam SongGenerationProcessor uses). Value shape:
+          //   { title_hint?: string, quality?: number,
+          //     quality_range?: [min, max], artist: 'targeted' }
+          // DETERMINISM: every rolled field (quality from a range, fallback title,
+          // mood) uses an ISOLATED seeded roll keyed off gameId/week/meeting/choice
+          // — NEVER ctx.getRandom, so the engine's pinned RNG stream and its draw
+          // count are completely undisturbed (rep_swing precedent above).
+          const grantValue = (value && typeof value === 'object') ? value as Record<string, any> : {};
+          if (typeof (ctx.gameData as any)?.createSong !== 'function') {
+            console.warn(`[EFFECT PROCESSING] grant_song skipped — gameData.createSong unavailable (client-side context)`);
+            break;
+          }
+          if (!artistId) {
+            console.warn(
+              `[EFFECT PROCESSING] grant_song requires a targeted artist (value.artist: 'targeted') but no artistId was resolved — skipped` +
+              `${meetingName ? ` — meeting: ${meetingName}` : ''}${choiceId ? `, choice: ${choiceId}` : ''}`
+            );
+            break;
+          }
+          const grantArtist = await ctx.gameData.getArtistById(artistId);
+          if (!grantArtist) {
+            console.warn(`[EFFECT PROCESSING] grant_song skipped — artist ${artistId} not found`);
+            break;
+          }
+
+          const gameId = ctx.gameState.id || 'unknown-game';
+          const currentWeek = ctx.gameState.currentWeek || 0;
+          const seed = `${gameId}-week${currentWeek}-grantsong-${meetingName || 'unknown-meeting'}-${choiceId || 'unknown-choice'}`;
+          const balance = ctx.gameData.getBalanceConfigSync?.() as any;
+
+          // Quality: explicit `quality` wins; else roll the authored quality_range;
+          // else roll the balance-knobbed default range (content.json
+          // song_generation.granted_song.default_quality_range).
+          const cfgRange = balance?.song_generation?.granted_song?.default_quality_range;
+          // HARDCODED: fallback default quality range if content.json's
+          // song_generation.granted_song block is missing.
+          const defaultRange: [number, number] =
+            Array.isArray(cfgRange) && cfgRange.length === 2 ? [cfgRange[0], cfgRange[1]] : [40, 60];
+          let quality: number;
+          if (typeof grantValue.quality === 'number') {
+            quality = Math.round(grantValue.quality);
+          } else {
+            const authored = grantValue.quality_range;
+            const [min, max] = Array.isArray(authored) && authored.length === 2
+              && typeof authored[0] === 'number' && typeof authored[1] === 'number'
+              ? [authored[0], authored[1]]
+              : defaultRange;
+            quality = Math.round(min + seededRandom(`${seed}-quality`) * (max - min));
+          }
+          quality = Math.max(20, Math.min(100, quality)); // songs.quality is 20-100
+
+          // Title: title_hint verbatim, else a deterministic seeded pick from the
+          // artist-genre name pool (falling back to the default pool).
+          let title: string;
+          if (typeof grantValue.title_hint === 'string' && grantValue.title_hint.trim().length > 0) {
+            title = grantValue.title_hint.trim();
+          } else {
+            const namePools = balance?.song_generation?.name_pools;
+            const pool: string[] = (grantArtist.genre && namePools?.genre_specific?.[grantArtist.genre])
+              || namePools?.default
+              || ['Untitled Session']; // HARDCODED: last-resort title if name pools unavailable
+            title = seededRandomPick(pool, `${seed}-title`) ?? 'Untitled Session';
+          }
+
+          const moodPool: string[] = balance?.song_generation?.mood_types
+            || ['upbeat', 'melancholic', 'aggressive', 'chill']; // mirrors generateSongMood's fallback
+          const songMood = seededRandomPick(moodPool, `${seed}-mood`) ?? 'upbeat';
+
+          // Row shape mirrors SongGenerationProcessor.generateSong (no 'id' — DB
+          // generates it). Born recorded/unreleased with no project attached, so it
+          // flows into the normal release-planning song picker.
+          const grantedSongRow = {
+            title,
+            artistId,
+            gameId,
+            quality,
+            genre: grantArtist.genre || 'pop',
+            mood: songMood,
+            createdWeek: currentWeek,
+            producerTier: 'local',
+            timeInvestment: 'standard',
+            isRecorded: true,
+            // Wall-clock metadata, same as project-born songs — the golden-master
+            // normalizer strips recordedAt (see SongGenerationProcessor).
+            recordedAt: new Date(),
+            isReleased: false,
+            releaseId: null,
+            projectId: null,
+            productionBudget: 0,
+            marketingAllocation: 0,
+            metadata: {
+              grantedBy: {
+                meetingName: meetingName ?? null,
+                choiceId: choiceId ?? null,
+                week: currentWeek,
+              },
+            },
+          };
+
+          const savedSong = await ctx.gameData.createSong(grantedSongRow, ctx.dbTransaction);
+          grantedSong = savedSong ?? grantedSongRow;
+
+          // Qualitative surfacing (no numbers — house regex rule); routed to the
+          // rendered catalog bucket, never the swallowed `other` bucket.
+          summary.changes.push({
+            type: 'song_granted',
+            description: `New recording in the vault: "${title}" — ${grantArtist.name}`,
+          });
+          console.log(`[EFFECT PROCESSING] grant_song: created "${title}" (quality ${quality}) for artist ${grantArtist.name} (seed: ${seed})`);
+          break;
+        }
+
+        case 'spawn_release': {
+          // Engine-verbs M1b (tangible catalog) — creates a REAL planned release
+          // that enters the normal processPlannedReleases → processReleasedProjects
+          // lifecycle (revenue, charts, awareness). Value shape (MVP: single only):
+          //   { songs: 'granted' | 'latest_recorded', type: 'single', defer_weeks? }
+          // Release week = currentWeek + release_offset_weeks (knob, default 1 =
+          // immediate-drop next week) + defer_weeks. Marketing budget = knob
+          // default 0 (markets.json market_formulas.spawned_release).
+          const spawnValue = (value && typeof value === 'object') ? value as Record<string, any> : {};
+          if (typeof (ctx.gameData as any)?.createRelease !== 'function') {
+            console.warn(`[EFFECT PROCESSING] spawn_release skipped — gameData.createRelease unavailable (client-side context)`);
+            break;
+          }
+          const gameId = ctx.gameState.id || 'unknown-game';
+          const currentWeek = ctx.gameState.currentWeek || 0;
+          const balance = ctx.gameData.getBalanceConfigSync?.() as any;
+          const spawnCfg = balance?.market_formulas?.spawned_release;
+          // HARDCODED: fallbacks if markets.json market_formulas.spawned_release is missing.
+          const defaultBudget = typeof spawnCfg?.default_marketing_budget === 'number' ? spawnCfg.default_marketing_budget : 0;
+          const offsetWeeks = typeof spawnCfg?.release_offset_weeks === 'number' ? spawnCfg.release_offset_weeks : 1;
+          const deferWeeks = typeof spawnValue.defer_weeks === 'number' && spawnValue.defer_weeks > 0
+            ? Math.floor(spawnValue.defer_weeks)
+            : 0;
+
+          // Resolve the song. 'granted' consumes the song a sibling grant_song key
+          // created earlier in this SAME effects block; 'latest_recorded' picks the
+          // targeted artist's newest recorded-but-unreleased song (deterministic
+          // tie-break, no RNG).
+          const songsMode = spawnValue.songs === 'latest_recorded' ? 'latest_recorded' : 'granted';
+          let releaseSong: any = null;
+          if (songsMode === 'granted') {
+            if (!grantedSong || !grantedSong.id) {
+              console.warn(
+                `[EFFECT PROCESSING] spawn_release (songs: 'granted') skipped — no grant_song landed earlier in this effects block` +
+                `${meetingName ? ` — meeting: ${meetingName}` : ''}${choiceId ? `, choice: ${choiceId}` : ''}`
+              );
+              break;
+            }
+            releaseSong = grantedSong;
+          } else {
+            if (!artistId) {
+              console.warn(`[EFFECT PROCESSING] spawn_release (songs: 'latest_recorded') requires a targeted artist but no artistId was resolved — skipped`);
+              break;
+            }
+            const artistSongs = await ctx.gameData.getSongsByArtist(artistId, gameId, ctx.dbTransaction);
+            const candidates = (artistSongs || []).filter((s: any) => s.isRecorded && !s.isReleased && !s.releaseId);
+            if (candidates.length === 0) {
+              console.warn(`[EFFECT PROCESSING] spawn_release skipped — artist ${artistId} has no recorded, unreleased songs`);
+              break;
+            }
+            // Deterministic: newest createdWeek first, stable id tie-break (no RNG).
+            candidates.sort((a: any, b: any) =>
+              (b.createdWeek || 0) - (a.createdWeek || 0) || String(a.id).localeCompare(String(b.id))
+            );
+            releaseSong = candidates[0];
+          }
+
+          const releaseArtistId = releaseSong.artistId;
+          const releaseArtist = await ctx.gameData.getArtistById(releaseArtistId);
+          const releaseWeek = currentWeek + offsetWeeks + deferWeeks;
+
+          // Engine-side ops over the shared creation core (same three steps, same
+          // order, as releasePlanningService — see shared/engine/releaseCreation.ts).
+          const ops: ReleaseCreationOps = {
+            insertRelease: (row) => ctx.gameData.createRelease(row, ctx.dbTransaction),
+            reserveSongsForRelease: async (songIds, releaseId) => {
+              for (const songId of songIds) {
+                await ctx.gameData.updateSong(songId, { releaseId }, ctx.dbTransaction);
+              }
+            },
+            insertReleaseSongs: async (rows) => {
+              for (const row of rows) {
+                await ctx.gameData.createReleaseSong(row, ctx.dbTransaction);
+              }
+            },
+          };
+          const newRelease = await createReleaseWithSongs(
+            ops,
+            {
+              gameId,
+              artistId: releaseArtistId,
+              title: releaseSong.title,
+              // MVP narrow: single-type only, regardless of authored value.type.
+              type: 'single',
+              releaseWeek,
+              status: 'planned',
+              // HARDCODED assumption: the knobbed budget is NOT deducted from cash
+              // (default 0). If this knob is ever tuned above 0, add a money
+              // deduction here or the marketing push is a free lunch.
+              marketingBudget: defaultBudget,
+              metadata: {
+                spawnedBy: {
+                  meetingName: meetingName ?? null,
+                  choiceId: choiceId ?? null,
+                  week: currentWeek,
+                },
+                scheduledReleaseWeek: releaseWeek,
+                marketingChannels: [],
+                marketingBudgetBreakdown: {},
+                // attachedHype 0 routes ReleaseProcessor to the attached-hype path
+                // — a surprise drop must NEVER drain the label's banked hype pool
+                // via the legacy pendingAwarenessBoost fallback.
+                attachedHype: 0,
+                leadSingleStrategy: null,
+              },
+            },
+            [releaseSong.id]
+          );
+
+          summary.changes.push({
+            type: 'release_spawned',
+            description: `Surprise release: "${releaseSong.title}" — ${releaseArtist?.name ?? 'your artist'} heads straight to the airwaves`,
+          });
+          console.log(`[EFFECT PROCESSING] spawn_release: planned "${releaseSong.title}" (release ${newRelease?.id}) for week ${releaseWeek}`);
+          break;
+        }
+
+        case 'promote_release': {
+          // Engine-verbs arc slice 8 (M5) — the economy's first BACKWARD-acting
+          // verb: a clamped awareness bump applied DIRECTLY to the targeted
+          // currently-released song (highest-awareness released song for the
+          // targeted artist, or label-wide — shared rule in releaseTargeting.ts).
+          // SURGICAL by design: only `awareness` (and its peak mirror) moves; the
+          // decay fields (awareness_decay_rate, breakthrough_achieved) are never
+          // touched, so the bump simply rides the existing weekly build/decay
+          // cycle in ReleaseProcessor.processReleasedProjects. Zero RNG.
+          if (!(value > 0)) {
+            console.log(`[EFFECT PROCESSING] promote_release with non-positive value (${value}) ignored`);
+            break;
+          }
+          try {
+            const releasedSongs = (await ctx.gameData.getReleasedSongs?.(ctx.gameState.id)) || [];
+            const target = pickTargetReleasedSong(releasedSongs, artistId);
+            if (!target) {
+              console.warn(`[EFFECT PROCESSING] promote_release: no currently-released song${artistId ? ` for artist ${artistId}` : ''} — effect skipped${meetingName ? ` (meeting: ${meetingName})` : ''}`);
+              break;
+            }
+            const promoCfg = (ctx.gameData.getBalanceConfigSync?.() as any)?.market_formulas?.release_promotion;
+            const maxBump = promoCfg?.max_awareness_bump ?? 15; // knob: markets.json release_promotion
+            const bump = Math.min(value, maxBump);
+            const currentAwareness = target.awareness ?? 0;
+            const newAwareness = Math.round(Math.max(0, Math.min(100, currentAwareness + bump)));
+            await ctx.gameData.updateSongs?.([
+              {
+                songId: target.id,
+                awareness: newAwareness,
+                peak_awareness: Math.round(Math.max(target.peak_awareness ?? 0, newAwareness)),
+              },
+            ], ctx.dbTransaction);
+
+            summary.changes.push({
+              type: 'meeting',
+              description: `Promo push behind "${target.title ?? 'your release'}" — its buzz is climbing again`,
+              amount: 0,
+              appliedEffects: { promote_release: value },
+            });
+            console.log(`[EFFECT PROCESSING] promote_release: +${bump} awareness (of authored ${value}, cap ${maxBump}) to "${target.title}" (${currentAwareness} -> ${newAwareness})`);
+          } catch (error) {
+            console.error('[EFFECT PROCESSING] promote_release failed (effect skipped):', error);
+          }
+          break;
+        }
+
+        case 'catalog_damage': {
+          // Engine-verbs arc slice 8 (M12) — severity-scaled awareness LOSS on the
+          // targeted released song (same shared target rule as promote_release).
+          // Awareness is the future-revenue driver (FinancialSystem.calculateDecayRevenue
+          // applies the weeks-5+ awareness modifier), so cutting it here cuts the
+          // song's ongoing streams too. peak_awareness is historical — never reduced.
+          const severity = Math.abs(value); // authored as positive severity; tolerate a signed value
+          if (!(severity > 0)) {
+            console.log(`[EFFECT PROCESSING] catalog_damage with zero severity ignored`);
+            break;
+          }
+          try {
+            const releasedSongs = (await ctx.gameData.getReleasedSongs?.(ctx.gameState.id)) || [];
+            const target = pickTargetReleasedSong(releasedSongs, artistId);
+            if (!target) {
+              console.warn(`[EFFECT PROCESSING] catalog_damage: no currently-released song${artistId ? ` for artist ${artistId}` : ''} — effect skipped${meetingName ? ` (meeting: ${meetingName})` : ''}`);
+              break;
+            }
+            const dmgCfg = (ctx.gameData.getBalanceConfigSync?.() as any)?.market_formulas?.catalog_damage;
+            const perSeverity = dmgCfg?.awareness_loss_fraction_per_severity ?? 0.1; // knob: markets.json catalog_damage
+            const maxFraction = dmgCfg?.max_total_fraction ?? 0.8;                    // knob: markets.json catalog_damage
+            const lossFraction = Math.min(maxFraction, severity * perSeverity);
+            const currentAwareness = target.awareness ?? 0;
+            const newAwareness = Math.round(Math.max(0, currentAwareness * (1 - lossFraction)));
+            await ctx.gameData.updateSongs?.([
+              { songId: target.id, awareness: newAwareness },
+            ], ctx.dbTransaction);
+
+            summary.changes.push({
+              type: 'meeting',
+              description: `"${target.title ?? 'A released track'}" took a hit — its buzz is fading and the streams will follow`,
+              amount: 0,
+              appliedEffects: { catalog_damage: value },
+            });
+            console.log(`[EFFECT PROCESSING] catalog_damage: severity ${severity} → -${(lossFraction * 100).toFixed(0)}% awareness on "${target.title}" (${currentAwareness} -> ${newAwareness})`);
+          } catch (error) {
+            console.error('[EFFECT PROCESSING] catalog_damage failed (effect skipped):', error);
+          }
+          break;
+        }
+
+        case 'cancel_project': {
+          // Engine-verbs arc slice 9 (M6) — SOFT-cancel of the targeted artist's
+          // ACTIVE recording project (Single/EP in planning/production). Mirrors
+          // the tour cancel route's soft-cancel shape (server/routes/projects.ts):
+          // completionStatus:'cancelled' + stage:'cancelled' — the stage machine
+          // (ProjectStageProcessor, which also skips cancelled explicitly) and the
+          // song generator (stage !== 'production') both stop naturally.
+          // RULES (MVP): NO refund of any kind (money spent stays spent), and
+          // SONGS ALREADY CREATED BY THE PROJECT STAY — they are recorded rows
+          // and remain releasable; only future song generation stops.
+          // Restart/delay is explicitly deferred (fights the monotonic stage model).
+          if (value === 0) {
+            console.log(`[EFFECT PROCESSING] cancel_project with zero value ignored`);
+            break;
+          }
+          try {
+            const projects = (await ctx.storage?.getProjectsByGame?.(ctx.gameState.id, ctx.dbTransaction)) || [];
+            const active = projects.filter((p: any) =>
+              ['Single', 'EP'].includes(p.type || '') &&
+              ['planning', 'production'].includes(p.stage || '') &&
+              p.completionStatus !== 'cancelled' &&
+              (!artistId || p.artistId === artistId)
+            );
+            if (active.length === 0) {
+              console.warn(`[EFFECT PROCESSING] cancel_project: no active recording project${artistId ? ` for artist ${artistId}` : ''} — effect skipped${meetingName ? ` (meeting: ${meetingName})` : ''}`);
+              break;
+            }
+            // Deterministic pick: the most recently started active project
+            // (highest startWeek), lexicographic id as the final tie-break.
+            const target = active.reduce((best: any, p: any) => {
+              const bestWeek = best.startWeek ?? 0;
+              const pWeek = p.startWeek ?? 0;
+              if (pWeek !== bestWeek) return pWeek > bestWeek ? p : best;
+              return p.id < best.id ? p : best;
+            });
+
+            await ctx.storage?.updateProject?.(target.id, {
+              stage: 'cancelled',
+              completionStatus: 'cancelled',
+              metadata: {
+                ...(target.metadata || {}),
+                cancelledWeek: ctx.gameState.currentWeek || 0,
+                cancelledBy: meetingName || 'effect',
+              },
+            }, ctx.dbTransaction);
+
+            summary.changes.push({
+              type: 'meeting',
+              description: `"${target.title}" was shut down mid-production — songs already in the can are kept, but no more are coming`,
+              amount: 0,
+              projectId: target.id,
+              artistId: target.artistId ?? undefined,
+              appliedEffects: { cancel_project: value },
+            });
+            console.log(`[EFFECT PROCESSING] cancel_project: soft-cancelled "${target.title}" (${target.id}, stage was ${target.stage}); ${target.songsCreated || 0}/${target.songCount || 0} songs already created are KEPT`);
+          } catch (error) {
+            console.error('[EFFECT PROCESSING] cancel_project failed (effect skipped):', error);
+          }
+          break;
+        }
+
+        case 'grant_inventory': {
+          // Engine-verbs arc slice 10 (M9 physical_inventory, flags-ledger MVP).
+          // Authored value = unit count. Writes a flags.inventory[] ledger entry
+          // tied to the targeted artist's LATEST released release (label-wide
+          // latest when untargeted). Manufacturing cost (units × unit_cost knob)
+          // is charged NOW through the summary (single [FINAL MONEY] point rule);
+          // the deterministic weekly sell-through lives in the streaming pass
+          // (ReleaseProcessor.processReleasedProjects → flagsLedgers.processInventoryWeek).
+          const requestedUnits = Math.round(value);
+          if (!(requestedUnits > 0)) {
+            console.log(`[EFFECT PROCESSING] grant_inventory with non-positive units (${value}) ignored`);
+            break;
+          }
+          try {
+            const releases = (await ctx.storage?.getReleasesByGame?.(ctx.gameState.id, ctx.dbTransaction)) || [];
+            const release = pickLatestReleasedRelease(releases, artistId);
+            if (!release) {
+              console.warn(`[EFFECT PROCESSING] grant_inventory: no released release${artistId ? ` for artist ${artistId}` : ''} — effect skipped${meetingName ? ` (meeting: ${meetingName})` : ''}`);
+              break;
+            }
+            const invCfg = {
+              ...PHYSICAL_INVENTORY_DEFAULTS,
+              ...(((ctx.gameData.getBalanceConfigSync?.() as any)?.market_formulas?.physical_inventory) || {}),
+            };
+            const units = Math.min(requestedUnits, invCfg.max_units_per_grant);
+            const manufacturingCost = units * invCfg.unit_cost;
+            const currentWeek = ctx.gameState.currentWeek || 0;
+
+            const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+            const ledger = readInventoryLedger(flags);
+            const baseId = `${release.id}-w${currentWeek}`;
+            const entry: InventoryLedgerEntry = {
+              id: ledger.some((e) => e.id === baseId) ? `${baseId}-${ledger.length}` : baseId,
+              releaseId: release.id,
+              releaseTitle: release.title || 'Untitled release',
+              artistId: release.artistId ?? undefined,
+              unitsInitial: units,
+              unitsRemaining: units,
+              unitCost: invCfg.unit_cost,
+              unitPrice: invCfg.unit_price,
+              createdWeek: currentWeek,
+            };
+            flags.inventory = [...ledger, entry];
+            ctx.gameState.flags = flags;
+
+            // Charge manufacturing like a meeting cost (same reconciliation path
+            // as the 'money' case: summary totals + roleMeetingCosts bucket).
+            summary.expenses += manufacturingCost;
+            if (!summary.expenseBreakdown) {
+              summary.expenseBreakdown = {
+                weeklyOperations: 0,
+                artistSalaries: 0,
+                executiveSalaries: 0,
+                signingBonuses: 0,
+                projectCosts: 0,
+                marketingCosts: 0,
+                roleMeetingCosts: 0
+              };
+            }
+            summary.expenseBreakdown.roleMeetingCosts += manufacturingCost;
+
+            summary.changes.push({
+              type: 'expense',
+              description: `Pressed a physical run of "${entry.releaseTitle}" — manufacturing paid up front, units start selling this week`,
+              amount: -manufacturingCost,
+              releaseId: release.id,
+            });
+            summary.changes.push({
+              type: 'meeting',
+              description: `Physical pressing ordered for "${entry.releaseTitle}"`,
+              amount: 0,
+              appliedEffects: { grant_inventory: value },
+            });
+            console.log(`[EFFECT PROCESSING] grant_inventory: ${units} units (authored ${value}, cap ${invCfg.max_units_per_grant}) @ cost ${invCfg.unit_cost}/price ${invCfg.unit_price} against "${entry.releaseTitle}" (${release.id}); manufacturing $${manufacturingCost}`);
+          } catch (error) {
+            console.error('[EFFECT PROCESSING] grant_inventory failed (effect skipped):', error);
+          }
+          break;
+        }
+
+        case 'transfer_revenue_stream': {
+          // Engine-verbs arc slice 10 (M11 revenue_stream_transfer, flags-ledger
+          // MVP). Authored value = sold fraction of the targeted released
+          // release's weekly streaming revenue (>= 1 read as percent), clamped by
+          // the max_fraction knob; term = default_weeks knob. Writes a
+          // flags.revenue_transfers[] entry; the weekly deduction lives in the
+          // streaming pass (ReleaseProcessor.processReleasedProjects →
+          // flagsLedgers.processRevenueTransfersWeek). The sale PRICE itself is
+          // whatever the authored choice pays via its own 'money' effect — this
+          // key only encumbers the stream.
+          try {
+            const xferCfg = {
+              ...REVENUE_TRANSFER_DEFAULTS,
+              ...(((ctx.gameData.getBalanceConfigSync?.() as any)?.market_formulas?.revenue_transfer) || {}),
+            };
+            const fraction = normalizeTransferFraction(value, xferCfg);
+            if (!(fraction > 0)) {
+              console.log(`[EFFECT PROCESSING] transfer_revenue_stream with non-positive fraction (${value}) ignored`);
+              break;
+            }
+            const releases = (await ctx.storage?.getReleasesByGame?.(ctx.gameState.id, ctx.dbTransaction)) || [];
+            const release = pickLatestReleasedRelease(releases, artistId);
+            if (!release) {
+              console.warn(`[EFFECT PROCESSING] transfer_revenue_stream: no released release${artistId ? ` for artist ${artistId}` : ''} — effect skipped${meetingName ? ` (meeting: ${meetingName})` : ''}`);
+              break;
+            }
+            const currentWeek = ctx.gameState.currentWeek || 0;
+            const entry: RevenueTransferEntry = {
+              releaseId: release.id,
+              releaseTitle: release.title || 'Untitled release',
+              fraction,
+              startWeek: currentWeek,
+              endWeek: currentWeek + xferCfg.default_weeks - 1,
+            };
+            const flags = (ctx.gameState.flags || {}) as Record<string, any>;
+            flags.revenue_transfers = [...readRevenueTransfers(flags), entry];
+            ctx.gameState.flags = flags;
+
+            summary.changes.push({
+              type: 'meeting',
+              description: `Sold a share of "${entry.releaseTitle}"'s streaming income — the buyer collects their cut weekly for the term of the deal`,
+              amount: 0,
+              releaseId: release.id,
+              appliedEffects: { transfer_revenue_stream: value },
+            });
+            console.log(`[EFFECT PROCESSING] transfer_revenue_stream: fraction ${fraction} (authored ${value}) of "${entry.releaseTitle}" (${release.id}), weeks ${entry.startWeek}-${entry.endWeek}`);
+          } catch (error) {
+            console.error('[EFFECT PROCESSING] transfer_revenue_stream failed (effect skipped):', error);
+          }
+          break;
+        }
+
         default:
           // MISSING: unknown/unimplemented effect key encountered by applyEffects (PR-1 truth
           // infrastructure). 'executive_mood' is deliberately silent here — it's consumed
           // directly out of effects_immediate by processExecutiveActions, not via this switch.
-          if (key !== 'executive_mood') {
+          // SLICE 5 (M13/M14): the targeting DIRECTIVE keys (target_executive /
+          // target_artist) are likewise silent — they are string-valued routing
+          // directives consumed by applyTargetedExecutiveMood (below) and the
+          // side-event resolver (game-engine.processPendingSideEventResolution),
+          // never live numeric channels of this switch.
+          if (key !== 'executive_mood' && !(EFFECT_TARGETING_DIRECTIVE_KEYS as readonly string[]).includes(key)) {
             console.warn(
               `[EFFECT VALIDATION] Unknown effect key "${key}" (value: ${value}) dropped` +
               `${meetingName ? ` — meeting: ${meetingName}` : ''}${choiceId ? `, choice: ${choiceId}` : ''}${targetScope ? `, scope: ${targetScope}` : ''}`
@@ -1290,9 +2484,12 @@ export class ActionProcessor {
               console.log(`[DELAYED EFFECTS] Processing artist-targeted delayed effects for artist ${artistId}:`, effects);
 
               // Use applyEffects() with artist targeting for delayed effects (Task 2.5)
-              const delayedEffectsRecord: Record<string, number> = {};
+              // Engine-verbs arc: structured-value keys (STRUCTURED_EFFECT_KEYS)
+              // are admitted alongside numbers — their applyEffects cases handle
+              // the string/object values.
+              const delayedEffectsRecord: Record<string, any> = {};
               for (const [effectKey, effectValue] of Object.entries(effects)) {
-                if (typeof effectValue === 'number') {
+                if (typeof effectValue === 'number' || STRUCTURED_EFFECT_KEYS.has(effectKey)) {
                   delayedEffectsRecord[effectKey] = effectValue;
                 }
               }
@@ -1361,6 +2558,29 @@ export class ActionProcessor {
         }
       }
 
+      // Engine-verbs slice 13 (M15) — pressScrutinyFlag expiry. The scrutiny flag
+      // is only consumed by a release press roll with marketing budget > 0
+      // (ReleaseProcessor.calculatePressOutcome), so an unconsumed flag ages out —
+      // the press finds a new target. Exact mirror of the pressStoryFlag expiry
+      // above; knob press_scrutiny_flag_expiry_weeks lives with the press config.
+      if (flags.pressScrutinyFlag === true) {
+        const stampedWeek = typeof flags.pressScrutinyFlagWeek === 'number' ? flags.pressScrutinyFlagWeek : (ctx.gameState.currentWeek || 0);
+        const expiryWeeks = ctx.gameData.getPressConfigSync().press_scrutiny_flag_expiry_weeks ?? 8;
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        if (currentWeek - stampedWeek >= expiryWeeks) {
+          console.log(`[PRESS SCRUTINY] Expired unconsumed scrutiny flag after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+          flags.pressScrutinyFlag = false;
+          delete flags.pressScrutinyFlagWeek;
+          if (summary && Array.isArray(summary.changes)) {
+            summary.changes.push({
+              type: 'meeting',
+              description: 'The press scrutiny died down — the spotlight moved on before you released anything',
+              amount: 0,
+            });
+          }
+        }
+      }
+
       // Exec-meetings-revival PR-4 (C1) — pendingQualityBonus expiry. If a banked
       // quality bonus goes unconsumed (no song generation cleared it — see
       // SongGenerationProcessor.processRecordingProjects) for
@@ -1375,6 +2595,30 @@ export class ActionProcessor {
           console.log(`[QUALITY BONUS] Expired unconsumed bonus (${flags.pendingQualityBonus}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
           flags.pendingQualityBonus = 0;
           delete flags.pendingQualityBonusWeek;
+        }
+      }
+
+      // Meeting-content session — per-ARTIST quality-pool expiry ("hypeArtistPools
+      // treatment"). Each artist's quality pool ages independently from its own
+      // last-bank week (matching the single-pool stamp behavior above); a pool
+      // consumed at recording time (SongGenerationProcessor.processRecordingProjects)
+      // never reaches this sweep. Same expiry window/knob as the label pool
+      // (pending_quality_bonus_expiry_weeks). UNCONSUMED pools only; container is
+      // dropped when it empties so no-op games stay byte-stable.
+      if (flags.qualityBonusArtistPools && typeof flags.qualityBonusArtistPools === 'object') {
+        const pools = flags.qualityBonusArtistPools as Record<string, { amount: number; week: number }>;
+        const expiryWeeks = ctx.gameData.getQualityBonusConfigSync().pending_quality_bonus_expiry_weeks;
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        for (const [poolArtistId, pool] of Object.entries(pools)) {
+          if (!pool || typeof pool.amount !== 'number' || pool.amount === 0) continue;
+          const stampedWeek = typeof pool.week === 'number' ? pool.week : currentWeek;
+          if (currentWeek - stampedWeek >= expiryWeeks) {
+            console.log(`[QUALITY BONUS] Expired unconsumed artist pool for ${poolArtistId} (${pool.amount}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+            delete pools[poolArtistId];
+          }
+        }
+        if (Object.keys(pools).length === 0) {
+          delete flags.qualityBonusArtistPools;
         }
       }
 
@@ -1459,6 +2703,31 @@ export class ActionProcessor {
           console.log(`[VARIANCE] Expired unconsumed variance pool (${flags.pendingVariance}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
           flags.pendingVariance = 0;
           delete flags.pendingVarianceWeek;
+        }
+      }
+
+      // Engine-verbs slice 12 (M10) — distributionEfficiency expiry. Unlike the
+      // banks above (stamped at write, expiry knob), this modifier carries its own
+      // untilWeek (from the authored { amount, weeks } value): the read site
+      // (ReleaseProcessor.calculateOngoingSongRevenue) applies it only while
+      // currentWeek < untilWeek, and this sweep deletes the lapsed entry so no-op
+      // games stay byte-stable. One qualitative line when it lapses.
+      if (flags.distributionEfficiency && typeof flags.distributionEfficiency === 'object') {
+        const dist = flags.distributionEfficiency as { amount?: number; untilWeek?: number };
+        const currentWeek = ctx.gameState.currentWeek || 0;
+        if (typeof dist.untilWeek !== 'number' || currentWeek >= dist.untilWeek) {
+          const lapsedAmount = typeof dist.amount === 'number' ? dist.amount : 0;
+          console.log(`[DISTRIBUTION] Distribution-efficiency modifier (${lapsedAmount}) lapsed at week ${currentWeek} (untilWeek ${dist.untilWeek})`);
+          delete flags.distributionEfficiency;
+          if (summary && Array.isArray(summary.changes)) {
+            summary.changes.push({
+              type: 'meeting',
+              description: lapsedAmount >= 0
+                ? 'Your distribution arrangement ran its course — streaming payouts return to normal'
+                : 'The distribution snarl cleared — streaming payouts return to normal',
+              amount: 0,
+            });
+          }
         }
       }
 
@@ -1614,10 +2883,14 @@ export class ActionProcessor {
 
     // Apply immediate effects using the standard applyEffects method
     // This handles artist_mood, artist_energy, creative_capital, etc.
+    // Engine-verbs arc (post-merge review fix): structured-value keys
+    // (STRUCTURED_EFFECT_KEYS) are admitted alongside numbers — this was the
+    // one entry point the arc's widening missed, silently stripping e.g. a
+    // dialogue-authored story_flag/grant_song before applyEffects ever saw it.
     if (choice.effects_immediate) {
-      const effects: Record<string, number> = {};
+      const effects: Record<string, any> = {};
       for (const [key, value] of Object.entries(choice.effects_immediate)) {
-        if (typeof value === 'number') {
+        if (typeof value === 'number' || STRUCTURED_EFFECT_KEYS.has(key)) {
           effects[key] = value;
         }
       }

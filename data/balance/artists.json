@@ -36,6 +36,12 @@
       "threshold_low": 45,
       "drift_amount": 8,
       "_note": "Volatility-economy slice 2 (knob liberation + amplification): the weekly passive mood drift toward neutral was HARDCODED in ArtistStateProcessor.calculateNaturalMoodDrift as ±3 with 55/45 bands. Liberated to config and amplified from 3 → 5 (~1.5×, rounded to the nearest sensible integer — leans into the 'mood too stable / invisible' playtest finding). Mood above threshold_high drifts down by drift_amount; below threshold_low drifts up by drift_amount; inside the band, no drift. Integer only (mood is an int column). Zero RNG. Round-2 tuning (2026-07-12): drift_amount 5 -> 8, bands unchanged."
+    },
+
+    "prospect_spawn": {
+      "default_talent_range": [40, 85],
+      "default_popularity_range": [5, 40],
+      "_note": "Engine-verbs slice 2 (M2 spawn_prospect): when an authored spawn_prospect effect omits quality_hint / popularity_hint, the engine rolls a target inside these ranges with an ISOLATED seeded RNG (never ctx.getRandom) and picks the nearest unsigned/undiscovered catalog artist. Hints, when authored, are used verbatim as targets."
     }
   }
 }

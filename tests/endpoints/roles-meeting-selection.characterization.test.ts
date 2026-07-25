@@ -255,8 +255,11 @@ describe('GET /api/roles/:roleId — Tier 2 reactive injection (synthetic reacti
     expect(res.body.meetings).toHaveLength(1);
     expect(res.body.meetings[0].id).toBe('synthetic_cco_mood_crater_reactive');
     // Spec §2: reactiveContext rides ON the selected meeting (additive optional).
+    // 2026-07-25 item 2: it also carries the triggering artist's id, so
+    // user_selected reactive meetings can bind their artist client-side.
     expect(res.body.meetings[0].reactiveContext).toEqual({
       trigger: 'mood_crater',
+      artistId,
       artistName: 'Crater Artist',
     });
     expect(res.body.reactiveContext).toBeUndefined();
@@ -326,8 +329,9 @@ describe('GET /api/roles/:roleId — Tier 2 reactive injection (synthetic reacti
     });
 
     const gameId = await seedGame();
+    const freshFaceId = crypto.randomUUID();
     await db.insert(artists).values({
-      id: crypto.randomUUID(),
+      id: freshFaceId,
       gameId,
       name: 'Fresh Face',
       archetype: 'Workhorse',
@@ -344,16 +348,23 @@ describe('GET /api/roles/:roleId — Tier 2 reactive injection (synthetic reacti
     expect(res.body.meetings[0].id).toBe('synthetic_ceo_recent_signing_reactive');
     expect(res.body.meetings[0].reactiveContext).toEqual({
       trigger: 'recent_signing',
+      artistId: freshFaceId,
       artistName: 'Fresh Face',
     });
   });
 });
 
 describe('GET /api/roles/:roleId — PR-2 real authored reactive meetings (no mocking, actual data/actions.json)', () => {
-  it('head_ar picks the real ar_recent_signing_plan meeting when an artist signed last week', async () => {
+  it('head_ar picks ONE of the two recent_signing owners (ar_recent_signing_plan | demo_ethics_one) when an artist signed last week', async () => {
+    // 2026-07-20 shared-trigger ownership: demo_ethics_one was restored to
+    // reactive on recent_signing alongside ar_recent_signing_plan — the seeded
+    // tie-break picks one at random, so this asserts membership, not identity
+    // (uniform-reachability across seeds is proven in the pure unit tests:
+    // tests/engine/meeting-selection-reactive-injection.test.ts).
     const gameId = await seedGame();
+    const newSigneeId = crypto.randomUUID();
     await db.insert(artists).values({
-      id: crypto.randomUUID(),
+      id: newSigneeId,
       gameId,
       name: 'New Signee',
       archetype: 'Workhorse',
@@ -367,9 +378,10 @@ describe('GET /api/roles/:roleId — PR-2 real authored reactive meetings (no mo
     const res = await request(app).get('/api/roles/head_ar').query({ gameId, week: '5' });
     expect(res.status).toBe(200);
     expect(res.body.meetings).toHaveLength(1);
-    expect(res.body.meetings[0].id).toBe('ar_recent_signing_plan');
+    expect(['ar_recent_signing_plan', 'demo_ethics_one']).toContain(res.body.meetings[0].id);
     expect(res.body.meetings[0].reactiveContext).toEqual({
       trigger: 'recent_signing',
+      artistId: newSigneeId,
       artistName: 'New Signee',
     });
   });
@@ -411,9 +423,10 @@ describe('GET /api/roles/:roleId — PR-2 real authored reactive meetings (no mo
     const cmoRes = await request(app).get('/api/roles/cmo').query({ gameId, week: '5' });
     expect(cmoRes.status).toBe(200);
     expect(cmoRes.body.meetings).toHaveLength(1);
-    expect(cmoRes.body.meetings[0].id).toBe('cmo_chart_debut_press');
+    expect(cmoRes.body.meetings[0].id).toBe('chart_debut_one_hour_window');
     expect(cmoRes.body.meetings[0].reactiveContext).toEqual({
       trigger: 'chart_debut',
+      artistId,
       artistName: 'Charting Artist',
       songTitle: 'Neon Nights',
     });
@@ -424,6 +437,7 @@ describe('GET /api/roles/:roleId — PR-2 real authored reactive meetings (no mo
     expect(ceoRes.body.meetings[0].id).toBe('ceo_chart_debut_strategy');
     expect(ceoRes.body.meetings[0].reactiveContext).toEqual({
       trigger: 'chart_debut',
+      artistId,
       artistName: 'Charting Artist',
       songTitle: 'Neon Nights',
     });
@@ -467,6 +481,7 @@ describe('GET /api/roles/:roleId — PR-2 real authored reactive meetings (no mo
     expect(res.body.meetings[0].id).toBe('distribution_release_out_numbers');
     expect(res.body.meetings[0].reactiveContext).toEqual({
       trigger: 'release_out',
+      artistId,
       artistName: 'Release Artist',
     });
   });
@@ -501,6 +516,7 @@ describe('GET /api/roles/:roleId — PR-2 real authored reactive meetings (no mo
     expect(res.body.meetings[0].id).toBe('cco_mood_crater_intervention');
     expect(res.body.meetings[0].reactiveContext).toEqual({
       trigger: 'mood_crater',
+      artistId,
       artistName: 'Cratering Artist',
     });
   });

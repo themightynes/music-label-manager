@@ -1791,33 +1791,33 @@ P.S. – Already have three story angles ready to deploy.",
             "executiveSalaries": 0,
             "marketingCosts": 0,
             "projectCosts": 0,
-            "roleMeetingCosts": 11850,
+            "roleMeetingCosts": 67250,
             "signingBonuses": 0,
             "weeklyOperations": 2234,
           },
-          "expenses": 15284,
-          "financialBreakdown": "$500,000 - $2,234 (operations) - $1,200 (artists) - $11,850 (role costs) = $484,716",
+          "expenses": 70684,
+          "financialBreakdown": "$500,000 - $2,234 (operations) - $1,200 (artists) - $67,250 (role costs) = $429,316",
           "greeting": "Financial Report – Week 5",
           "narrative": "REVENUE: $0
-EXPENSES: $15,284
-NET: -$15,284
+EXPENSES: $70,684
+NET: -$70,684
 
 ⚠ Warning Indicators:
 • Expense ratio: 0% (target: <70%)
 • Cash flow: Negative
-• Burn rate: $15,284/week
+• Burn rate: $70,684/week
 
 Immediate attention recommended.",
           "narrativeBody": "Financial Report – Week 5
 
 REVENUE: $0
-EXPENSES: $15,284
-NET: -$15,284
+EXPENSES: $70,684
+NET: -$70,684
 
 ⚠ Warning Indicators:
 • Expense ratio: 0% (target: <70%)
 • Cash flow: Negative
-• Burn rate: $15,284/week
+• Burn rate: $70,684/week
 
 Immediate attention recommended.
 
@@ -1838,32 +1838,32 @@ Immediate attention recommended.
             "executiveSalaries": 0,
             "marketingCosts": 0,
             "projectCosts": 0,
-            "roleMeetingCosts": 11850,
+            "roleMeetingCosts": 67250,
             "signingBonuses": 0,
             "weeklyOperations": 2234,
           },
-          "expenses": 15284,
-          "financialBreakdown": "$500,000 - $2,234 (operations) - $1,200 (artists) - $11,850 (role costs) = $484,716",
+          "expenses": 70684,
+          "financialBreakdown": "$500,000 - $2,234 (operations) - $1,200 (artists) - $67,250 (role costs) = $429,316",
           "isProfit": false,
           "narrativeBody": "Financial Report – Week 5
 
 REVENUE: $0
-EXPENSES: $15,284
-NET: -$15,284
+EXPENSES: $70,684
+NET: -$70,684
 
 ⚠ Warning Indicators:
 • Expense ratio: 0% (target: <70%)
 • Cash flow: Negative
-• Burn rate: $15,284/week
+• Burn rate: $70,684/week
 
 Immediate attention recommended.
 
 — Finance Department",
-          "net": -15284,
+          "net": -70684,
           "revenue": 0,
           "streams": 0,
         },
-        "preview": "Revenue $0 • Expenses $15284",
+        "preview": "Revenue $0 • Expenses $70684",
         "sender": "Finance Department",
         "senderRoleId": null,
         "subject": "Week 5 Financial Summary",
@@ -1926,7 +1926,7 @@ Immediate attention recommended.
       "before": {},
     },
     "money": {
-      "after": 484716,
+      "after": 429316,
       "before": 500000,
     },
     "playlistAccess": {
@@ -1951,7 +1951,7 @@ Immediate attention recommended.
     "changes": [
       {
         "appliedEffects": {
-          "money": -8100,
+          "money": -36000,
         },
         "autonomous": true,
         "choiceId": "<id>",
@@ -1971,7 +1971,7 @@ Immediate attention recommended.
       },
       {
         "appliedEffects": {
-          "money": -3750,
+          "money": -31250,
         },
         "autonomous": true,
         "choiceId": "<id>",
@@ -2052,12 +2052,12 @@ Immediate attention recommended.
       "executiveSalaries": 0,
       "marketingCosts": 0,
       "projectCosts": 0,
-      "roleMeetingCosts": 11850,
+      "roleMeetingCosts": 67250,
       "signingBonuses": 0,
       "weeklyOperations": 2234,
     },
-    "expenses": 15284,
-    "financialBreakdown": "$500,000 - $2,234 (operations) - $1,200 (artists) - $11,850 (role costs) = $484,716",
+    "expenses": 70684,
+    "financialBreakdown": "$500,000 - $2,234 (operations) - $1,200 (artists) - $67,250 (role costs) = $429,316",
     "generatedEmails": 3,
     "reputationChanges": {},
     "revenue": 0,
@@ -2739,33 +2739,33 @@ By the numbers,
             "executiveSalaries": 0,
             "marketingCosts": 0,
             "projectCosts": 0,
-            "roleMeetingCosts": 0,
+            "roleMeetingCosts": 16000,
             "signingBonuses": 0,
             "weeklyOperations": 1982,
           },
-          "expenses": 3182,
-          "financialBreakdown": "$500,000 - $1,982 (operations) - $1,200 (artists) = $496,818",
+          "expenses": 19182,
+          "financialBreakdown": "$500,000 - $1,982 (operations) - $1,200 (artists) - $16,000 (role costs) = $480,818",
           "greeting": "Financial Report – Week 5",
           "narrative": "REVENUE: $0
-EXPENSES: $3,182
-NET: -$3,182
+EXPENSES: $19,182
+NET: -$19,182
 
 ⚠ Warning Indicators:
 • Expense ratio: 0% (target: <70%)
 • Cash flow: Negative
-• Burn rate: $3,182/week
+• Burn rate: $19,182/week
 
 Immediate attention recommended.",
           "narrativeBody": "Financial Report – Week 5
 
 REVENUE: $0
-EXPENSES: $3,182
-NET: -$3,182
+EXPENSES: $19,182
+NET: -$19,182
 
 ⚠ Warning Indicators:
 • Expense ratio: 0% (target: <70%)
 • Cash flow: Negative
-• Burn rate: $3,182/week
+• Burn rate: $19,182/week
 
 Immediate attention recommended.
 
@@ -2786,32 +2786,32 @@ Immediate attention recommended.
             "executiveSalaries": 0,
             "marketingCosts": 0,
             "projectCosts": 0,
-            "roleMeetingCosts": 0,
+            "roleMeetingCosts": 16000,
             "signingBonuses": 0,
             "weeklyOperations": 1982,
           },
-          "expenses": 3182,
-          "financialBreakdown": "$500,000 - $1,982 (operations) - $1,200 (artists) = $496,818",
+          "expenses": 19182,
+          "financialBreakdown": "$500,000 - $1,982 (operations) - $1,200 (artists) - $16,000 (role costs) = $480,818",
           "isProfit": false,
           "narrativeBody": "Financial Report – Week 5
 
 REVENUE: $0
-EXPENSES: $3,182
-NET: -$3,182
+EXPENSES: $19,182
+NET: -$19,182
 
 ⚠ Warning Indicators:
 • Expense ratio: 0% (target: <70%)
 • Cash flow: Negative
-• Burn rate: $3,182/week
+• Burn rate: $19,182/week
 
 Immediate attention recommended.
 
 — Finance Department",
-          "net": -3182,
+          "net": -19182,
           "revenue": 0,
           "streams": 0,
         },
-        "preview": "Revenue $0 • Expenses $3182",
+        "preview": "Revenue $0 • Expenses $19182",
         "sender": "Finance Department",
         "senderRoleId": null,
         "subject": "Week 5 Financial Summary",
@@ -2869,7 +2869,7 @@ Immediate attention recommended.
       "before": {},
     },
     "money": {
-      "after": 496818,
+      "after": 480818,
       "before": 500000,
     },
     "playlistAccess": {
@@ -2895,6 +2895,7 @@ Immediate attention recommended.
       {
         "appliedEffects": {
           "creative_capital": -1,
+          "money": -16000,
         },
         "autonomous": true,
         "choiceId": "<id>",
@@ -2960,12 +2961,12 @@ Immediate attention recommended.
       "executiveSalaries": 0,
       "marketingCosts": 0,
       "projectCosts": 0,
-      "roleMeetingCosts": 0,
+      "roleMeetingCosts": 16000,
       "signingBonuses": 0,
       "weeklyOperations": 1982,
     },
-    "expenses": 3182,
-    "financialBreakdown": "$500,000 - $1,982 (operations) - $1,200 (artists) = $496,818",
+    "expenses": 19182,
+    "financialBreakdown": "$500,000 - $1,982 (operations) - $1,200 (artists) - $16,000 (role costs) = $480,818",
     "generatedEmails": 3,
     "reputationChanges": {},
     "revenue": 0,
@@ -3581,6 +3582,11 @@ Immediate attention recommended.
     },
     "flags": {
       "after": {
+        "escalationHistory": {
+          "head_ar": [
+            "escalation_ar_botched_signing",
+          ],
+        },
         "pending_side_event": {
           "category": "industry_drama",
           "choices": [
