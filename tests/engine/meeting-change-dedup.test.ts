@@ -178,4 +178,42 @@ describe('ActionProcessor.describeDelayedEffect — labeled payoffs (playtest #3
     const label = await processor.describeDelayedEffect(ctx, undefined, undefined);
     expect(label).toBe('Delayed effect triggered');
   });
+
+  // Playtest bug (2026-07-25): outcome_summary lines with {artistName} rendered
+  // the literal brace in weekly results (seen on the_dossier and
+  // demo_ethics_one). The artist-targeted delayed flag knows its artist —
+  // resolve the placeholder at fire time.
+  it('resolves {artistName} in the outcome line from the delayed flag artist', async () => {
+    const processor: any = new ActionProcessor();
+    const ctx = buildCtx({
+      gameData: {
+        getChoiceById: vi.fn(async () => ({
+          id: 'choice_a',
+          outcome_summary: 'Mac had {artistName} cut the song again — theirs, every bar.',
+        })),
+      },
+      storage: {
+        getArtist: vi.fn(async () => ({ id: 'artist-9', name: 'Diego Morales' })),
+      },
+    });
+    const label = await processor.describeDelayedEffect(ctx, 'demo_ethics_one', 'choice_a', 'artist-9');
+    expect(label).toBe(
+      'Delayed effect: Strategy Session — Mac had Diego Morales cut the song again — theirs, every bar.'
+    );
+    expect(label).not.toContain('{artistName}');
+  });
+
+  it('falls back to "your artist" when no artist id rides the delayed flag', async () => {
+    const processor: any = new ActionProcessor();
+    const ctx = buildCtx({
+      gameData: {
+        getChoiceById: vi.fn(async () => ({
+          id: 'choice_a',
+          outcome_summary: 'The story about {artistName} died.',
+        })),
+      },
+    });
+    const label = await processor.describeDelayedEffect(ctx, 'the_dossier', 'choice_a');
+    expect(label).toBe('Delayed effect: Strategy Session — The story about your artist died.');
+  });
 });

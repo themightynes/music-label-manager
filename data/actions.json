@@ -698,6 +698,7 @@
       "meeting_id": "creative_recording",
       "category": "production",
       "target_scope": "user_selected",
+      "auto_bind_artist": "low_mood",
       "requires": [
         "artist_signed"
       ],
@@ -994,6 +995,7 @@
       "meeting_id": "showcase_slot",
       "category": "talent",
       "target_scope": "user_selected",
+      "auto_bind_artist": "low_popularity",
       "requires": [
         "artist_signed",
         "music_exists"
@@ -1469,6 +1471,7 @@
       "meeting_id": "slow_news_week",
       "category": "marketing",
       "target_scope": "user_selected",
+      "auto_bind_artist": "planned_release",
       "requires": [
         "artist_signed",
         "release_planned"
@@ -1804,6 +1807,7 @@
       "meeting_id": "platform_exclusive_bidding",
       "category": "marketing",
       "target_scope": "user_selected",
+      "auto_bind_artist": "planned_release",
       "requires": [
         "artist_signed",
         "release_planned"
@@ -2043,6 +2047,7 @@
       "meeting_id": "the_engagement_farm",
       "category": "marketing",
       "target_scope": "user_selected",
+      "auto_bind_artist": "planned_release",
       "requires": [
         "artist_signed",
         "release_planned"

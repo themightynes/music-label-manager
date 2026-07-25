@@ -20,7 +20,7 @@ import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence, GameArtist,
 import { ArtistChangeHelpers, isScheduleEventEffect } from '../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../utils/seasonalCalculations';
 import { scaleReputationGain } from '../utils/reputationScaling';
-import { pickBoundArtist } from './artistBinding';
+import { pickBoundArtist, resolveBindStrategy } from './artistBinding';
 import { selectSideEvent } from './sideEventSelection';
 import { classifyChange, classifyChartUpdate } from '../utils/changeImportance';
 import { AROfficeProcessor } from './processors/AROfficeProcessor';
@@ -954,9 +954,15 @@ export class GameEngine {
         if (reactiveHappening?.artistId) {
           metadata.selectedArtistId = reactiveHappening.artistId;
         } else if ((meeting as any).auto_bind_artist) {
-          // `artists` was loaded above with the same rows the route reads —
-          // same list + same seed = same bound artist at both sites.
-          const bound = pickBoundArtist(artists as any[], seed);
+          // `artists`/`releases` were loaded above with the same rows the
+          // route reads — same list + same seed + same strategy = same bound
+          // artist at both sites.
+          const bound = pickBoundArtist(
+            artists as any[],
+            seed,
+            resolveBindStrategy((meeting as any).auto_bind_artist),
+            releases as any[],
+          );
           if (!bound) continue; // no signed artist to bind → sit out
           metadata.selectedArtistId = bound.id;
         } else {

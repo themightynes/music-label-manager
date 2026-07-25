@@ -342,11 +342,12 @@ export interface RoleMeeting {
     songTitle?: string;
   };
   /**
-   * Item 5 (2026-07-25): authored opt-in — a fiction-driven user_selected
-   * meeting whose subject artist the game names up front (seeded weighted
-   * draw) instead of asking the player to pick. See shared/engine/artistBinding.ts.
+   * Item 5 (2026-07-25): authored opt-in — a user_selected meeting whose
+   * subject artist the game names up front (seeded draw) instead of asking
+   * the player to pick. `true` = 'popularity'; string values select a
+   * fiction-appropriate strategy. See shared/engine/artistBinding.ts.
    */
-  auto_bind_artist?: boolean;
+  auto_bind_artist?: boolean | 'popularity' | 'low_mood' | 'low_popularity' | 'planned_release';
   /**
    * Item 5: server-attached bound artist on the SELECTED meeting (response-side
    * only, never authored) — present when auto_bind_artist drew the subject.

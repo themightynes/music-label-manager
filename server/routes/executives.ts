@@ -5,7 +5,7 @@ import { requireClerkUser } from '../auth';
 import { requireGameOwner } from '../middleware/requireGameOwner';
 import { generateMeetingSeed } from '@shared/utils/seededRandom';
 import { buildRelevanceInput, deriveRelevanceState, selectWeeklyMeetingWithHappenings } from '@shared/engine/meetingSelection';
-import { pickBoundArtist } from '@shared/engine/artistBinding';
+import { pickBoundArtist, resolveBindStrategy } from '@shared/engine/artistBinding';
 import { deriveWeekHappenings } from '@shared/engine/weekHappenings';
 import { ChartService } from '@shared/engine/ChartService';
 import { gameDataLoader } from '@shared/utils/dataLoader';
@@ -171,10 +171,11 @@ router.get("/api/roles/:roleId", requireClerkUser, async (req, res) => {
             (selectedMeeting as any).auto_bind_artist
           ) {
             // Item 5 (2026-07-25): fiction-driven user_selected meeting — the
-            // exec walks in already naming the subject artist. Seeded weighted
-            // draw off the SAME base seed the engine's autonomous path uses
-            // (two-site parity — shared/engine/artistBinding.ts).
-            const bound = pickBoundArtist(artists, seed);
+            // exec walks in already naming the subject artist. Seeded,
+            // strategy-driven draw off the SAME base seed the engine's
+            // autonomous path uses (two-site parity — artistBinding.ts).
+            const strategy = resolveBindStrategy((selectedMeeting as any).auto_bind_artist);
+            const bound = pickBoundArtist(artists, seed, strategy, releases as any[]);
             if (bound) {
               console.log(`[MEETING API] 🎯 Artist-bound meeting for ${req.params.roleId}:`, selectedMeeting.id, bound.name);
               roleMeetings = [{ ...selectedMeeting, boundArtist: { artistId: bound.id, artistName: bound.name } }];

@@ -68,3 +68,58 @@ describe('pickBoundArtist', () => {
     expect(bound).toBeDefined(); // deterministic, namespaced — smoke check
   });
 });
+
+describe('pickBoundArtist — fiction strategies (picker removal, 2026-07-25)', () => {
+  it('low_mood weights toward the artist who needs the boost', () => {
+    const hurting = { ...artist('hurting', 50), mood: 5 } as any;
+    const thriving = { ...artist('thriving', 50), mood: 95 } as any;
+    let hurtingWins = 0;
+    for (let week = 0; week < 40; week++) {
+      if (pickBoundArtist([thriving, hurting], `g-week${week}-cco`, 'low_mood')?.id === 'hurting') hurtingWins++;
+    }
+    // weights ~115 vs ~25 → the low-mood artist takes the clear majority.
+    expect(hurtingWins).toBeGreaterThan(24);
+  });
+
+  it('low_popularity weights toward the up-and-comer', () => {
+    const star = artist('star', 95);
+    const fresh = artist('fresh', 5);
+    let freshWins = 0;
+    for (let week = 0; week < 40; week++) {
+      if (pickBoundArtist([star, fresh], `g-week${week}-ar`, 'low_popularity')?.id === 'fresh') freshWins++;
+    }
+    expect(freshWins).toBeGreaterThan(24);
+  });
+
+  it('planned_release binds the artist of the SOONEST planned release outright', () => {
+    const roster = [artist('a', 90), artist('b', 10), artist('c', 50)];
+    const releases = [
+      { artistId: 'c', status: 'planned', releaseWeek: 9 },
+      { artistId: 'b', status: 'planned', releaseWeek: 7 },
+      { artistId: 'a', status: 'released', releaseWeek: 2 },
+    ];
+    for (let week = 0; week < 5; week++) {
+      expect(
+        pickBoundArtist(roster, `g-week${week}-cmo`, 'planned_release', releases)?.id
+      ).toBe('b');
+    }
+  });
+
+  it('planned_release falls back to popularity weighting when nothing is planned', () => {
+    const roster = [artist('a', 90), artist('b', 10)];
+    const bound = pickBoundArtist(roster, 'g-week3-cmo', 'planned_release', [
+      { artistId: 'a', status: 'released', releaseWeek: 2 },
+    ]);
+    expect(bound).toBeDefined(); // deterministic weighted fallback, no crash
+  });
+
+  it('resolveBindStrategy normalizes authored values', async () => {
+    const { resolveBindStrategy } = await import('@shared/engine/artistBinding');
+    expect(resolveBindStrategy(true)).toBe('popularity');
+    expect(resolveBindStrategy('low_mood')).toBe('low_mood');
+    expect(resolveBindStrategy('planned_release')).toBe('planned_release');
+    expect(resolveBindStrategy(undefined)).toBeUndefined();
+    expect(resolveBindStrategy(false)).toBeUndefined();
+    expect(resolveBindStrategy('bogus_strategy')).toBe('popularity');
+  });
+});

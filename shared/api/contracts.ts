@@ -550,9 +550,13 @@ export const WeeklyActionSchema = z.object({
   // Tier 2 (PR-1): server-attached "why now" context on the SELECTED meeting
   // (never authored in data/actions.json — response-side only).
   reactiveContext: ReactiveContextSchema.optional(),
-  // Item 5 (2026-07-25): authored opt-in — fiction-driven user_selected
-  // meetings whose subject artist the game names up front.
-  auto_bind_artist: z.boolean().optional(),
+  // Item 5 (2026-07-25): authored opt-in — user_selected meetings whose
+  // subject artist the game names up front. true = 'popularity'; string
+  // values select a fiction-appropriate strategy (artistBinding.ts).
+  auto_bind_artist: z.union([
+    z.boolean(),
+    z.enum(['popularity', 'low_mood', 'low_popularity', 'planned_release']),
+  ]).optional(),
   // Item 5: server-attached bound artist (response-side only, never authored).
   boundArtist: z.object({
     artistId: z.string(),
