@@ -276,7 +276,9 @@ describe('WeekSummary — Mandatory Side Events resolved beat ("Crisis Handled")
     expect(screen.getByText(/You chose: Take the deal/)).toBeInTheDocument();
     // Immediate + delayed effect badges (both whitelisted keys).
     expect(screen.getByText(/\+12000 money/)).toBeInTheDocument();
-    expect(screen.getByText(/\+2 reputation \(next wk\)/)).toBeInTheDocument();
+    // Round-4 honest badges: authored delayed reputation 2 applies x3 next
+    // week — the badge shows the value that will actually land.
+    expect(screen.getByText(/\+6 reputation \(next wk\)/)).toBeInTheDocument();
   });
 
   it('does not render the interactive beat for a mandatory occurrence that carries no choices', () => {

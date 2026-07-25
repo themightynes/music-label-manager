@@ -28,6 +28,13 @@ import {
 } from './week-summary/categorizeChanges';
 import { TourCityCard } from './week-summary/TourCityCard';
 import { AnticipationLine } from './week-summary/AnticipationLine';
+import { scaleReputationGain } from '@shared/utils/reputationScaling';
+
+// Round-4 honest badges: authored reputation values apply x3 (shared scaler) —
+// show the value that will actually land. Other effect keys apply as authored.
+function displayEffectValue(key: string, value: number): number {
+  return key === 'reputation' ? scaleReputationGain(value) : value;
+}
 
 interface WeekSummaryProps {
   weeklyStats: WeekSummaryType;
@@ -325,20 +332,26 @@ function ResolvedCrisisBeat({ event }: { event: EventOccurrence }) {
         )}
         {(immediateBadges.length > 0 || delayedBadges.length > 0) && (
           <div className="flex flex-wrap gap-1">
-            {immediateBadges.map(([key, value]) => (
-              <EffectBadgeTooltip key={`i-${key}`} effectKey={key}>
-                <Badge variant="outline" className="text-xs font-mono rounded-pill text-neon-cyan border-neon-cyan/40">
-                  {value > 0 ? '+' : ''}{value} {key.replace(/_/g, ' ')}
-                </Badge>
-              </EffectBadgeTooltip>
-            ))}
-            {delayedBadges.map(([key, value]) => (
-              <EffectBadgeTooltip key={`d-${key}`} effectKey={key}>
-                <Badge variant="outline" className="text-xs font-mono rounded-pill text-neon-lilac border-neon-lilac/40">
-                  {value > 0 ? '+' : ''}{value} {key.replace(/_/g, ' ')} (next wk)
-                </Badge>
-              </EffectBadgeTooltip>
-            ))}
+            {immediateBadges.map(([key, value]) => {
+              const shown = displayEffectValue(key, value);
+              return (
+                <EffectBadgeTooltip key={`i-${key}`} effectKey={key}>
+                  <Badge variant="outline" className="text-xs font-mono rounded-pill text-neon-cyan border-neon-cyan/40">
+                    {shown > 0 ? '+' : ''}{shown} {key.replace(/_/g, ' ')}
+                  </Badge>
+                </EffectBadgeTooltip>
+              );
+            })}
+            {delayedBadges.map(([key, value]) => {
+              const shown = displayEffectValue(key, value);
+              return (
+                <EffectBadgeTooltip key={`d-${key}`} effectKey={key}>
+                  <Badge variant="outline" className="text-xs font-mono rounded-pill text-neon-lilac border-neon-lilac/40">
+                    {shown > 0 ? '+' : ''}{shown} {key.replace(/_/g, ' ')} (next wk)
+                  </Badge>
+                </EffectBadgeTooltip>
+              );
+            })}
           </div>
         )}
       </CardContent>
