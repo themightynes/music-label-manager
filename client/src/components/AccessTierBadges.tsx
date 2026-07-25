@@ -36,7 +36,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           color: 'bg-gradient-to-br from-[rgba(55,224,176,1)] to-[rgba(47,176,255,1)] text-[#04121a] border-0 shadow-glow-positive',
           description: 'Small independent playlists',
           benefits: ['Access to indie playlists', '1K-10K follower playlists', 'Genre-specific placements'],
-          requirements: '10+ Reputation',  // Fixed threshold
+          requirements: '40+ Reputation',  // HARDCODED: mirrors progression.json access_tier_system (round-4 scale)
           futureRequirements: '1 released project'  // Not implemented yet
         },
         { 
@@ -45,7 +45,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           color: 'bg-gradient-to-br from-neon-cyan to-neon-blue text-[#04121a] border-0 shadow-glow-cyan',
           description: 'Medium-sized curated playlists',
           benefits: ['Mid-tier playlist access', '10K-100K follower playlists', 'Editorial consideration'],
-          requirements: '30+ Reputation',  // Fixed threshold
+          requirements: '180+ Reputation',  // HARDCODED: mirrors progression.json access_tier_system (round-4 scale)
           futureRequirements: '3 released projects'  // Not implemented yet
         },
         { 
@@ -54,7 +54,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           color: 'bg-gradient-to-br from-neon-lilac to-action-purple text-white border-0 shadow-glow-purple',
           description: 'Major platform editorial playlists',
           benefits: ['Flagship playlist access', '100K+ follower playlists', 'Algorithm boost'],
-          requirements: '60+ Reputation',  // Fixed threshold
+          requirements: '510+ Reputation',  // HARDCODED: mirrors progression.json access_tier_system (round-4 scale)
           futureRequirements: '5 released projects, Major label status'  // Not implemented yet
         }
       ]
@@ -78,7 +78,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           color: 'bg-gradient-to-br from-[rgba(55,224,176,1)] to-[rgba(47,176,255,1)] text-[#04121a] border-0 shadow-glow-positive',
           description: 'Music blogs and online publications',
           benefits: ['Blog coverage', 'Online reviews', 'Social media mentions'],
-          requirements: '8+ Reputation',  // Fixed threshold
+          requirements: '35+ Reputation',  // HARDCODED: mirrors progression.json access_tier_system (round-4 scale)
           futureRequirements: 'Press coverage from releases'  // Not implemented yet
         },
         { 
@@ -87,7 +87,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           color: 'bg-gradient-to-br from-neon-cyan to-neon-blue text-[#04121a] border-0 shadow-glow-cyan',
           description: 'Regional magazines and radio',
           benefits: ['Regional press', 'Radio interviews', 'Magazine features'],
-          requirements: '25+ Reputation',  // Fixed threshold
+          requirements: '150+ Reputation',  // HARDCODED: mirrors progression.json access_tier_system (round-4 scale)
           futureRequirements: 'Consistent press coverage'  // Not implemented yet
         },
         { 
@@ -96,7 +96,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           color: 'bg-gradient-to-br from-neon-lilac to-action-purple text-white border-0 shadow-glow-purple',
           description: 'National media and major publications',
           benefits: ['National press', 'TV appearances', 'Major publication features'],
-          requirements: '50+ Reputation',  // Fixed threshold
+          requirements: '440+ Reputation',  // HARDCODED: mirrors progression.json access_tier_system (round-4 scale)
           futureRequirements: 'Industry recognition'  // Not implemented yet
         }
       ]
@@ -120,7 +120,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           color: 'bg-gradient-to-br from-[rgba(55,224,176,1)] to-[rgba(47,176,255,1)] text-[#04121a] border-0 shadow-glow-positive',
           description: 'Small venues and clubs',
           benefits: ['Club venues (50-500 capacity)', 'Local gig circuit', 'Fan base building'],  // Fixed capacity
-          requirements: '5+ Reputation',  // Fixed threshold
+          requirements: '25+ Reputation',  // HARDCODED: mirrors progression.json access_tier_system (round-4 scale)
           futureRequirements: 'Active artist roster'  // Not implemented yet
         },
         { 
@@ -129,7 +129,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           color: 'bg-gradient-to-br from-neon-cyan to-neon-blue text-[#04121a] border-0 shadow-glow-cyan',
           description: 'Mid-sized theaters and venues',
           benefits: ['Theater venues (500-2000 capacity)', 'Regional touring', 'Higher ticket prices'],
-          requirements: '20+ Reputation',  // Fixed threshold
+          requirements: '110+ Reputation',  // HARDCODED: mirrors progression.json access_tier_system (round-4 scale)
           futureRequirements: 'Proven live draw'  // Not implemented yet
         },
         { 
@@ -138,7 +138,7 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
           color: 'bg-gradient-to-br from-neon-lilac to-action-purple text-white border-0 shadow-glow-purple',
           description: 'Large arenas and stadiums',
           benefits: ['Arena venues (2000-20000 capacity)', 'National touring', 'Premium revenue'],  // Fixed capacity
-          requirements: '45+ Reputation',  // Fixed threshold
+          requirements: '380+ Reputation',  // HARDCODED: mirrors progression.json access_tier_system (round-4 scale)
           futureRequirements: 'Established fanbase'  // Not implemented yet
         }
       ]
