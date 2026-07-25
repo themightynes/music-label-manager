@@ -19,7 +19,7 @@ import { AchievementsEngine } from './AchievementsEngine';
 import type { WeekSummary, ChartUpdate, GameChange, EventOccurrence, GameArtist, ScheduledEventEntry, ScheduleEventEffect } from '../types/gameTypes';
 import { ArtistChangeHelpers, isScheduleEventEffect } from '../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../utils/seasonalCalculations';
-import { scaleReputationGain } from '../utils/reputationScaling';
+import { scaleReputationGain, MAX_REPUTATION_FALLBACK } from '../utils/reputationScaling';
 import { selectSideEvent } from './sideEventSelection';
 import { classifyChange, classifyChartUpdate } from '../utils/changeImportance';
 import { AROfficeProcessor } from './processors/AROfficeProcessor';
@@ -451,7 +451,7 @@ export class GameEngine {
     //   threshold: data/balance/progression.json -> progression_thresholds.fourth_focus_slot_reputation
     //   base/max:  data/balance/projects.json     -> time_progression.focus_slots_base / focus_slots_max
     const focusBalance = this.gameData.getBalanceConfigSync();
-    const focusSlotUnlockReputation = focusBalance?.progression_thresholds?.fourth_focus_slot_reputation ?? 50;
+    const focusSlotUnlockReputation = focusBalance?.progression_thresholds?.fourth_focus_slot_reputation ?? 280;
     const focusSlotsBase = focusBalance?.time_progression?.focus_slots_base ?? 3;
     const focusSlotsMax = focusBalance?.time_progression?.focus_slots_max ?? 4;
     if (this.gameState.reputation && this.gameState.reputation >= focusSlotUnlockReputation) {
@@ -2044,10 +2044,11 @@ export class GameEngine {
       }
 
       if (bonus > 0) {
-        // Volatility-economy slice 3: throttle chart-milestone reputation (a
-        // "release success" gain) through the shared global gain-scaling helper.
+        // Chart-milestone reputation routes through the shared delta scaler
+        // (round-4: an x3 amplifier onto the 0-700 scale).
         const scaledBonus = scaleReputationGain(bonus, reputationSystem);
-        this.gameState.reputation = Math.max(0, Math.min(100, (this.gameState.reputation || 0) + scaledBonus));
+        const maxRep = (reputationSystem as any)?.max_reputation ?? MAX_REPUTATION_FALLBACK;
+        this.gameState.reputation = Math.max(0, Math.min(maxRep, (this.gameState.reputation || 0) + scaledBonus));
         if (!summary.reputationChanges) summary.reputationChanges = {};
         summary.reputationChanges['global'] = (summary.reputationChanges['global'] || 0) + scaledBonus;
 

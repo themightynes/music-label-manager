@@ -1,30 +1,27 @@
 {
   "reputation_system": {
-    "starting_reputation": 5,
+    "starting_reputation": 15,
     "starting_creative_capital": 10,
-    "max_reputation": 100,
+    "max_reputation": 700,
     "goal_failure_penalty": 2,
     "hit_single_bonus": 3,
     "number_one_bonus": 7,
-    "reputation_gain_scaling": 0.5,
-    "_reputation_gain_scaling_note": "Volatility-economy slice 3: a global damper on how fast reputation is EARNED (playtest: rep hit 100 by week ~21 of 52). Multiplies every POSITIVE reputation gain (rounded) at each source — there is no single chokepoint, so it is applied per-source via shared/utils/reputationScaling.scaleReputationGain at: chart milestones (game-engine), press coverage (ReleaseProcessor), PR-push + digital-ads marketing (ActionProcessor), and meeting immediate + delayed rep effects (ActionProcessor). LOSSES ARE NOT SCALED (flop penalty, negative meeting/rep-swing outcomes apply at full magnitude). 1.0 = no damping. Round-3 tuning (2026-07-25 playtest: still too fast at 0.7 — top tiers should open in the final third of a 52-week run): scaling 0.7 -> 0.5, hit_single_bonus 5 -> 3, number_one_bonus 10 -> 7 (effective chart gains: top-10 debut +4 -> +2, No.1 +7 -> +4). DO NOT go below 0.5: Math.round(1 x 0.4) = 0 would erase the +1 meeting-effect gains entirely.",
+    "reputation_gain_scaling": 3,
+    "_reputation_gain_scaling_note": "Round-4 REDESIGN (2026-07-25, replaces the round-3 damper): reputation moved from a 0-100 scale to a 0-700 scale so the goalposts stretch instead of the gains shrinking — flagship playlists now open at 510 ('last year should open 500+'). reputation_gain_scaling is now an AMPLIFIER (x3) applied to EVERY reputation delta, GAINS AND LOSSES ALIKE, via shared/utils/reputationScaling.scaleReputationGain (chart milestones, press coverage, PR-push/digital-ads, meeting immediate + delayed effects, the flop sink). Authored content values stay small (+1..+6); applied deltas are authored x3, and the choice-badge preview shows the SAME x3 value, so what the player is promised is exactly what lands. Trajectory anchor: undamped 0-100 pace was ~4.75 rep/week; x3 with authored 3/7 chart bonuses gives ~13/week -> flagship 510 lands ~week 40 of 52. Keep this value in lockstep with DEFAULT_REPUTATION_GAIN_SCALING in shared/utils/reputationScaling.ts (tripwire-tested).",
     "flop_penalty": 8,
-    "flop_revenue_ratio": 0.30,
+    "flop_revenue_ratio": 0.3,
     "flop_investment_floor": 10000,
     "flop_artist_mood_penalty": -12,
     "_flop_artist_mood_penalty_note": "Volatility-economy slice 2: a flop doesn't just cost the label reputation (flop_penalty) — it wounds the release artist's morale. Applied ONCE, alongside the flop reputation sink (same once-only flag, same deterministic gate), to summary.artistChanges[release.artistId].mood; clamped 0-100 downstream. Signed value (negative = a drop). Zero RNG. Round-2 tuning (2026-07-12): flop_penalty 5 -> 8, flop_artist_mood_penalty -8 -> -12.",
-
     "creative_capital_milestones": {
       "cc_top10_bonus": 1,
       "cc_number_one_bonus": 2,
       "_note": "PENDING-DECISIONS #9 (2026-07-12): milestone-sourced Creative Capital — a small trickle from chart milestones so CC income isn't gated on one cco meeting choice. Fires via GameEngine.applyChartMilestoneBonuses on the SAME once-per-song flags as hit_single_bonus/number_one_bonus: cc_top10_bonus the week a song FIRST enters the top 10, cc_number_one_bonus the week it FIRST hits No. 1. NO-STACK: a #1 debut (both milestones same week) grants max(cc_top10_bonus, cc_number_one_bonus), not the sum — unlike the reputation bonuses, which stack. Not scaled by reputation_gain_scaling. No upper CC cap exists in the engine (floor 0 only)."
     },
-
     "award_chance_per_point": 0.08,
     "award_chance_cap": 0.8,
     "award_score_bonus": 2000,
     "award_nominee_pool_threshold": 5,
-
     "exec_mood_modifiers": {
       "disgruntled_below": 30,
       "content_above": 80,
@@ -33,7 +30,6 @@
       "cost_multiplier_content": 0.9,
       "effect_multiplier_inspired": 1.2
     },
-
     "executive_delegation": {
       "loyalty_on_use": 5,
       "loyalty_decay_per_week": 5,
@@ -74,17 +70,14 @@
         }
       }
     },
-
     "regional_barriers": {
       "domestic": 0,
-      "neighboring": 15,
-      "international": 35,
-      "global": 60
+      "neighboring": 60,
+      "international": 200,
+      "global": 380
     },
-    
     "decay_rate": 0.1
   },
-  
   "access_tier_system": {
     "playlist_access": {
       "none": {
@@ -93,22 +86,21 @@
         "cost_modifier": 1.0
       },
       "niche": {
-        "threshold": 10,
+        "threshold": 40,
         "reach_multiplier": 0.4,
         "cost_modifier": 1.2
       },
       "mid": {
-        "threshold": 30,
+        "threshold": 180,
         "reach_multiplier": 0.8,
         "cost_modifier": 1.5
       },
       "flagship": {
-        "threshold": 60,
+        "threshold": 510,
         "reach_multiplier": 1.5,
         "cost_modifier": 2.0
       }
     },
-    
     "press_access": {
       "none": {
         "threshold": 0,
@@ -116,55 +108,64 @@
         "sentiment_modifier": 0.8
       },
       "blogs": {
-        "threshold": 8,
+        "threshold": 35,
         "pickup_chance": 0.25,
         "sentiment_modifier": 1.0
       },
       "mid_tier": {
-        "threshold": 25,
-        "pickup_chance": 0.60,
+        "threshold": 150,
+        "pickup_chance": 0.6,
         "sentiment_modifier": 1.2
       },
       "national": {
-        "threshold": 50,
+        "threshold": 440,
         "pickup_chance": 0.85,
         "sentiment_modifier": 1.5
       }
     },
-    
     "venue_access": {
       "none": {
         "threshold": 0,
-        "capacity_range": [0, 50],
+        "capacity_range": [
+          0,
+          50
+        ],
         "guarantee_multiplier": 0.3
       },
       "clubs": {
-        "threshold": 5,
-        "capacity_range": [50, 500],
+        "threshold": 25,
+        "capacity_range": [
+          50,
+          500
+        ],
         "guarantee_multiplier": 0.7
       },
       "theaters": {
-        "threshold": 20,
-        "capacity_range": [500, 2000],
+        "threshold": 110,
+        "capacity_range": [
+          500,
+          2000
+        ],
         "guarantee_multiplier": 1.0
       },
       "arenas": {
-        "threshold": 45,
-        "capacity_range": [2000, 20000],
+        "threshold": 380,
+        "capacity_range": [
+          2000,
+          20000
+        ],
         "guarantee_multiplier": 1.5
       }
     }
   },
-  
   "progression_thresholds": {
-    "second_artist_reputation": 10,
-    "fourth_focus_slot_reputation": 50,
+    "second_artist_reputation": 40,
+    "fourth_focus_slot_reputation": 280,
     "playlist_niche_streams": 100000,
     "press_blogs_pickups": 2,
     "venue_clubs_sellouts": 2,
-    "global_label_reputation": 75
+    "global_label_reputation": 560
   },
-  
   "weekly_meeting_selection": {
     "relevance_weight": 3.0,
     "_relevance_weight_note": "Volatility-economy slice 4: raised 2.0 -> 3.0 so recently-relevant meetings surface more strongly (playtest: meeting relevance was too subtle to notice). Recency window unchanged.",
@@ -176,7 +177,6 @@
       "low_energy_lt": 30
     }
   },
-
   "difficulty_modifiers": {
     "easy": {
       "starting_money_multiplier": 1.5,

@@ -251,8 +251,8 @@ export class ServerGameData {
       fourth_focus_slot_reputation: thresholds.fourth_focus_slot_reputation,
       label_size_thresholds: {
         local: 0,
-        regional: 25,
-        national: 50,
+        regional: 150,
+        national: 280,
         global: thresholds.global_label_reputation
       }
     };
@@ -1010,13 +1010,13 @@ export class ServerGameData {
   getProgressionThresholdsSync() {
     if (!this.balanceData) {
       return {
-        second_artist_reputation: 10,
-        fourth_focus_slot_reputation: 50,
+        second_artist_reputation: 40,
+        fourth_focus_slot_reputation: 280,
         label_size_thresholds: {
           local: 0,
-          regional: 25,
-          national: 50,
-          global: 75
+          regional: 150,
+          national: 280,
+          global: 560
         }
       };
     }
@@ -1027,8 +1027,8 @@ export class ServerGameData {
       fourth_focus_slot_reputation: thresholds.fourth_focus_slot_reputation,
       label_size_thresholds: {
         local: 0,
-        regional: 25,
-        national: 50,
+        regional: 150,
+        national: 280,
         global: thresholds.global_label_reputation
       }
     };

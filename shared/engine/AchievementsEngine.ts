@@ -75,7 +75,7 @@ export class AchievementsEngine {
     // Calculate score breakdown
     const scoreBreakdown: ScoreBreakdown = {
       money: Math.max(0, Math.floor((gameState.money || 0) / 1000)), // 1 point per $1k
-      reputation: Math.max(0, Math.floor((gameState.reputation || 0) / 5)), // 1 point per 5 reputation
+      reputation: Math.max(0, Math.floor((gameState.reputation || 0) / 30)), // 1 point per 30 reputation (round-4: 0-700 scale; keeps max contribution ~23, in line with the old /5 on 0-100)
       // TODO (C62): still hardcoded 0. No doc (ACHIEVEMENTS_DEPENDENCY_CHART.md,
       // ACHIEVEMENTS_KNOWLEDGE_CHART.md, technical-debt-backlog.md) defines what
       // "successful artist" or "completed project" means for campaign scoring,

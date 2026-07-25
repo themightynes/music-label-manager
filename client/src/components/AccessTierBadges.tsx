@@ -197,10 +197,12 @@ export function AccessTierBadges({ gameState }: AccessTierBadgesProps) {
     const currentRep = gameState.reputation || 0;
     
     // Simplified progress calculation based on reputation milestones
+    // HARDCODED: mirrors data/balance/progression.json access_tier_system
+    // thresholds (round-4, 0-700 scale) — keep in lockstep when tuning.
     const repRequirements = {
-      playlist: [10, 30, 60],  // Actual thresholds from balance config
-      press: [8, 25, 50],      // Actual thresholds from balance config
-      venue: [5, 20, 45]       // Actual thresholds from balance config
+      playlist: [40, 180, 510],
+      press: [35, 150, 440],
+      venue: [25, 110, 380]
     };
     
     const targetRep = repRequirements[tierType][currentTier.level];

@@ -11,6 +11,7 @@ import {
 import { EffectBadgeTooltip } from './EffectBadgeTooltip';
 import { getChoiceCreativeCapitalCost } from '../../services/executiveAutoSelect';
 import { resolveMeetingPromptPlaceholders } from '../../utils/meetingPromptPlaceholders';
+import { scaleReputationGain } from '@shared/utils/reputationScaling';
 
 // C99 fix (v3 meeting-content wave): an authored effect VALUE is not always a
 // number — the STRUCTURED_EFFECT_KEYS carry objects/strings (e.g. schedule_event
@@ -155,8 +156,12 @@ function EffectBadge({
     switch (key) {
       case 'money':
         return `${val > 0 ? '+' : ''}$${val.toLocaleString()}`;
-      case 'reputation':
-        return `${val > 0 ? '+' : ''}${val} Rep`;
+      case 'reputation': {
+        // Round-4 honest preview: show the SCALED delta (authored x3 onto the
+        // 0-700 scale) — the badge must promise exactly what will land.
+        const shownRep = scaleReputationGain(val);
+        return `${shownRep > 0 ? '+' : ''}${shownRep} Rep`;
+      }
       case 'creative_capital':
         return `${val > 0 ? '+' : ''}${val} Creative`;
       case 'artist_mood':
@@ -194,8 +199,9 @@ function EffectBadge({
       case 'rep_swing':
         // Exec-meetings-revival PR-6 (C4) — the authored value here is the
         // GAMBLE's magnitude (pre-roll), shown at the choice-preview stage before
-        // the isolated seeded roll resolves it.
-        return `±${Math.abs(val)} Rep Gamble`;
+        // the isolated seeded roll resolves it. Round-4 honest preview: the
+        // resolved roll is scaled x3 on application, so the shown bound is too.
+        return `±${Math.abs(scaleReputationGain(val))} Rep Gamble`;
       case 'award_chances':
         // Exec-meetings-revival PR-7 (C5) — prestige/award track. Never expires,
         // banks to campaign end; badge reads as a durable prestige value.
