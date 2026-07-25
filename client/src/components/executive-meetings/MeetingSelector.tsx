@@ -172,23 +172,31 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
   const safeIndex = Math.min(meetingIndex, filteredMeetings.length - 1);
   const meeting = filteredMeetings[safeIndex];
   const isUserSelected = meeting.target_scope === 'user_selected' && signedArtists.length > 0;
-  // Resolve {artistName}/{songTitle} against the reactive happening's names
-  // (global-scope reactive meetings — e.g. chart_debut_one_hour_window — know
-  // WHICH song charted via reactiveContext), with graceful fallbacks so
-  // literal braces never render (see meetingPromptPlaceholders.ts).
+  // Item 5 (2026-07-25): a server-bound artist (auto_bind_artist fiction
+  // meetings) means the exec walks in already naming the subject — the brief
+  // renders the NAMED `prompt` ("a journalist is sitting on a story about
+  // Diego Morales"), not the artist-agnostic prompt_before_selection.
+  const boundArtist = meeting.boundArtist;
+  // Resolve {artistName}/{songTitle} against the bound artist or the reactive
+  // happening's names (global-scope reactive meetings — e.g.
+  // chart_debut_one_hour_window — know WHICH song charted via reactiveContext),
+  // with graceful fallbacks so literal braces never render.
   const briefPrompt = resolveMeetingPromptPlaceholders(
-    meeting.target_scope === 'user_selected' && meeting.prompt_before_selection
+    meeting.target_scope === 'user_selected' && meeting.prompt_before_selection && !boundArtist
       ? meeting.prompt_before_selection
       : meeting.prompt,
-    meeting.reactiveContext ?? {}
+    boundArtist
+      ? { artistName: boundArtist.artistName, ...(meeting.reactiveContext ?? {}) }
+      : meeting.reactiveContext ?? {}
   );
 
   const handleStart = () => {
-    // Reactive user_selected meetings bind the TRIGGERING artist — the fiction
-    // already chose ("the one that made me sign {artistName}"), so offering a
-    // picker both breaks fiction and lets the player contradict it (2026-07-25
-    // playtest). Non-reactive user_selected meetings keep the picker.
-    const boundArtistId = meeting.reactiveContext?.artistId;
+    // Bound user_selected meetings skip the picker: REACTIVE meetings bind the
+    // TRIGGERING artist, auto_bind_artist meetings bind the server's seeded
+    // draw — either way the fiction already chose, so offering a picker both
+    // breaks fiction and lets the player contradict it (2026-07-25 playtest).
+    // Unbound user_selected meetings keep the picker.
+    const boundArtistId = meeting.reactiveContext?.artistId ?? boundArtist?.artistId;
     if (isUserSelected && boundArtistId) {
       onSelectMeeting(meeting, boundArtistId);
     } else if (isUserSelected) {
@@ -220,7 +228,7 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
           onClick={handleStart}
           className="w-[340px] max-w-full rounded-button bg-gradient-to-br from-action-pink to-action-purple py-6 text-[15px] font-semibold text-white shadow-action hover:opacity-90"
         >
-          {isUserSelected && !meeting.reactiveContext?.artistId
+          {isUserSelected && !meeting.reactiveContext?.artistId && !boundArtist
             ? 'Start Meeting — pick an artist'
             : 'Start Meeting'}
         </Button>

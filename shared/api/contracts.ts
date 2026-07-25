@@ -547,9 +547,24 @@ export const WeeklyActionSchema = z.object({
   // Tier 2 (PR-1): optional reactive-meeting trigger. Dark launch: no
   // data/actions.json entry sets this yet (PR-2 authors the first ones).
   reactive_trigger: HappeningTypeSchema.optional(),
+  // Playtest 2026-07-25: per-meeting injection probability, 0–1 (absent =
+  // always fires when triggered) — demo_ethics_one on EVERY signing read as copy-paste.
+  reactive_chance: z.number().min(0).max(1).optional(),
   // Tier 2 (PR-1): server-attached "why now" context on the SELECTED meeting
   // (never authored in data/actions.json — response-side only).
   reactiveContext: ReactiveContextSchema.optional(),
+  // Item 5 (2026-07-25): authored opt-in — user_selected meetings whose
+  // subject artist the game names up front. true = 'popularity'; string
+  // values select a fiction-appropriate strategy (artistBinding.ts).
+  auto_bind_artist: z.union([
+    z.boolean(),
+    z.enum(['popularity', 'low_mood', 'low_popularity', 'planned_release']),
+  ]).optional(),
+  // Item 5: server-attached bound artist (response-side only, never authored).
+  boundArtist: z.object({
+    artistId: z.string(),
+    artistName: z.string(),
+  }).optional(),
   choices: z.array(DialogueChoiceSchema).default([]),
   details: ActionDetailsSchema,
   recommendations: ActionRecommendationsSchema,

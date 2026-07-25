@@ -26,18 +26,9 @@ import { releasesQueryKey, releaseSongsQueryKey } from '@/hooks/useReleases';
 import { projectsQueryKey } from '@/hooks/useProjects';
 import { artistsQueryKey } from '@/hooks/useArtists';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Copy, Trash2, Plus, Download, Upload } from 'lucide-react';
-
-type SaveSummary = {
-  id: string;
-  name: string;
-  week: number;
-  isAutosave: boolean | null;
-  createdAt: string;
-  updatedAt: string;
-  money: number | null;
-  reputation: number | null;
-};
+import { Save, Download, Upload } from 'lucide-react';
+import { groupSaves, type SaveGroup, type SaveSummary } from '@/components/saves/groupSaves';
+import { SaveGroupList } from '@/components/saves/SaveGroupList';
 
 type PendingImportState = {
   name: string;
@@ -60,6 +51,8 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [saveDetails, setSaveDetails] = useState<Record<string, GameSaveSnapshot>>({});
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [pendingGroupDelete, setPendingGroupDelete] = useState<SaveGroup | null>(null);
+  const [deletingGroup, setDeletingGroup] = useState(false);
   const [pendingImport, setPendingImport] = useState<PendingImportState | null>(null);
   const [importing, setImporting] = useState(false);
   const { toast } = useToast();
@@ -67,6 +60,8 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
   useEffect(() => {
     if (!open) {
       setPendingDelete(null);
+      setPendingGroupDelete(null);
+      setDeletingGroup(false);
       setPendingImport(null);
       setImporting(false);
       setDeleting(null);
@@ -83,15 +78,20 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
     enabled: open
   });
 
-  const manualSaves = useMemo(
-    () => (saves || []).filter(save => !save.isAutosave),
-    [saves]
-  );
-
-  const autosaveSaves = useMemo(
-    () => (saves || []).filter(save => save.isAutosave),
-    [saves]
-  );
+  // Merge in money/reputation from any locally cached full snapshots (covers
+  // freshly imported/forked saves before the summary refetch lands), then
+  // group by playthrough with the current game pinned first.
+  const groups = useMemo(() => {
+    const merged = (saves || []).map(save => {
+      const detail = saveDetails[save.id];
+      return {
+        ...save,
+        money: save.money ?? detail?.gameState?.money ?? null,
+        reputation: save.reputation ?? detail?.gameState?.reputation ?? null,
+      };
+    });
+    return groupSaves(merged, gameState?.id ?? null);
+  }, [saves, saveDetails, gameState?.id]);
 
   const handleSave = async () => {
     if (!newSaveName.trim() || !gameState) return;
@@ -209,6 +209,63 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
       });
     } finally {
       setDeleting(null);
+    }
+  };
+
+  const handleRename = async (save: SaveSummary, name: string) => {
+    try {
+      const response = await apiRequest('PATCH', `/api/saves/${save.id}`, { name });
+      await response.json();
+      refetchSaves();
+      toast({
+        title: 'Save renamed',
+        description: `"${save.name}" is now "${name}".`,
+      });
+    } catch (error) {
+      console.error('Failed to rename save:', error);
+      toast({
+        title: 'Rename failed',
+        description: error instanceof Error ? `Rename failed: ${error.message}` : 'Failed to rename save. Please try again.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const confirmDeleteGroup = async () => {
+    if (!pendingGroupDelete) {
+      return;
+    }
+
+    const group = pendingGroupDelete;
+    setDeletingGroup(true);
+    try {
+      const response = await apiRequest('DELETE', `/api/saves/by-game/${group.key}`);
+      const result = await response.json();
+
+      setSaveDetails(prev => {
+        const next = { ...prev };
+        for (const save of [...group.manualSaves, ...group.autosaves]) {
+          delete next[save.id];
+        }
+        return next;
+      });
+
+      refetchSaves();
+      toast({
+        title: 'Playthrough deleted',
+        description: `Removed ${result.deletedCount ?? 'all'} saves for "${group.label}".`,
+      });
+      setPendingGroupDelete(null);
+    } catch (error) {
+      console.error('Failed to delete playthrough saves:', error);
+      toast({
+        title: 'Delete failed',
+        description: error instanceof Error ? `Delete failed: ${error.message}` : 'Failed to delete playthrough saves. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeletingGroup(false);
     }
   };
 
@@ -418,15 +475,6 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    });
-  };
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -436,139 +484,22 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
           </DialogHeader>
 
           <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
-            {/* Manual saves */}
-            {manualSaves.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-mono text-[10px] uppercase tracking-[0.24em] text-[rgba(180,170,220,0.5)]">Manual Saves</h3>
-                {manualSaves.map(save => {
-                  const detail = saveDetails[save.id];
-                  const money = save.money ?? detail?.gameState?.money ?? null;
-                  const reputation = save.reputation ?? detail?.gameState?.reputation ?? null;
-                  return (
-                    <div key={save.id} className="rounded-xl border border-white/[0.06] bg-surface-inner/50 p-4 transition-colors hover:bg-white/[0.045]">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-[#F7F4FB]">{save.name}</span>
-                            <span className="font-mono text-[11px] px-[11px] py-[4px] rounded-pill bg-[rgba(160,90,240,0.14)] border border-[rgba(160,90,240,0.4)] text-neon-lilac">
-                              Manual
-                            </span>
-                          </div>
-                          <div className="text-xs text-white/70 mt-1">
-                            Week {save.week} | <span className="font-mono text-money">${typeof money === 'number' ? money.toLocaleString() : '--'}</span> | Rep {typeof reputation === 'number' ? reputation : '--'}
-                          </div>
-                          <div className="font-mono text-[11px] text-white/50 mt-1">
-                            Saved {formatDate(save.updatedAt)}
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2 shrink-0">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleLoad(save.id)}
-                            disabled={loading || deleting === save.id}
-                            className="text-xs rounded-button border-[rgba(55,214,255,0.35)] bg-[rgba(55,214,255,0.06)] text-neon-cyan hover:bg-[rgba(55,214,255,0.12)] hover:text-neon-cyan"
-                          >
-                            {loading ? 'Loading...' : 'Load'}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleLoad(save.id, 'fork')}
-                            disabled={loading || deleting === save.id}
-                            className="text-xs rounded-button border-white/[0.09] bg-white/[0.02] text-white/75 hover:bg-white/[0.06] hover:text-white"
-                          >
-                            <Copy className="h-3 w-3 mr-1" />
-                            Copy
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => requestDelete(save.id, save.name)}
-                            disabled={loading || deleting === save.id}
-                            className="text-xs rounded-button border-negative/40 bg-negative/[0.08] text-negative hover:bg-negative/[0.16] hover:text-negative"
-                          >
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            {deleting === save.id ? 'Deleting...' : 'Delete'}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+            {groups.length === 0 ? (
+              <div className="rounded-xl border-2 border-dashed border-white/[0.09] p-8 text-center">
+                <p className="text-sm text-white/50">No saves yet — name your first save below.</p>
               </div>
+            ) : (
+              <SaveGroupList
+                groups={groups}
+                loading={loading}
+                deletingId={deleting}
+                onLoad={save => handleLoad(save.id)}
+                onFork={save => handleLoad(save.id, 'fork')}
+                onDelete={save => requestDelete(save.id, save.name)}
+                onRename={handleRename}
+                onDeleteGroup={setPendingGroupDelete}
+              />
             )}
-
-            {/* Autosaves */}
-            {autosaveSaves.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-mono text-[10px] uppercase tracking-[0.24em] text-[rgba(180,170,220,0.5)]">Autosaves</h3>
-                {autosaveSaves.map(save => {
-                  const detail = saveDetails[save.id];
-                  const money = save.money ?? detail?.gameState?.money ?? null;
-                  const reputation = save.reputation ?? detail?.gameState?.reputation ?? null;
-                  return (
-                    <div key={save.id} className="rounded-xl border border-white/[0.06] bg-surface-inner/50 p-4 transition-colors hover:bg-white/[0.045]">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-[#F7F4FB]">{save.name}</span>
-                            <span className="font-mono text-[11px] px-[11px] py-[4px] rounded-pill bg-[rgba(55,214,255,0.1)] border border-[rgba(55,214,255,0.35)] text-neon-cyan">
-                              Autosave
-                            </span>
-                          </div>
-                          <div className="text-xs text-white/70 mt-1">
-                            Week {save.week} | <span className="font-mono text-money">${typeof money === 'number' ? money.toLocaleString() : '--'}</span> | Rep {typeof reputation === 'number' ? reputation : '--'}
-                          </div>
-                          <div className="font-mono text-[11px] text-white/50 mt-1">
-                            Saved {formatDate(save.updatedAt)}
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2 shrink-0">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleLoad(save.id)}
-                            disabled={loading || deleting === save.id}
-                            className="text-xs rounded-button border-[rgba(55,214,255,0.35)] bg-[rgba(55,214,255,0.06)] text-neon-cyan hover:bg-[rgba(55,214,255,0.12)] hover:text-neon-cyan"
-                          >
-                            {loading ? 'Loading...' : 'Load'}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleLoad(save.id, 'fork')}
-                            disabled={loading || deleting === save.id}
-                            className="text-xs rounded-button border-white/[0.09] bg-white/[0.02] text-white/75 hover:bg-white/[0.06] hover:text-white"
-                          >
-                            <Copy className="h-3 w-3 mr-1" />
-                            Copy
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => requestDelete(save.id, save.name)}
-                            disabled={loading || deleting === save.id}
-                            className="text-xs rounded-button border-negative/40 bg-negative/[0.08] text-negative hover:bg-negative/[0.16] hover:text-negative"
-                          >
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            {deleting === save.id ? 'Deleting...' : 'Delete'}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Empty slots */}
-            {Array.from({ length: Math.max(0, 3 - manualSaves.length) }).map((_, index) => (
-              <div key={`empty-${index}`} className="rounded-xl border-2 border-dashed border-white/[0.09] p-4 text-center">
-                <Plus className="h-5 w-5 text-white/50 mx-auto mb-2" />
-                <p className="text-sm text-white/50">Empty Slot</p>
-              </div>
-            ))}
           </div>
 
           {/* New save input — pinned below the scrolling list */}
@@ -652,6 +583,47 @@ export function SaveGameModal({ open, onOpenChange }: SaveGameModalProps) {
               className="rounded-button bg-negative text-white hover:bg-negative/90"
             >
               {deleting !== null && pendingDelete && deleting === pendingDelete.id ? 'Deleting...' : 'Delete'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!pendingGroupDelete}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !deletingGroup) {
+            setPendingGroupDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="border-white/[0.06] bg-surface-panel text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#F7F4FB]">Delete this playthrough's saves?</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/70">
+              {pendingGroupDelete
+                ? `This will permanently remove all ${
+                    pendingGroupDelete.manualSaves.length + pendingGroupDelete.autosaves.length
+                  } saves for "${pendingGroupDelete.label}".${
+                    pendingGroupDelete.isCurrent
+                      ? ' This is your CURRENT game — the live game keeps running, but you will have no saves to return to until you save again.'
+                      : ''
+                  }`
+                : 'This action cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={deletingGroup}
+              className="rounded-button border-white/[0.09] text-white hover:bg-white/[0.08]"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              onClick={() => confirmDeleteGroup()}
+              disabled={deletingGroup}
+              className="rounded-button bg-negative text-white hover:bg-negative/90"
+            >
+              {deletingGroup ? 'Deleting...' : 'Delete all'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

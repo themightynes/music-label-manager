@@ -689,7 +689,8 @@ export class ActionProcessor {
   private async describeDelayedEffect(
     ctx: WeekContext,
     meetingName: string | undefined,
-    choiceId: string | undefined
+    choiceId: string | undefined,
+    targetArtistId?: string
   ): Promise<string> {
     let meetingLabel: string | undefined;
     let choiceLabel: string | undefined;
@@ -707,6 +708,25 @@ export class ActionProcessor {
       } catch {
         // Resolution is best-effort — fall through to the generic label below.
       }
+    }
+
+    // Playtest bug (2026-07-25): authored outcome lines may carry {artistName}/
+    // {songTitle} (e.g. the_dossier). Resolve them here at fire time — the
+    // artist-targeted delayed flag knows its artist — with the same graceful
+    // fallbacks as the client resolver (meetingPromptPlaceholders.ts), so a
+    // literal brace never reaches the weekly summary.
+    if (choiceLabel && /\{artistName\}|\{songTitle\}/.test(choiceLabel)) {
+      let artistName: string | undefined;
+      if (targetArtistId) {
+        try {
+          artistName = (await ctx.storage.getArtist(targetArtistId, ctx.dbTransaction))?.name ?? undefined;
+        } catch {
+          // best-effort — fall back below
+        }
+      }
+      choiceLabel = choiceLabel
+        .replace(/\{artistName\}/g, artistName ?? 'your artist')
+        .replace(/\{songTitle\}/g, artistName ? `${artistName}'s song` : 'the song');
     }
 
     if (meetingLabel && choiceLabel) {
@@ -2499,7 +2519,7 @@ export class ActionProcessor {
 
               // Playtest bug #3 fix: descriptive label (which meeting + choice)
               // instead of the bare "Delayed effect triggered for artist X".
-              const description = await this.describeDelayedEffect(ctx, meetingName, choiceId);
+              const description = await this.describeDelayedEffect(ctx, meetingName, choiceId, artistId);
               summary.changes.push({
                 type: 'delayed_effect',
                 description,

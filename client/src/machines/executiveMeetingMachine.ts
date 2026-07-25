@@ -1,7 +1,7 @@
 import { assign, fromPromise, setup } from 'xstate';
 import type { RoleMeeting, DialogueChoice, Executive } from '../../../shared/types/gameTypes';
 import { fetchExecutives, fetchRoleMeetings, fetchMeetingDialogue } from '../services/executiveService';
-import { prepareAutoSelectOptions, selectTopOptions, optionToActionData, type AutoSelectOption } from '../services/executiveAutoSelect';
+import { prepareAutoSelectOptions, selectTopOptions, appendCeoFillerOption, optionToActionData, type AutoSelectOption } from '../services/executiveAutoSelect';
 import { getMoodModifiers, applyMoodModifiersToEffects, isNeutral } from '@shared/utils/executiveMoodModifier';
 
 type DialogueData = {
@@ -408,7 +408,21 @@ export const executiveMeetingMachine = setup({
         // who already has a queued action this week.
         usedExecutiveRoles: context.usedExecutiveRoles,
       });
-      const topOptions = selectTopOptions(allOptions, slotsRemaining, context.creativeCapital);
+      let topOptions = selectTopOptions(allOptions, slotsRemaining, context.creativeCapital);
+
+      // 4th-slot CEO filler (playtest 2026-07-25): when the seeded execs can't
+      // fill every remaining slot (4th slot unlocked, or A&R head out
+      // scouting), draw the leftover slot from the CEO meeting lane.
+      if (topOptions.length < slotsRemaining) {
+        const ceoMeetings = await ensureMeetings('ceo');
+        topOptions = appendCeoFillerOption(
+          topOptions,
+          slotsRemaining,
+          ceoMeetings,
+          context.creativeCapital,
+          context.usedExecutiveRoles
+        );
+      }
 
       // Convert to AutoOption format expected by machine
       const machineOptions: AutoOption[] = topOptions.map(option => ({

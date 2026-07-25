@@ -158,6 +158,7 @@
       "meeting_id": "prod_creative_clash",
       "category": "production",
       "target_scope": "user_selected",
+      "auto_bind_artist": true,
       "requires": [
         "artist_signed"
       ],
@@ -697,6 +698,7 @@
       "meeting_id": "creative_recording",
       "category": "production",
       "target_scope": "user_selected",
+      "auto_bind_artist": "low_mood",
       "requires": [
         "artist_signed"
       ],
@@ -752,6 +754,7 @@
       "meeting_id": "wall_of_misses",
       "category": "talent",
       "target_scope": "user_selected",
+      "auto_bind_artist": true,
       "requires": [
         "artist_signed"
       ],
@@ -937,6 +940,7 @@
       "meeting_id": "reinvention_tape",
       "category": "talent",
       "target_scope": "user_selected",
+      "auto_bind_artist": true,
       "requires": [
         "artist_signed"
       ],
@@ -991,6 +995,7 @@
       "meeting_id": "showcase_slot",
       "category": "talent",
       "target_scope": "user_selected",
+      "auto_bind_artist": "low_popularity",
       "requires": [
         "artist_signed",
         "music_exists"
@@ -1096,6 +1101,7 @@
       "meeting_id": "second_album_syndrome",
       "category": "talent",
       "target_scope": "user_selected",
+      "auto_bind_artist": true,
       "requires": [
         "artist_signed",
         "music_exists",
@@ -1223,10 +1229,12 @@
       "meeting_id": "demo_ethics_one",
       "category": "talent",
       "target_scope": "user_selected",
+      "auto_bind_artist": true,
       "requires": [
         "artist_signed"
       ],
       "reactive_trigger": "recent_signing",
+      "reactive_chance": 0.4,
       "prompt_before_selection": "Whose signing demo has the co-writer problem?",
       "prompt": "The demo — the one that made me sign {artistName}. There's a co-writer on it: uncleared, uncredited, and as of this morning, lawyered. I played that tape for this whole building and said I'd found a complete artist. Turns out I found most of one. I can make this quiet, I can make it right, or we cut the song again from zero — but if it gets loud before the ink dries on the profile pieces, it isn't their name that eats it. It's mine.",
       "choices": [
@@ -1464,6 +1472,7 @@
       "meeting_id": "slow_news_week",
       "category": "marketing",
       "target_scope": "user_selected",
+      "auto_bind_artist": "planned_release",
       "requires": [
         "artist_signed",
         "release_planned"
@@ -1676,6 +1685,7 @@
       "meeting_id": "the_dossier",
       "category": "marketing",
       "target_scope": "user_selected",
+      "auto_bind_artist": true,
       "requires": [
         "artist_signed"
       ],
@@ -1736,6 +1746,7 @@
       "meeting_id": "awards_whisper_campaign",
       "category": "marketing",
       "target_scope": "user_selected",
+      "auto_bind_artist": true,
       "requires": [
         "artist_signed",
         "release_out"
@@ -1797,6 +1808,7 @@
       "meeting_id": "platform_exclusive_bidding",
       "category": "marketing",
       "target_scope": "user_selected",
+      "auto_bind_artist": "planned_release",
       "requires": [
         "artist_signed",
         "release_planned"
@@ -2036,6 +2048,7 @@
       "meeting_id": "the_engagement_farm",
       "category": "marketing",
       "target_scope": "user_selected",
+      "auto_bind_artist": "planned_release",
       "requires": [
         "artist_signed",
         "release_planned"

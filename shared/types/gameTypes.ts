@@ -328,6 +328,12 @@ export interface RoleMeeting {
    */
   reactive_trigger?: HappeningType;
   /**
+   * Playtest 2026-07-25: per-meeting injection probability, 0–1 (absent =
+   * always fires when triggered) — demo_ethics_one on EVERY signing read as
+   * copy-paste.
+   */
+  reactive_chance?: number;
+  /**
    * Tier 2 (PR-2): server-attached "why now" context on the SELECTED meeting —
    * present only when the route's injection stage picked this meeting via a
    * matching week happening (never authored in data/actions.json; response-side
@@ -340,6 +346,22 @@ export interface RoleMeeting {
     artistId?: string;
     artistName?: string;
     songTitle?: string;
+  };
+  /**
+   * Item 5 (2026-07-25): authored opt-in — a user_selected meeting whose
+   * subject artist the game names up front (seeded draw) instead of asking
+   * the player to pick. `true` = 'popularity'; string values select a
+   * fiction-appropriate strategy. See shared/engine/artistBinding.ts.
+   */
+  auto_bind_artist?: boolean | 'popularity' | 'low_mood' | 'low_popularity' | 'planned_release';
+  /**
+   * Item 5: server-attached bound artist on the SELECTED meeting (response-side
+   * only, never authored) — present when auto_bind_artist drew the subject.
+   * The client skips the picker and renders the named prompt as the brief.
+   */
+  boundArtist?: {
+    artistId: string;
+    artistName: string;
   };
   choices: DialogueChoice[];
 }
