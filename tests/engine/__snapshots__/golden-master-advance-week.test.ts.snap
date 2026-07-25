@@ -6178,7 +6178,7 @@ Performance Indicators:
       "before": "none",
     },
     "reputation": {
-      "after": 18,
+      "after": 16,
       "before": 10,
     },
   },
@@ -6242,8 +6242,8 @@ Performance Indicators:
         "type": "unlock",
       },
       {
-        "amount": 8,
-        "description": "+8 reputation points",
+        "amount": 6,
+        "description": "+6 reputation points",
         "importance": "notable",
         "type": "reputation",
       },
@@ -6280,7 +6280,7 @@ Performance Indicators:
     "generatedEmails": 4,
     "pressMentions": 8,
     "reputationChanges": {
-      "<uuid-key>": 8,
+      "<uuid-key>": 6,
     },
     "revenue": 11628,
     "streams": 232553,
@@ -7219,7 +7219,7 @@ Immediate attention recommended.
       "before": "none",
     },
     "reputation": {
-      "after": 18,
+      "after": 16,
       "before": 10,
     },
   },
@@ -7272,8 +7272,8 @@ Immediate attention recommended.
         "type": "unlock",
       },
       {
-        "amount": 8,
-        "description": "+8 reputation points",
+        "amount": 6,
+        "description": "+6 reputation points",
         "importance": "notable",
         "type": "reputation",
       },
@@ -7310,7 +7310,7 @@ Immediate attention recommended.
     "generatedEmails": 4,
     "pressMentions": 8,
     "reputationChanges": {
-      "<uuid-key>": 8,
+      "<uuid-key>": 6,
     },
     "revenue": 7818,
     "streams": 156368,

@@ -24,18 +24,22 @@ const progression = JSON.parse(
   fs.readFileSync(path.join(process.cwd(), 'data', 'balance', 'progression.json'), 'utf-8'),
 );
 const repSystem = progression.reputation_system;
-const SCALING: number = repSystem.reputation_gain_scaling; // 0.7
+const SCALING: number = repSystem.reputation_gain_scaling; // 0.5 (round-3 tuning, 2026-07-25)
 
 describe('slice 3 — scaleReputationGain helper', () => {
-  it('default factor is 0.7', () => {
+  it('configured factor is 0.5 (round-3 tuning); code fallback stays 0.7', () => {
     expect(DEFAULT_REPUTATION_GAIN_SCALING).toBe(0.7);
-    expect(SCALING).toBe(0.7);
+    expect(SCALING).toBe(0.5);
   });
 
-  it('scales + rounds a positive gain (10 → 7, 5 → round(3.5)=4, 15 → round(10.5)=11)', () => {
-    expect(scaleReputationGain(10, repSystem)).toBe(7);
-    expect(scaleReputationGain(5, repSystem)).toBe(4);
-    expect(scaleReputationGain(15, repSystem)).toBe(11);
+  it('scales + rounds a positive gain (10 → 5, 5 → round(2.5)=3, 15 → round(7.5)=8)', () => {
+    expect(scaleReputationGain(10, repSystem)).toBe(5);
+    expect(scaleReputationGain(5, repSystem)).toBe(3);
+    expect(scaleReputationGain(15, repSystem)).toBe(8);
+  });
+
+  it('a +1 meeting gain survives the 0.5 damper (round(0.5)=1 — the floor rationale)', () => {
+    expect(scaleReputationGain(1, repSystem)).toBe(1);
   });
 
   it('LOSSES pass through unscaled', () => {
@@ -102,15 +106,15 @@ function stubOutcome(proc: ReleaseProcessor, revenue: number) {
 }
 
 describe('slice 3 — press-coverage reputation scaling + C65 cap', () => {
-  it('scales the press reputation gain (raw 10 → applied 7)', async () => {
+  it('scales the press reputation gain (raw 10 → applied 5 at the 0.5 damper)', async () => {
     const proc = new ReleaseProcessor();
     stubOutcome(proc, 50000); // healthy revenue, not a flop
     const { ctx } = buildPressCtx({ reputation: 50, reputationGain: 10, pickups: 3 });
 
     await proc.processPlannedReleases(ctx, ctx.summary, undefined);
 
-    expect(ctx.gameState.reputation).toBe(50 + scaleReputationGain(10, repSystem)); // 57
-    expect(ctx.summary.reputationChanges['artist-1']).toBe(7);
+    expect(ctx.gameState.reputation).toBe(50 + scaleReputationGain(10, repSystem)); // 55
+    expect(ctx.summary.reputationChanges['artist-1']).toBe(scaleReputationGain(10, repSystem));
   });
 
   it('C65: caps reputation at 100 (was the only uncapped path)', async () => {
