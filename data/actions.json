@@ -1234,6 +1234,7 @@
         "artist_signed"
       ],
       "reactive_trigger": "recent_signing",
+      "reactive_chance": 0.4,
       "prompt_before_selection": "Whose signing demo has the co-writer problem?",
       "prompt": "The demo — the one that made me sign {artistName}. There's a co-writer on it: uncleared, uncredited, and as of this morning, lawyered. I played that tape for this whole building and said I'd found a complete artist. Turns out I found most of one. I can make this quiet, I can make it right, or we cut the song again from zero — but if it gets loud before the ink dries on the profile pieces, it isn't their name that eats it. It's mine.",
       "choices": [
