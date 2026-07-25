@@ -74,6 +74,13 @@ export interface WeekChangeCategories {
    * rendered — this repo's recurring swallow-bug).
    */
   hypeRoutine: GameChange[];
+  /**
+   * Engine-verbs M1a/M1b (tangible catalog): 'song_granted' (a meeting choice
+   * delivered a real recorded song) and 'release_spawned' (a meeting choice put
+   * a real release on the schedule). Simple notable-stage lines, kept OUT of
+   * `other` (never rendered — this repo's recurring swallow-bug).
+   */
+  catalogNotable: GameChange[];
   other: GameChange[];
 }
 
@@ -91,6 +98,7 @@ export function categorizeWeekChanges(changes: GameChange[]): WeekChangeCategori
     breakthroughs: [],
     hypeNotable: [],
     hypeRoutine: [],
+    catalogNotable: [],
     other: [],
   };
 
@@ -103,12 +111,20 @@ export function categorizeWeekChanges(changes: GameChange[]): WeekChangeCategori
       categories.revenue.push(change);
     } else if (change.type === 'expense') {
       categories.expenses.push(change);
-    } else if (change.type === 'unlock' || change.type === 'reputation' || change.type === 'flop') {
+    } else if (
+      change.type === 'unlock' ||
+      change.type === 'reputation' ||
+      change.type === 'flop' ||
+      change.type === 'creative_capital'
+    ) {
       // Balance-integrity slice 2: a 'flop' is a reputation SINK event — a released
       // record underperformed its investment and cost the label standing. Routed to
       // the rendered Achievements card (the reputation home) alongside the aggregated
       // ⭐ line, so the flop cause is visible and never falls into the never-rendered
       // `other` bucket (the awareness-arc invisible-event failure class).
+      // PENDING-DECISIONS #9: 'creative_capital' (chart-milestone CC grant) rides
+      // the same Achievements card as the chart-milestone reputation line it
+      // accompanies — same never-`other` rule.
       categories.achievements.push(change);
     } else if (change.type === 'mood' || change.type === 'energy') {
       // C87: tour energy drain entries ride the mood bucket (the artist-state
@@ -131,6 +147,8 @@ export function categorizeWeekChanges(changes: GameChange[]): WeekChangeCategori
       categories.hypeNotable.push(change);
     } else if (change.type === 'hype_banked' || change.type === 'pre_campaign') {
       categories.hypeRoutine.push(change);
+    } else if (change.type === 'song_granted' || change.type === 'release_spawned') {
+      categories.catalogNotable.push(change);
     } else if (change.type === 'project_complete') {
       // Projects go to other category, will be shown in Projects tab
       categories.other.push(change);

@@ -177,6 +177,9 @@
       "nostalgic",
       "rebellious",
       "romantic"
-    ]
+    ],
+    "granted_song": {
+      "default_quality_range": [40, 60]
+    }
   }
 }

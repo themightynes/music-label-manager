@@ -141,7 +141,7 @@ This ensures we can easily grep for `STUB:`, `HARDCODED:`, `TODO:`, and `MISSING
 ## 🔀 Git & Branch Workflow
 - **Prefer selective `git add <paths>` over `git add -A`** — blanket adds have swept machine-local files (`.claude/settings.local.json`) and merge artifacts (`*.orig`) into commits here. `*.orig`/`*.rej` are gitignored; don't force-add them.
 - **Resuming a stale/long-lived branch**: merge `main` in and validate (`npm run check` + relevant tests) **before** building new work on it. Branches cut from old `main` can carry hidden conflicts (e.g. `game-engine.ts` auto-merges cleanly at the text level but may still need review).
-- **Keep session-log / status-doc updates off feature PRs** — land them on a small `docs/session-<date>` branch off `main` so feature PRs stay focused.
+- **Session-log / status-doc placement is two-tier** (2026-07-21 ruling): on a **long-lived working-session branch** (multi-day, wip commits, the next session continues on the branch), commit `DEVELOPMENT_STATUS.md`/`ai_instructions.md` updates as `docs(session)` commits **on that branch** — splitting them off is friction for no benefit. For **quick feature PRs** (merge within a day or two), keep status docs off the PR and land them on a small `docs/session-<date>` branch off `main` so the PR stays focused and `main`'s status stays current. ⚠️ Known cost of the on-branch tier: `main`'s `DEVELOPMENT_STATUS.md` is stale until the session branch merges — when onboarding a fresh session, check whether an active session branch carries a newer entry before trusting `main`'s copy.
 
 ---
 *For project overview, current status, and documentation references, use the `/onboard` command*
