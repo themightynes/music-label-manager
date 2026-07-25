@@ -336,6 +336,8 @@ export interface RoleMeeting {
    */
   reactiveContext?: {
     trigger: HappeningType;
+    /** Triggering artist's id — binds user_selected reactive meetings (no picker). */
+    artistId?: string;
     artistName?: string;
     songTitle?: string;
   };

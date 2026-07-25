@@ -518,6 +518,9 @@ export const HappeningTypeSchema = z.enum(HAPPENING_TYPES);
 // populated until PR-2 authors reactive_trigger meetings.
 export const ReactiveContextSchema = z.object({
   trigger: HappeningTypeSchema,
+  // Triggering artist's id (when the happening knows it): binds user_selected
+  // reactive meetings to the fiction's artist client-side — no picker.
+  artistId: z.string().optional(),
   artistName: z.string().optional(),
   songTitle: z.string().optional(),
 });

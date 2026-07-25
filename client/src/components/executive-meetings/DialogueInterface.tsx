@@ -94,7 +94,7 @@ interface DialogueInterfaceProps {
    * `{artistName}`/`{songTitle}` in the prompt resolve against these instead
    * of rendering literally. Absent for normal (non-reactive) meetings.
    */
-  reactiveContext?: { artistName?: string; songTitle?: string };
+  reactiveContext?: { artistId?: string; artistName?: string; songTitle?: string };
 }
 
 function EffectBadge({

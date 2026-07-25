@@ -184,6 +184,13 @@ export class GameEngine {
     this.gameState.usedFocusSlots = 0;
     this.gameState.currentWeek = (this.gameState.currentWeek || 0) + 1;
 
+    // Delegation guard (2026-07-25 playtest): a head_ar dispatched on an A&R
+    // office op is BUSY, not neglected — he must make no autonomous meeting
+    // call this week. Snapshot BEFORE processAROfficeWeekly, which completes
+    // the op and clears the slot (AROfficeProcessor.ts), i.e. reading the flag
+    // at autonomous-resolution time would always see false.
+    const headArBusyWithAROffice = !!(this.gameState as any).arOfficeSlotUsed;
+
     // Process A&R Office operation lifecycle (one-week sourcing completes on advance)
     console.log('[A&R DEBUG] About to process A&R with game state:', {
       arOfficeSlotUsed: (this.gameState as any).arOfficeSlotUsed,
@@ -209,7 +216,7 @@ export class GameEngine {
     // same pass. Routes each pick through the SAME processRoleMeeting path as a
     // player pick (byte-identical effect application) and marks the exec as used
     // so it is skipped by processExecutiveMoodDecay.
-    await this.resolveAutonomousExecMeetings(summary, dbTransaction);
+    await this.resolveAutonomousExecMeetings(summary, dbTransaction, headArBusyWithAROffice);
 
     // Apply any artist mood/loyalty changes from meetings immediately to database
     await this.applyArtistChangesToDatabase(summary, dbTransaction);
@@ -721,7 +728,11 @@ export class GameEngine {
    * re-derivation's own seeds (generateMeetingSeed / reactive tie-break) are
    * likewise isolated.
    */
-  private async resolveAutonomousExecMeetings(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async resolveAutonomousExecMeetings(
+    summary: WeekSummary,
+    dbTransaction?: any,
+    headArBusyWithAROffice = false,
+  ): Promise<void> {
     const storage = this.storage;
     if (!storage?.getExecutivesByGame) return;
 
@@ -746,9 +757,16 @@ export class GameEngine {
       return typeof until === 'number' && until > planningWeek;
     };
 
-    // Only auto-resolve if at least one exec actually needs it.
+    // Only auto-resolve if at least one exec actually needs it. A head_ar on an
+    // A&R office op this week is busy, not neglected (mirrors the client-side
+    // exclusions in executiveAutoSelect.ts and ExecutiveCard.tsx).
     const candidates = executives.filter(
-      (e: any) => e?.role && e.role !== 'ceo' && !acted.has(e.id) && !isAbsent(e.role),
+      (e: any) =>
+        e?.role &&
+        e.role !== 'ceo' &&
+        !acted.has(e.id) &&
+        !isAbsent(e.role) &&
+        !(headArBusyWithAROffice && e.role === 'head_ar'),
     );
     if (candidates.length === 0) return;
 
@@ -923,16 +941,22 @@ export class GameEngine {
         autonomous: true,
       };
 
-      // user_selected meetings: autonomous resolution falls back to predetermined
-      // targeting (highest-popularity artist) — the exec picks the obvious artist
-      // in character (§4.3.4). This is the one place autonomous diverges from AUTO
+      // user_selected meetings: a REACTIVE pick binds the triggering happening's
+      // artist (the fiction already chose — same binding the player path uses);
+      // otherwise autonomous resolution falls back to predetermined targeting
+      // (highest-popularity artist) — the exec picks the obvious artist in
+      // character (§4.3.4). This is the one place autonomous diverges from AUTO
       // (which skips user_selected entirely).
       if ((meeting as any).target_scope === 'user_selected') {
-        const artist = await new ArtistStateProcessor().selectHighestPopularityArtist(
-          this.weekContext(summary, dbTransaction),
-        );
-        if (!artist) continue; // no signed artist to target → sit out
-        metadata.selectedArtistId = artist.id;
+        if (reactiveHappening?.artistId) {
+          metadata.selectedArtistId = reactiveHappening.artistId;
+        } else {
+          const artist = await new ArtistStateProcessor().selectHighestPopularityArtist(
+            this.weekContext(summary, dbTransaction),
+          );
+          if (!artist) continue; // no signed artist to target → sit out
+          metadata.selectedArtistId = artist.id;
+        }
       }
 
       // Delegation-arc FIX 2: the targetId must be unique per (meeting, week).

@@ -184,7 +184,14 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
   );
 
   const handleStart = () => {
-    if (isUserSelected) {
+    // Reactive user_selected meetings bind the TRIGGERING artist — the fiction
+    // already chose ("the one that made me sign {artistName}"), so offering a
+    // picker both breaks fiction and lets the player contradict it (2026-07-25
+    // playtest). Non-reactive user_selected meetings keep the picker.
+    const boundArtistId = meeting.reactiveContext?.artistId;
+    if (isUserSelected && boundArtistId) {
+      onSelectMeeting(meeting, boundArtistId);
+    } else if (isUserSelected) {
       setPickingArtistFor(meeting);
     } else {
       onSelectMeeting(meeting);
@@ -213,7 +220,9 @@ export function MeetingSelector({ meetings, signedArtists, onSelectMeeting, onBa
           onClick={handleStart}
           className="w-[340px] max-w-full rounded-button bg-gradient-to-br from-action-pink to-action-purple py-6 text-[15px] font-semibold text-white shadow-action hover:opacity-90"
         >
-          {isUserSelected ? 'Start Meeting — pick an artist' : 'Start Meeting'}
+          {isUserSelected && !meeting.reactiveContext?.artistId
+            ? 'Start Meeting — pick an artist'
+            : 'Start Meeting'}
         </Button>
         {filteredMeetings.length > 1 && (
           <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted">

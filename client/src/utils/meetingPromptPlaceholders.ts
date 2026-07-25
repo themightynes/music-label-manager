@@ -26,6 +26,8 @@
  */
 
 export interface PromptPlaceholderContext {
+  /** Not read here — present so a meeting's reactiveContext can be passed whole. */
+  artistId?: string;
   artistName?: string;
   songTitle?: string;
 }

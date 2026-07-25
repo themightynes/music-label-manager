@@ -156,6 +156,9 @@ router.get("/api/roles/:roleId", requireClerkUser, async (req, res) => {
           if (selectedMeeting && reactiveHappening) {
             const reactiveContext = {
               trigger: reactiveHappening.type,
+              // artistId lets the client BIND user_selected reactive meetings to
+              // the triggering artist (no picker — the fiction already chose).
+              ...(reactiveHappening.artistId ? { artistId: reactiveHappening.artistId } : {}),
               ...(reactiveHappening.artistName ? { artistName: reactiveHappening.artistName } : {}),
               ...(reactiveHappening.songTitle ? { songTitle: reactiveHappening.songTitle } : {}),
             };
