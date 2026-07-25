@@ -220,6 +220,77 @@ export function selectTopOptions(
 }
 
 /**
+ * Synthetic CEO lane for AUTO's 4th-slot filler. The CEO is the player, not a
+ * seeded executives row — no mood/loyalty state exists, so the neutral 50s only
+ * matter for display. `id` is unused for submission (optionToActionData omits
+ * executiveId for the ceo role).
+ */
+export const CEO_AUTO_EXECUTIVE: Executive = {
+  id: 'ceo',
+  role: 'ceo',
+  level: 1,
+  mood: 50,
+  loyalty: 50,
+};
+
+/**
+ * Playtest fix (2026-07-25): with the 4th focus slot unlocked, AUTO could
+ * never fill it — it proposes at most one meeting per seeded exec and only 4
+ * execs exist (fewer when the A&R head is out scouting). The CEO lane already
+ * exists in the manual UI (ceo meetings in actions.json, CEO card, ceo-aware
+ * action data); AUTO just never drew from it.
+ *
+ * The CEO is a FILLER, not a competitor: appended only when the scored picks
+ * leave slots unfilled (his role-priority score would otherwise outrank
+ * content execs and hijack a slot from a neglected exec). Respects the same
+ * rules as every other lane: skipped when the ceo role already has a queued
+ * action, `user_selected`-only pools are ineligible (findEligibleMeeting),
+ * gamble-free choice via pickSafestChoice, and never overdraws the remaining
+ * Creative Capital budget.
+ *
+ * @param selected - options already chosen by selectTopOptions (score order)
+ * @param availableSlots - total slots AUTO may fill this pass
+ * @param ceoMeetings - the ceo role's meeting pool for this week
+ * @param creativeCapitalBudget - CC budget for the WHOLE pass (the CEO filler
+ *   only spends what the selected options left over)
+ * @param usedExecutiveRoles - roles with an already-queued action this week
+ * @returns a new array with the CEO option appended, or `selected` unchanged
+ */
+export function appendCeoFillerOption(
+  selected: AutoSelectOption[],
+  availableSlots: number,
+  ceoMeetings: RoleMeeting[],
+  creativeCapitalBudget: number = Infinity,
+  usedExecutiveRoles: readonly string[] = []
+): AutoSelectOption[] {
+  if (selected.length >= availableSlots) return selected;
+  if (usedExecutiveRoles.includes('ceo')) return selected;
+  if (selected.some((option) => option.executive.role === 'ceo')) return selected;
+
+  const meeting = findEligibleMeeting(ceoMeetings);
+  if (!meeting) return selected;
+
+  const spent = selected.reduce(
+    (sum, option) => sum + getChoiceCreativeCapitalCost(option.choice),
+    0
+  );
+  const budgetLeft = creativeCapitalBudget - spent;
+
+  const choice = pickSafestChoice(meeting.choices ?? [], budgetLeft);
+  if (!choice || getChoiceCreativeCapitalCost(choice) > budgetLeft) return selected;
+
+  return [
+    ...selected,
+    {
+      executive: CEO_AUTO_EXECUTIVE,
+      meeting,
+      choice,
+      score: 0, // filler — always ranks after the scored exec picks
+    },
+  ];
+}
+
+/**
  * Convert an auto-select option to action data format
  *
  * @param option - Auto-selection option
