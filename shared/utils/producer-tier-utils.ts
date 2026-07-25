@@ -31,21 +31,21 @@ export const PRODUCER_TIERS: Record<string, ProducerTierConfig> = {
   },
   regional: {
     name: 'Regional Producer',
-    unlockReputation: 15,
+    unlockReputation: 60,
     qualityBonus: 5,
     description: 'Experienced regional producer with better facilities',
     costMultiplier: 1.5
   },
   national: {
     name: 'National Producer',
-    unlockReputation: 35,
+    unlockReputation: 165,
     qualityBonus: 12,
     description: 'Renowned producer with top-tier equipment and connections',
     costMultiplier: 2.5
   },
   legendary: {
     name: 'Legendary Producer',
-    unlockReputation: 60,
+    unlockReputation: 380,
     qualityBonus: 20,
     description: 'Industry legend with Grammy wins and platinum records',
     costMultiplier: 4.0

@@ -1,6 +1,9 @@
 {
   "quality_system": {
-    "base_range": [20, 80],
+    "base_range": [
+      20,
+      80
+    ],
     "max_quality": 100,
     "artist_synergy_bonus": 10,
     "pending_quality_bonus_expiry_weeks": 8,
@@ -36,7 +39,7 @@
       "description": "Dynamic minimum viable cost system with 5-segment piecewise function for realistic budget scaling",
       "efficiency_examples": {
         "0.5x (50% of minimum)": "Major penalty - low quality",
-        "0.8x (80% of minimum)": "Minimum viable - baseline quality", 
+        "0.8x (80% of minimum)": "Minimum viable - baseline quality",
         "1.2x (120% of minimum)": "Optimal efficiency - good quality bonus",
         "2.0x (200% of minimum)": "Luxury investment - excellent quality bonus",
         "3.5x (350% of minimum)": "Premium investment - maximum efficiency",
@@ -44,7 +47,6 @@
       }
     }
   },
-
   "song_quality_formula": {
     "_note": "DISTINCT from producer_tier_system.multiplier / time_investment_system.multiplier, which feed cost/duration ONLY. These keys feed the song-QUALITY formula (SongGenerationProcessor.calculateEnhancedSongQuality). Do not conflate the two multiplier sets — see systemsMapData non-edges ne-producer-multiplier-shadowed / ne-time-multiplier-shadowed.",
     "talent_weight": 0.65,
@@ -77,7 +79,6 @@
     "breakout_base_chance": 0.05,
     "failure_base_chance": 0.1
   },
-
   "producer_tier_system": {
     "local": {
       "multiplier": 1.0,
@@ -86,21 +87,20 @@
     },
     "regional": {
       "multiplier": 1.8,
-      "unlock_rep": 15,
+      "unlock_rep": 60,
       "description": "Regional producers with professional equipment and experience"
     },
     "national": {
       "multiplier": 3.2,
-      "unlock_rep": 35,
+      "unlock_rep": 165,
       "description": "National producers with industry connections and top-tier equipment"
     },
     "legendary": {
       "multiplier": 5.5,
-      "unlock_rep": 60,
+      "unlock_rep": 380,
       "description": "Legendary producers with Grammy awards and platinum records"
     }
   },
-
   "time_investment_system": {
     "rushed": {
       "multiplier": 0.7,

@@ -1,4 +1,5 @@
 import { Toaster } from '@/components/ui/toaster';
+import { MAX_REPUTATION_FALLBACK } from '@shared/utils/reputationScaling';
 import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/hooks/use-toast';
 import { useGameStore } from '@/store/gameStore';
@@ -128,10 +129,13 @@ export function ToastNotification() {
     if (prevRep !== currentRep) {
       const change = currentRep - prevRep;
       const isPositive = change > 0;
-      const reputationTier = currentRep >= 80 ? 'Elite' : 
-                           currentRep >= 60 ? 'Established' : 
-                           currentRep >= 40 ? 'Rising' : 
-                           currentRep >= 20 ? 'Emerging' : 'Unknown';
+      // Round-4 reputation scale (0-700). Bands anchored to the real access
+      // gates in progression.json: niche playlists 40, mid 180, national press
+      // 440, global label 560. HARDCODED: keep in lockstep when tuning.
+      const reputationTier = currentRep >= 560 ? 'Elite' :
+                           currentRep >= 440 ? 'Established' :
+                           currentRep >= 180 ? 'Rising' :
+                           currentRep >= 40 ? 'Emerging' : 'Unknown';
       
       const key = `reputation-${currentRep}`;
       
@@ -141,7 +145,10 @@ export function ToastNotification() {
           description: `Current reputation: ${currentRep} (${reputationTier} tier)`,
           type: isPositive ? 'success' : 'warning',
           duration: 3000,
-          progress: currentRep
+          // Progress renders as a % — normalize onto the 0-700 scale so 99 rep
+          // reads ~14%, not 99% (round-4 fix; MAX_REPUTATION_FALLBACK mirrors
+          // progression.json max_reputation, tripwire-tested).
+          progress: (currentRep / MAX_REPUTATION_FALLBACK) * 100
         });
       }
     }

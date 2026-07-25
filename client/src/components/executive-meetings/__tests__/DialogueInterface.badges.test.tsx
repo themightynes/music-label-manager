@@ -91,7 +91,7 @@ describe('ChoiceEffects badge honesty', () => {
   it('renders a badge for a live effect key', () => {
     render(<ChoiceEffects choice={buildChoice({ effects_immediate: { reputation: 3, money: -500 } })} />);
 
-    expect(screen.getByText('+3 Rep')).toBeInTheDocument();
+    expect(screen.getByText('+9 Rep')).toBeInTheDocument(); // authored +3 x3 (round-4 honest preview)
     expect(screen.getByText('$-500')).toBeInTheDocument();
     expect(screen.queryByText('No direct effects')).not.toBeInTheDocument();
   });
@@ -111,7 +111,7 @@ describe('ChoiceEffects badge honesty', () => {
       />
     );
 
-    expect(screen.getByText('+2 Rep')).toBeInTheDocument();
+    expect(screen.getByText('+6 Rep')).toBeInTheDocument(); // authored +2 x3 (round-4 honest preview)
     expect(screen.queryByText(/Market Data/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Venue Rep/)).not.toBeInTheDocument();
   });
@@ -174,7 +174,7 @@ describe('ChoiceEffects badge honesty', () => {
 
   it('renders "±N Rep Gamble" for rep_swing', () => {
     render(<ChoiceEffects choice={buildChoice({ effects_delayed: { rep_swing: 2 } })} />);
-    expect(screen.getByText('±2 Rep Gamble')).toBeInTheDocument();
+    expect(screen.getByText('±6 Rep Gamble')).toBeInTheDocument(); // authored ±2 x3 (round-4 honest preview)
   });
 
   // Exec-meetings-revival PR-7 (C5) — award/prestige channel badges are now live.
@@ -288,7 +288,7 @@ describe('ChoiceEffects badge honesty', () => {
         />
       );
       expect(screen.getByText('$-500')).toBeInTheDocument();
-      expect(screen.getByText('+3 Rep')).toBeInTheDocument();
+      expect(screen.getByText('+9 Rep')).toBeInTheDocument(); // authored +3 x3 (round-4 honest preview)
       expect(screen.getByText('+2 Creative')).toBeInTheDocument();
     });
 

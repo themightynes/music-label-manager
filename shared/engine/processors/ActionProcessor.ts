@@ -63,7 +63,7 @@ import {
   type InventoryLedgerEntry,
   type RevenueTransferEntry,
 } from '../flagsLedgers';
-import { scaleReputationGain } from '../../utils/reputationScaling';
+import { scaleReputationGain, MAX_REPUTATION_FALLBACK } from '../../utils/reputationScaling';
 import {
   getMoodModifiers,
   applyMoodModifiersToEffects,
@@ -1102,12 +1102,12 @@ export class ActionProcessor {
           }
           break;
         case 'reputation': {
-          // Volatility-economy slice 3: throttle POSITIVE meeting reputation gains
-          // through the shared global gain-scaling helper. A negative meeting effect
-          // (reputation loss) passes through unscaled.
+          // Round-4: every meeting reputation delta (either sign) routes through
+          // the shared x3 scaler onto the 0-700 scale.
           const repSystemCfg = (ctx.gameData.getBalanceConfigSync?.() as any)?.reputation_system;
           const scaledValue = scaleReputationGain(value, repSystemCfg);
-          ctx.gameState.reputation = Math.max(0, Math.min(100, (ctx.gameState.reputation || 0) + scaledValue));
+          const repMax = repSystemCfg?.max_reputation ?? MAX_REPUTATION_FALLBACK;
+          ctx.gameState.reputation = Math.max(0, Math.min(repMax, (ctx.gameState.reputation || 0) + scaledValue));
           // Track reputation changes in summary for analysis
           if (!summary.reputationChanges) {
             summary.reputationChanges = {};
@@ -1564,14 +1564,14 @@ export class ActionProcessor {
             ? 0
             : Math.floor(roll * (2 * magnitude + 1)) - magnitude;
 
-          // Volatility-economy slice 3: a rep-swing that PAYS OFF is a reputation
-          // GAIN and is throttled by the shared global scaling; a swing that
-          // BACKFIRES is a loss and applies at full magnitude (positive-only helper).
+          // Round-4: both swing directions route through the shared x3 scaler —
+          // a payoff and a backfire scale symmetrically onto the 0-700 scale.
           const repSystemCfg = (ctx.gameData.getBalanceConfigSync?.() as any)?.reputation_system;
           const rolledValue = scaleReputationGain(rawRolledValue, repSystemCfg);
 
           const previousReputation = ctx.gameState.reputation || 0;
-          ctx.gameState.reputation = Math.max(0, Math.min(100, previousReputation + rolledValue));
+          const swingRepMax = repSystemCfg?.max_reputation ?? MAX_REPUTATION_FALLBACK;
+          ctx.gameState.reputation = Math.max(0, Math.min(swingRepMax, previousReputation + rolledValue));
 
           if (!summary.reputationChanges) {
             summary.reputationChanges = {};
@@ -2815,10 +2815,10 @@ export class ActionProcessor {
           pressMomentumForPush
         );
         if (pressPickups > 0) {
-          // Volatility-economy slice 3: throttle the PR-push reputation gain.
+          // PR-push reputation routes through the shared x3 scaler (round-4).
           const prRepSystemCfg = (ctx.gameData.getBalanceConfigSync?.() as any)?.reputation_system;
           const prRepGain = scaleReputationGain(pressPickups, prRepSystemCfg);
-          ctx.gameState.reputation = Math.min(100, (ctx.gameState.reputation || 0) + prRepGain);
+          ctx.gameState.reputation = Math.min(prRepSystemCfg?.max_reputation ?? MAX_REPUTATION_FALLBACK, (ctx.gameState.reputation || 0) + prRepGain);
           // C45: count pickups so weeklyStats.pressMentions reflects reality.
           summary.pressMentions = (summary.pressMentions || 0) + pressPickups;
           effectDescription = `PR campaign generated ${pressPickups} press mentions`;
@@ -2831,10 +2831,10 @@ export class ActionProcessor {
       case 'digital_ads': {
         // Digital ads improve streaming potential
         const rawStreamingBoost = Math.floor(campaignCost / 1000); // $1k = 1 reputation point
-        // Volatility-economy slice 3: throttle the digital-ads reputation gain.
+        // Digital-ads reputation routes through the shared x3 scaler (round-4).
         const digitalRepSystemCfg = (ctx.gameData.getBalanceConfigSync?.() as any)?.reputation_system;
         const streamingBoost = scaleReputationGain(rawStreamingBoost, digitalRepSystemCfg);
-        ctx.gameState.reputation = Math.min(100, (ctx.gameState.reputation || 0) + streamingBoost);
+        ctx.gameState.reputation = Math.min(digitalRepSystemCfg?.max_reputation ?? MAX_REPUTATION_FALLBACK, (ctx.gameState.reputation || 0) + streamingBoost);
         effectDescription = `Digital campaign boosted online presence (+${streamingBoost} reputation)`;
         break;
       }

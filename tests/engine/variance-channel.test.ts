@@ -410,11 +410,14 @@ describe('ActionProcessor.applyEffects — rep_swing', () => {
     await processor.applyEffects(ctx, { rep_swing: 2 }, undefined, 'global', 'cmo_pr_angle', 'spicy');
 
     expect('pendingRepSwing' in (ctx.gameState.flags as any)).toBe(false);
-    // Reputation changed by SOME integer in [-2, 2] (could be 0).
+    // Raw roll is SOME integer in [-2, 2] (could be 0); round-4 rescale applies
+    // it x3 (reputation_gain_scaling fallback), so the landed delta is a
+    // multiple of 3 in [-6, 6].
     const delta = ctx.gameState.reputation - 50;
-    expect(delta).toBeGreaterThanOrEqual(-2);
-    expect(delta).toBeLessThanOrEqual(2);
+    expect(delta).toBeGreaterThanOrEqual(-6);
+    expect(delta).toBeLessThanOrEqual(6);
     expect(Number.isInteger(delta)).toBe(true);
+    expect(Math.abs(delta) % 3).toBe(0);
   });
 
   it('same seed inputs (gameId, week, meeting, choice) => same roll (determinism)', async () => {
@@ -480,34 +483,36 @@ describe('ActionProcessor.applyEffects — rep_swing', () => {
     expect(foundNegative).toBe(true);
   });
 
-  it('clamps reputation at 100 ceiling', async () => {
+  it('clamps reputation at the 700 ceiling (round-4 scale)', async () => {
     const processor = new ActionProcessor();
 
     let foundCeiling = false;
     for (let i = 0; i < 50; i++) {
       const testCtx = buildContext();
-      testCtx.gameState.reputation = 99;
+      testCtx.gameState.reputation = 699;
       testCtx.gameState.id = 'clamp-ceiling-game';
       await processor.applyEffects(testCtx, { rep_swing: 10 }, undefined, 'global', 'meeting', `choice-${i}`);
-      if (testCtx.gameState.reputation === 100) {
+      if (testCtx.gameState.reputation === 700) {
         foundCeiling = true;
         break;
       }
-      expect(testCtx.gameState.reputation).toBeLessThanOrEqual(100);
+      expect(testCtx.gameState.reputation).toBeLessThanOrEqual(700);
     }
     expect(foundCeiling).toBe(true);
   });
 
-  it('rolled value stays within [-magnitude, +magnitude]', async () => {
+  it('applied delta stays within [-magnitude, +magnitude] x the round-4 scaling factor', async () => {
     const processor = new ActionProcessor();
     for (let i = 0; i < 30; i++) {
       const ctx = buildContext();
       ctx.gameState.reputation = 50;
       ctx.gameState.id = 'range-test-game';
       await processor.applyEffects(ctx, { rep_swing: 3 }, undefined, 'global', 'meeting', `choice-range-${i}`);
+      // Raw roll ∈ [-3, 3]; applied delta is the roll x3 (reputation_gain_scaling).
       const delta = ctx.gameState.reputation - 50;
-      expect(delta).toBeGreaterThanOrEqual(-3);
-      expect(delta).toBeLessThanOrEqual(3);
+      expect(delta).toBeGreaterThanOrEqual(-9);
+      expect(delta).toBeLessThanOrEqual(9);
+      expect(Math.abs(delta) % 3).toBe(0);
     }
   });
 

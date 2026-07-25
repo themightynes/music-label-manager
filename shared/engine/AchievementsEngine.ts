@@ -75,7 +75,7 @@ export class AchievementsEngine {
     // Calculate score breakdown
     const scoreBreakdown: ScoreBreakdown = {
       money: Math.max(0, Math.floor((gameState.money || 0) / 1000)), // 1 point per $1k
-      reputation: Math.max(0, Math.floor((gameState.reputation || 0) / 5)), // 1 point per 5 reputation
+      reputation: Math.max(0, Math.floor((gameState.reputation || 0) / 30)), // 1 point per 30 reputation (round-4: 0-700 scale; keeps max contribution ~23, in line with the old /5 on 0-100)
       // TODO (C62): still hardcoded 0. No doc (ACHIEVEMENTS_DEPENDENCY_CHART.md,
       // ACHIEVEMENTS_KNOWLEDGE_CHART.md, technical-debt-backlog.md) defines what
       // "successful artist" or "completed project" means for campaign scoring,
@@ -186,8 +186,11 @@ export class AchievementsEngine {
     else if (scoreBreakdown.money >= 50) achievements.push('💵 Profitable - Ended with $50k+');
 
     // Reputation achievements
-    if (scoreBreakdown.reputation >= 40) achievements.push('⭐ Industry Legend - 200+ Reputation');
-    else if (scoreBreakdown.reputation >= 20) achievements.push('🌟 Well Known - 100+ Reputation');
+    // Round-4: scoreBreakdown.reputation = floor(rep/30), max 23 at rep 700.
+    // Thresholds anchored to raw rep 500 / 200 on the 0-700 scale (the old
+    // 40/20 point gates were unreachable after the /30 divisor change).
+    if (scoreBreakdown.reputation >= 16) achievements.push('⭐ Industry Legend - 500+ Reputation');
+    else if (scoreBreakdown.reputation >= 6) achievements.push('🌟 Well Known - 200+ Reputation');
 
     // Access tier achievements
     // C62: was `=== 'mid'` / `=== 'mid_tier'`, the MIDDLE tiers — a player at the

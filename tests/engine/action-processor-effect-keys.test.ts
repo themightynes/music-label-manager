@@ -90,11 +90,11 @@ describe('ActionProcessor.applyEffects — unknown effect keys (PR-1)', () => {
 
     await processor.applyEffects(ctx, { reputation: 3, totally_unknown_key: -99 }, undefined, 'global');
 
-    // Volatility-economy slice 3: positive reputation gains are scaled by
-    // reputation_gain_scaling (fallback 0.7 here — buildContext's gameData has no
-    // config), so +3 → round(2.1) = 2 → 50 + 2 = 52. The point of THIS test is
+    // Round-4 rescale (0-700 scale): reputation deltas are amplified by
+    // reputation_gain_scaling (fallback x3 here — buildContext's gameData has no
+    // config), so +3 → 9 → 50 + 9 = 59. The point of THIS test is
     // that the known key still applies alongside a dropped unknown key.
-    expect(ctx.gameState.reputation).toBe(52);
+    expect(ctx.gameState.reputation).toBe(59);
   });
 });
 

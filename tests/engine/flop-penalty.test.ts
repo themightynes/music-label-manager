@@ -20,6 +20,7 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ReleaseProcessor } from '@shared/engine/processors/ReleaseProcessor';
+import { scaleReputationGain } from '@shared/utils/reputationScaling';
 import { ProgressionProcessor } from '@shared/engine/processors/ProgressionProcessor';
 import type { WeekContext } from '@shared/engine/processors/types';
 
@@ -28,6 +29,9 @@ const progression = JSON.parse(
 );
 const repSystem = progression.reputation_system;
 const FLOP_PENALTY: number = repSystem.flop_penalty;               // 8 (round-2 tuning 2026-07-12)
+// Round-4: the flop sink routes through the shared x3 delta scaler — the
+// APPLIED penalty is the authored value scaled (8 -> 24 on the 0-700 scale).
+const APPLIED_FLOP = -scaleReputationGain(-FLOP_PENALTY, repSystem); // 24
 const FLOP_REVENUE_RATIO: number = repSystem.flop_revenue_ratio;   // 0.10
 const FLOP_INVESTMENT_FLOOR: number = repSystem.flop_investment_floor; // 10000
 
@@ -130,19 +134,19 @@ describe('Balance-integrity slice 2 — flop penalty (ReleaseProcessor.processPl
 
     await proc.processPlannedReleases(ctx, ctx.summary, undefined);
 
-    // Reputation dropped by exactly flop_penalty (clamped ≥ 0)
-    expect(ctx.gameState.reputation).toBe(50 - FLOP_PENALTY);
+    // Reputation dropped by exactly the SCALED flop penalty (clamped ≥ 0)
+    expect(ctx.gameState.reputation).toBe(50 - APPLIED_FLOP);
     // Once-only flag recorded (deterministic key)
     expect((ctx.gameState.flags as any)['flop_penalty_applied_release-1']).toBe(true);
-    // Structured 'flop' change entry present, carrying the signed delta
+    // Structured 'flop' change entry present, carrying the signed applied delta
     const flopEntry = (ctx.summary.changes as any[]).find((c) => c.type === 'flop');
     expect(flopEntry).toBeDefined();
-    expect(flopEntry.amount).toBe(-FLOP_PENALTY);
+    expect(flopEntry.amount).toBe(-APPLIED_FLOP);
     expect(flopEntry.description).toContain('flopped');
-    expect(flopEntry.description).toContain(`${-FLOP_PENALTY} reputation`);
+    expect(flopEntry.description).toContain(`${-APPLIED_FLOP} reputation`);
     expect(flopEntry.releaseName).toBe('Neon Nights');
     // Delta accumulated into reputationChanges (feeds the aggregated ⭐ line)
-    expect(ctx.summary.reputationChanges['artist-1']).toBe(-FLOP_PENALTY);
+    expect(ctx.summary.reputationChanges['artist-1']).toBe(-APPLIED_FLOP);
   });
 
   it('BELOW FLOOR: tiny investment + terrible revenue → NO penalty', async () => {
@@ -220,12 +224,12 @@ describe('Balance-integrity slice 2 — tier downgrade sanity (ProgressionProces
     const gameData: any = {
       getAccessTiersSync: () => progression.access_tier_system,
     };
-    // playlist 'mid' threshold is 30; start just above at 31 with mid unlocked,
-    // then a −FLOP_PENALTY flop puts reputation at (31 - FLOP_PENALTY) → must
-    // downgrade to 'niche' (thr 10). Computed dynamically so this test tracks
-    // whatever flop_penalty is currently configured (8 as of round-2 tuning
-    // 2026-07-12, was 28 when flop_penalty was 3).
-    const postFlopReputation = 31 - FLOP_PENALTY; // 23
+    // playlist 'mid' threshold is 180 (round-4 scale); start just above at 181
+    // with mid unlocked, then an APPLIED_FLOP drop puts reputation at
+    // (181 - APPLIED_FLOP) → must downgrade to 'niche' (thr 40). Computed
+    // dynamically so this test tracks the configured flop_penalty and scaler.
+    const postFlopReputation =
+      progression.access_tier_system.playlist_access.mid.threshold + 1 - APPLIED_FLOP; // 157
     const ctx: WeekContext = {
       gameState: {
         id: 'game-1',

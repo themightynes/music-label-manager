@@ -15,6 +15,7 @@
 // Import types from the correct location
 import type { WeekSummary } from '../types/gameTypes';
 import type { WeeklyFinancials } from './game-engine';
+import { MAX_REPUTATION_FALLBACK } from '../utils/reputationScaling';
 
 /**
  * Types for tour calculation parameters and results
@@ -478,10 +479,10 @@ export class FinancialSystem {
       MIN: 0.9,
       MAX: 1.1
     },
-    REPUTATION_BASELINE: 50,
+    REPUTATION_BASELINE: 300, // round-4: midpoint fallback on the 0-700 scale (mirrors markets.json ongoing_streams.reputation_baseline)
     DEFAULT_ARTIST_FEE: 1200,
     DEFAULT_PRESS_CHANCE: 0.05,
-    REPUTATION_GAIN_MULTIPLIER: 2,
+    REPUTATION_GAIN_MULTIPLIER: 2, // authored-scale raw gain — the x3 onto the 0-700 scale happens in scaleReputationGain at the application site (ReleaseProcessor); do NOT pre-multiply here
     // VENUE CAPACITY SCALING - configuration-driven via VenueCapacityManager
     VENUE_SCALING: {
       popularity_scaling_factor: 0.3,
@@ -721,7 +722,7 @@ export class FinancialSystem {
 
     // Base calculations
     const baseRate = config.sell_through_base;
-    const reputationBonus = (params.localReputation / 100) * config.reputation_modifier;
+    const reputationBonus = (params.localReputation / MAX_REPUTATION_FALLBACK) * config.reputation_modifier;
 
     // ENHANCED: Adjusted popularity bonus with venue size effects
     const adjustedPopularityBonus = (params.artistPopularity / 100) * config.local_popularity_weight * popularityEffectiveness;
@@ -891,7 +892,7 @@ export class FinancialSystem {
     // Note: Only marketing budget affects quality, venue/production fees are fixed costs
     // Sell-Through Rate = Base Rate (config) + (Reputation * config modifier) + (Artist_Popularity * config weight) + (Marketing_Budget_Per_City/Venue_Capacity*11/100*0.15)
     const baseRate = config.sell_through_base;
-    const reputationBonus = (localReputation / 100) * config.reputation_modifier;
+    const reputationBonus = (localReputation / MAX_REPUTATION_FALLBACK) * config.reputation_modifier;
     const popularityBonus = (artistPopularity / 100) * config.local_popularity_weight;
     const budgetQualityBonus = marketingBudgetPerCity > 0 ? (marketingBudgetPerCity / venueCapacity) * tourF.budget_sell_through_coefficient / 100 * tourF.budget_sell_through_scale : 0;
     
@@ -991,7 +992,7 @@ export class FinancialSystem {
 
     // Enhanced sell-through calculation
     const baseRate = config.sell_through_base;
-    const reputationBonus = (localReputation / 100) * config.reputation_modifier;
+    const reputationBonus = (localReputation / MAX_REPUTATION_FALLBACK) * config.reputation_modifier;
     const adjustedPopularityBonus = (artistPopularity / 100) * config.local_popularity_weight * popularityEffectiveness;
     const budgetQualityBonus = marketingBudgetPerCity > 0 ? (marketingBudgetPerCity / venueCapacity) * tourF.budget_sell_through_coefficient / 100 * tourF.budget_sell_through_scale : 0;
 

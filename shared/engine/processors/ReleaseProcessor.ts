@@ -1760,7 +1760,11 @@ export class ReleaseProcessor {
               ctx.gameState.flags = flopFlags;
 
               const repBefore = ctx.gameState.reputation || 0;
-              const repAfter = Math.max(0, repBefore - flopPenalty);
+              // Round-4: the flop sink routes through the shared x3 delta scaler
+              // like every other reputation source (authored 8 lands as -24 on
+              // the 0-700 scale) — losses and gains scale symmetrically now.
+              const scaledFlopDelta = scaleReputationGain(-flopPenalty, repSystem);
+              const repAfter = Math.max(0, repBefore + scaledFlopDelta);
               const repDelta = repAfter - repBefore; // ≤ 0 (0 only if already floored)
               ctx.gameState.reputation = repAfter;
 

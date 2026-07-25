@@ -251,8 +251,8 @@ export class ServerGameData {
       fourth_focus_slot_reputation: thresholds.fourth_focus_slot_reputation,
       label_size_thresholds: {
         local: 0,
-        regional: 25,
-        national: 50,
+        regional: 150,
+        national: 280,
         global: thresholds.global_label_reputation
       }
     };
@@ -1010,13 +1010,13 @@ export class ServerGameData {
   getProgressionThresholdsSync() {
     if (!this.balanceData) {
       return {
-        second_artist_reputation: 10,
-        fourth_focus_slot_reputation: 50,
+        second_artist_reputation: 40,
+        fourth_focus_slot_reputation: 280,
         label_size_thresholds: {
           local: 0,
-          regional: 25,
-          national: 50,
-          global: 75
+          regional: 150,
+          national: 280,
+          global: 560
         }
       };
     }
@@ -1027,8 +1027,8 @@ export class ServerGameData {
       fourth_focus_slot_reputation: thresholds.fourth_focus_slot_reputation,
       label_size_thresholds: {
         local: 0,
-        regional: 25,
-        national: 50,
+        regional: 150,
+        national: 280,
         global: thresholds.global_label_reputation
       }
     };
@@ -1039,9 +1039,9 @@ export class ServerGameData {
     if (!this.balanceData) {
       return {
         local: { multiplier: 1.0, unlock_rep: 0, description: "Local producers" },
-        regional: { multiplier: 1.8, unlock_rep: 15, description: "Regional producers" },
-        national: { multiplier: 3.2, unlock_rep: 35, description: "National producers" },
-        legendary: { multiplier: 5.5, unlock_rep: 60, description: "Legendary producers" }
+        regional: { multiplier: 1.8, unlock_rep: 60, description: "Regional producers" },
+        national: { multiplier: 3.2, unlock_rep: 165, description: "National producers" },
+        legendary: { multiplier: 5.5, unlock_rep: 380, description: "Legendary producers" }
       };
     }
     
