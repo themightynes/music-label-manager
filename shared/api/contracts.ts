@@ -547,6 +547,9 @@ export const WeeklyActionSchema = z.object({
   // Tier 2 (PR-1): optional reactive-meeting trigger. Dark launch: no
   // data/actions.json entry sets this yet (PR-2 authors the first ones).
   reactive_trigger: HappeningTypeSchema.optional(),
+  // Playtest 2026-07-25: per-meeting injection probability, 0–1 (absent =
+  // always fires when triggered) — demo_ethics_one on EVERY signing read as copy-paste.
+  reactive_chance: z.number().min(0).max(1).optional(),
   // Tier 2 (PR-1): server-attached "why now" context on the SELECTED meeting
   // (never authored in data/actions.json — response-side only).
   reactiveContext: ReactiveContextSchema.optional(),

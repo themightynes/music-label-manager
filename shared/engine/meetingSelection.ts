@@ -12,7 +12,7 @@
  * Spec: docs/01-planning/implementation-specs/[READY] meeting-relevance-tier0-1-plan.md §1-§2.
  */
 
-import { seededRandomPick, seededWeightedPick } from '../utils/seededRandom';
+import { seededRandom, seededRandomPick, seededWeightedPick } from '../utils/seededRandom';
 import type { RelevanceTag, RequiresEntry, HappeningType } from '../types/gameTypes';
 import type { WeekHappening } from './weekHappenings';
 
@@ -493,7 +493,15 @@ export function selectWeeklyMeeting<T extends RelevanceTaggable & CategoryTaggab
 
 /** Minimal shape a pool item needs to be considered for reactive injection. */
 export interface ReactiveTaggable {
+  id: string;
   reactive_trigger?: HappeningType;
+  /**
+   * Per-meeting injection probability (0–1). Absent = 1.0 (always fires when
+   * its trigger matches — back-compat for all pre-existing reactive meetings).
+   * Playtest 2026-07-25: demo_ethics_one firing on EVERY signing read as
+   * copy-paste; a sub-1 chance lets a trigger fire only sometimes.
+   */
+  reactive_chance?: number;
 }
 
 /**
@@ -551,10 +559,26 @@ export function matchReactiveMeeting<T extends ReactiveTaggable>(
     happeningsByType.set(happening.type, list);
   }
 
+  // Per-meeting chance gate (playtest 2026-07-25): a meeting with
+  // `reactive_chance` < 1 only enters candidacy when a seeded roll passes.
+  // ISOLATED seed (`${seed}-reactive-chance-${meeting.id}`) — NEVER the
+  // engine's RNG stream — so both selection sites (offer route + autonomous
+  // engine path) roll identically for the same (gameId, week, roleId).
+  // A failed roll behaves exactly as if this meeting's trigger didn't match:
+  // other reactive matches still compete by priority, and if none remain the
+  // caller falls through to the normal weighted draw.
+  const passesChanceRoll = (meeting: T): boolean => {
+    const chance = meeting.reactive_chance ?? 1;
+    if (chance >= 1) return true;
+    if (chance <= 0) return false;
+    return seededRandom(`${seed}-reactive-chance-${meeting.id}`) < chance;
+  };
+
   // Collect every (meeting, happening) pair whose trigger fires this week.
   const candidates: ReactiveMatch<T>[] = [];
   for (const meeting of eligiblePool) {
     if (!meeting.reactive_trigger) continue;
+    if (!passesChanceRoll(meeting)) continue;
     const matchingHappenings = happeningsByType.get(meeting.reactive_trigger);
     if (!matchingHappenings) continue;
     for (const happening of matchingHappenings) {

@@ -328,6 +328,12 @@ export interface RoleMeeting {
    */
   reactive_trigger?: HappeningType;
   /**
+   * Playtest 2026-07-25: per-meeting injection probability, 0–1 (absent =
+   * always fires when triggered) — demo_ethics_one on EVERY signing read as
+   * copy-paste.
+   */
+  reactive_chance?: number;
+  /**
    * Tier 2 (PR-2): server-attached "why now" context on the SELECTED meeting —
    * present only when the route's injection stage picked this meeting via a
    * matching week happening (never authored in data/actions.json; response-side

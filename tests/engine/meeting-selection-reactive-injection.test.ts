@@ -209,6 +209,115 @@ describe('matchReactiveMeeting — priority + requires', () => {
   });
 });
 
+describe('reactive_chance — per-meeting injection probability (playtest 2026-07-25)', () => {
+  it('reactive_chance absent → always injects when triggered (existing behavior pinned)', () => {
+    const pool: Pool = [
+      { id: 'normal' },
+      { id: 'always-fires', reactive_trigger: 'recent_signing' },
+    ];
+    for (let week = 1; week <= 40; week++) {
+      const seed = generateMeetingSeed('game-chance', week, 'head_ar');
+      const result = selectWeeklyMeetingWithHappenings(pool, emptyState(), seed, [happening('recent_signing')]);
+      expect(result.meeting?.id).toBe('always-fires');
+      expect(result.reactiveHappening?.type).toBe('recent_signing');
+    }
+  });
+
+  it('reactive_chance: 0 → never injects; the weighted draw proceeds over the non-reactive pool', () => {
+    const pool: Pool = [
+      { id: 'normal' },
+      { id: 'never-fires', reactive_trigger: 'recent_signing', reactive_chance: 0 },
+    ];
+    for (let week = 1; week <= 40; week++) {
+      const seed = generateMeetingSeed('game-chance', week, 'head_ar');
+      const result = selectWeeklyMeetingWithHappenings(pool, emptyState(), seed, [happening('recent_signing')]);
+      expect(result.meeting?.id).toBe('normal');
+      expect(result.reactiveHappening).toBeNull();
+    }
+  });
+
+  it('reactive_chance: 1 behaves exactly like absent (always injects)', () => {
+    const pool: Pool = [
+      { id: 'normal' },
+      { id: 'certain', reactive_trigger: 'recent_signing', reactive_chance: 1 },
+    ];
+    for (let week = 1; week <= 40; week++) {
+      const seed = generateMeetingSeed('game-chance', week, 'head_ar');
+      const result = selectWeeklyMeetingWithHappenings(pool, emptyState(), seed, [happening('recent_signing')]);
+      expect(result.meeting?.id).toBe('certain');
+    }
+  });
+
+  it('deterministic: same seed → same outcome across repeated calls, and a fractional chance produces BOTH outcomes across seeds', () => {
+    // Mirrors the authored demo_ethics_one value (0.4).
+    const pool: Pool = [
+      { id: 'normal' },
+      { id: 'demo_ethics_one', reactive_trigger: 'recent_signing', reactive_chance: 0.4 },
+    ];
+    const outcomes = new Set<string>();
+    for (let week = 1; week <= 60; week++) {
+      const seed = generateMeetingSeed('game-chance', week, 'head_ar');
+      const first = selectWeeklyMeetingWithHappenings(pool, emptyState(), seed, [happening('recent_signing')]);
+      for (let i = 0; i < 10; i++) {
+        const again = selectWeeklyMeetingWithHappenings(pool, emptyState(), seed, [happening('recent_signing')]);
+        expect(again.meeting?.id).toBe(first.meeting?.id);
+        expect(again.reactiveHappening?.type ?? null).toBe(first.reactiveHappening?.type ?? null);
+      }
+      outcomes.add(first.meeting!.id);
+    }
+    // 60 independent weekly seeds at 40%: both "fired" and "didn't fire" must
+    // occur (a chance gate that always or never fires is dead).
+    expect(outcomes).toEqual(new Set(['normal', 'demo_ethics_one']));
+  });
+
+  it('failed roll on the priority-winning reactive meeting lets a lower-priority reactive match win', () => {
+    // mood_crater outranks recent_signing, but its owner's roll always fails
+    // (chance 0) → the lower-priority recent_signing owner injects instead.
+    const pool: Pool = [
+      { id: 'normal' },
+      { id: 'mood-owner', reactive_trigger: 'mood_crater', reactive_chance: 0 },
+      { id: 'signing-owner', reactive_trigger: 'recent_signing' },
+    ];
+    const happenings = [happening('mood_crater'), happening('recent_signing')];
+    for (let week = 1; week <= 40; week++) {
+      const seed = generateMeetingSeed('game-chance', week, 'head_ar');
+      const result = selectWeeklyMeetingWithHappenings(pool, emptyState(), seed, happenings);
+      expect(result.meeting?.id).toBe('signing-owner');
+      expect(result.reactiveHappening?.type).toBe('recent_signing');
+    }
+  });
+
+  it('a failed fractional roll on the priority winner falls through to the lower-priority owner (both branches reachable across seeds)', () => {
+    const pool: Pool = [
+      { id: 'mood-owner', reactive_trigger: 'mood_crater', reactive_chance: 0.4 },
+      { id: 'signing-owner', reactive_trigger: 'recent_signing' },
+    ];
+    const happenings = [happening('mood_crater'), happening('recent_signing')];
+    const winners = new Set<string>();
+    for (let week = 1; week <= 60; week++) {
+      const seed = generateMeetingSeed('game-chance-2', week, 'head_ar');
+      const match = matchReactiveMeeting(pool, happenings, seed);
+      expect(match).not.toBeNull();
+      winners.add(match!.meeting.id);
+    }
+    // When mood-owner's roll passes it wins on priority; when it fails,
+    // signing-owner takes over — both must occur across 60 seeds.
+    expect(winners).toEqual(new Set(['mood-owner', 'signing-owner']));
+  });
+
+  it('a chance-failed reactive meeting stays event-gated: it does NOT leak into the fall-through weighted draw', () => {
+    const pool: Pool = [
+      { id: 'normal' },
+      { id: 'never-fires', reactive_trigger: 'recent_signing', reactive_chance: 0 },
+    ];
+    for (let week = 1; week <= 40; week++) {
+      const seed = generateMeetingSeed('game-chance-3', week, 'head_ar');
+      const result = selectWeeklyMeetingWithHappenings(pool, emptyState(), seed, [happening('recent_signing')]);
+      expect(result.meeting?.id).not.toBe('never-fires');
+    }
+  });
+});
+
 describe('selectWeeklyMeetingWithHappenings — replace-the-draw semantics (fork B1)', () => {
   it('no happenings (default/omitted) → byte-identical to selectWeeklyMeeting', () => {
     const pool: Pool = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }];
