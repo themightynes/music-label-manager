@@ -12,7 +12,9 @@ import {
   pickSafestChoice,
   prepareAutoSelectOptions,
   selectTopOptions,
+  appendCeoFillerOption,
   getChoiceCreativeCapitalCost,
+  type AutoSelectOption,
 } from '../../client/src/services/executiveAutoSelect';
 
 function choice(id: string, overrides: Partial<DialogueChoice> = {}): DialogueChoice {
@@ -340,5 +342,73 @@ describe('selectTopOptions — never overdraws Creative Capital (playtest bug #1
     const options = prepareAutoSelectOptions([exec('head_ar'), exec('cmo')], { head_ar: [m1], cmo: [m2] });
     const picked = selectTopOptions(options, 2);
     expect(picked).toHaveLength(2);
+  });
+});
+
+describe('appendCeoFillerOption — AUTO fills the 4th slot from the CEO lane (playtest 2026-07-25)', () => {
+  const exec = (role: string, mood = 50): Executive => ({ id: `exec-${role}`, role, level: 1, mood, loyalty: 50 });
+
+  function meetingWith(id: string, role: string, choices: DialogueChoice[]): RoleMeeting {
+    return { id, prompt: id, target_scope: 'global', role_id: role, choices } as RoleMeeting;
+  }
+
+  const ceoMeetings = [meetingWith('ceo_m', 'ceo', [choice('ceo_safe', { effects_immediate: { money: -500 } })])];
+
+  function execOption(role: string): AutoSelectOption {
+    const m = meetingWith(`${role}_m`, role, [choice(`${role}_safe`)]);
+    return { executive: exec(role), meeting: m, choice: m.choices![0] as DialogueChoice, score: 100 };
+  }
+
+  it('appends a CEO option when scored picks leave a slot unfilled', () => {
+    const selected = [execOption('head_ar'), execOption('cmo'), execOption('cco')];
+    const result = appendCeoFillerOption(selected, 4, ceoMeetings);
+    expect(result).toHaveLength(4);
+    expect(result[3].executive.role).toBe('ceo');
+    expect(result[3].meeting.id).toBe('ceo_m');
+  });
+
+  it('does nothing when all slots are already filled (CEO never competes)', () => {
+    const selected = [execOption('head_ar'), execOption('cmo'), execOption('cco'), execOption('head_distribution')];
+    const result = appendCeoFillerOption(selected, 4, ceoMeetings);
+    expect(result).toHaveLength(4);
+    expect(result.every((o) => o.executive.role !== 'ceo')).toBe(true);
+  });
+
+  it('skips the CEO when the ceo role already has a queued action', () => {
+    const result = appendCeoFillerOption([execOption('cmo')], 2, ceoMeetings, Infinity, ['ceo']);
+    expect(result).toHaveLength(1);
+  });
+
+  it('skips a user_selected-only CEO pool (needs the player, not AUTO)', () => {
+    const userSelectedOnly = [{
+      ...meetingWith('ceo_pick', 'ceo', [choice('c1')]),
+      target_scope: 'user_selected',
+    } as RoleMeeting];
+    const result = appendCeoFillerOption([execOption('cmo')], 2, userSelectedOnly);
+    expect(result).toHaveLength(1);
+  });
+
+  it('never overdraws the remaining Creative Capital budget', () => {
+    const costlyCeo = [meetingWith('ceo_costly', 'ceo', [
+      choice('ceo_cc', { effects_immediate: { creative_capital: -2 } }),
+    ])];
+    const spentTwo: AutoSelectOption = {
+      ...execOption('cmo'),
+      choice: choice('cmo_cc', { effects_immediate: { creative_capital: -2 } }),
+    };
+    // Budget 3, already spent 2 → only 1 left; the CEO's cheapest choice costs 2.
+    const result = appendCeoFillerOption([spentTwo], 2, costlyCeo, 3);
+    expect(result).toHaveLength(1);
+
+    // Budget 4 → 2 left; now it fits.
+    const result2 = appendCeoFillerOption([spentTwo], 2, costlyCeo, 4);
+    expect(result2).toHaveLength(2);
+    expect(result2[1].executive.role).toBe('ceo');
+  });
+
+  it('is idempotent: never appends a second CEO option', () => {
+    const once = appendCeoFillerOption([execOption('cmo')], 3, ceoMeetings);
+    const twice = appendCeoFillerOption(once, 3, ceoMeetings);
+    expect(twice.filter((o) => o.executive.role === 'ceo')).toHaveLength(1);
   });
 });

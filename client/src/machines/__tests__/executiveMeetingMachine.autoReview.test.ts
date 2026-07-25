@@ -92,7 +92,11 @@ describe('executiveMeetingMachine — AUTO propose-then-confirm (PR-3)', () => {
     await waitForState(actor, 'reviewingAutoSelections');
 
     const { autoOptions } = actor.getSnapshot().context;
-    expect(autoOptions.length).toBe(2);
+    // 2 seeded execs + the CEO filler for the 3rd free slot (playtest
+    // 2026-07-25: AUTO fills every unlocked slot, drawing the leftover from
+    // the CEO meeting lane as a fallback — never competing with scored execs).
+    expect(autoOptions.length).toBe(3);
+    expect(autoOptions[2].executive.role).toBe('ceo');
     // Not committed yet — the review gate must not have called onActionSelected.
     expect(onActionSelected).not.toHaveBeenCalled();
     // AUTO's safest-choice logic is unchanged: it picks the gamble-free choice.
