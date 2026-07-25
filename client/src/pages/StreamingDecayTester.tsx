@@ -435,7 +435,7 @@ export default function StreamingDecayTester() {
                   <Slider
                     value={[songQuality]}
                     onValueChange={(value) => setSongQuality(value[0])}
-                    max={100}
+                    max={700}
                     min={20}
                     step={5}
                     className="w-full"
@@ -478,7 +478,7 @@ export default function StreamingDecayTester() {
                   />
                   <div className="flex justify-between text-xs text-white/50 mt-1">
                     <span>0 (No Rep)</span>
-                    <span>100 (Industry Leader)</span>
+                    <span>700 (Industry Leader)</span>
                   </div>
                 </div>
 

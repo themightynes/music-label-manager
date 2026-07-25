@@ -1039,9 +1039,9 @@ export class ServerGameData {
     if (!this.balanceData) {
       return {
         local: { multiplier: 1.0, unlock_rep: 0, description: "Local producers" },
-        regional: { multiplier: 1.8, unlock_rep: 15, description: "Regional producers" },
-        national: { multiplier: 3.2, unlock_rep: 35, description: "National producers" },
-        legendary: { multiplier: 5.5, unlock_rep: 60, description: "Legendary producers" }
+        regional: { multiplier: 1.8, unlock_rep: 60, description: "Regional producers" },
+        national: { multiplier: 3.2, unlock_rep: 165, description: "National producers" },
+        legendary: { multiplier: 5.5, unlock_rep: 380, description: "Legendary producers" }
       };
     }
     
