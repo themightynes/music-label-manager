@@ -48,16 +48,22 @@ Reverse order of deletion to satisfy foreign keys.
 
 ### Client
 - **`client/src/store/gameStore.ts`**: Save/load logic, autosave trigger
-- **`client/src/components/SaveGameModal.tsx`**: UI with lazy loading
+- **`client/src/components/SaveGameModal.tsx`**: Save & Load dialog host (save input, export/import, confirm dialogs)
+- **`client/src/components/saves/`** (July 2026 grouped browser):
+  - `groupSaves.ts` - Pure grouping: buckets `SaveSummary[]` by playthrough (`gameId`, labeled by `musicLabelName`), current game pinned first; legacy saves without a `gameId` land in an "Unknown Label" bucket
+  - `SaveGroupList.tsx` - Collapsible group per playthrough (current expanded by default; flat list when only one playthrough); autosaves render as an indented, de-emphasized sub-cluster
+  - `SaveCard.tsx` - Shared save card (load/copy/delete, inline rename for manual saves, relative timestamps with absolute tooltip)
 - **`client/src/contexts/GameContext.tsx`**: Cross-tab game selection
 
 ### Server
-- **`server/routes.ts`**:
+- **`server/routes/saves.ts`**:
   - `GET /api/saves` - List summaries
   - `GET /api/saves/:saveId` - Fetch full snapshot
   - `POST /api/saves` - Create save with autosave cleanup
   - `POST /api/saves/:saveId/restore` - Restore with timestamp conversion
+  - `PATCH /api/saves/:saveId` - Rename a manual save (autosaves rejected; name-only update that does not bump `updatedAt`)
   - `DELETE /api/saves/:saveId` - Ownership-enforced deletion
+  - `DELETE /api/saves/by-game/:gameId` - Delete every save belonging to one playthrough (matches the `gameId` inside the snapshot JSONB)
 - **`server/storage.ts`**: Database operations for save management
 
 ### Shared
@@ -100,7 +106,7 @@ const convertTimestamps = (obj: any): any => {
 **Legacy migration**: `getGameSaves()` normalizes legacy autosaves still named `"Autosave"` on read (it matches any autosave whose name starts with `Autosave`), rewriting them to `"{musicLabelName} - Week {week}"` for display.
 
 > **Caveat**: The migration matches on the `Autosave` name prefix for autosave records, so a save a user *manually* named exactly `"Autosave"` will also be renamed on display. This is a benign edge case — the underlying save data is untouched.
-**Cleanup**: Keeps the newest 3 autosaves per game (`purgeOldAutosaves(..., keep: 3)`)
+**Cleanup**: Keeps the newest `AUTOSAVE_RETENTION` (3) autosaves per game — `saveService.createSave` calls `purgeOldAutosaves`, which filters by the snapshot's `gameId` and ranks stale rows in SQL (id-only projection; it does not load `game_state` JSONB)
 
 ```typescript
 // In gameStore.ts after week advancement

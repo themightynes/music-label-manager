@@ -67,7 +67,9 @@ export interface IStorage {
   getGameSaveForUser(id: string, userId: string): Promise<GameSave | undefined>;
   createGameSave(gameSave: InsertGameSave & { userId: string }): Promise<GameSave>;
   updateGameSave(id: string, gameSave: Partial<InsertGameSave>): Promise<GameSave>;
+  renameGameSave(id: string, userId: string, name: string): Promise<GameSave | undefined>;
   deleteGameSave(id: string, userId: string): Promise<number>;
+  deleteGameSavesByGameId(userId: string, gameId: string): Promise<number>;
   purgeOldAutosaves(userId: string, gameId: string, keep: number): Promise<void>;
 
   // Game state
@@ -264,32 +266,44 @@ export class DatabaseStorage implements IStorage {
       return;
     }
 
-    const autosaves = await this.db
-      .select()
+    // Filter + rank in SQL and project only ids — this runs on every week
+    // advance, so avoid pulling every autosave's full game_state JSONB into
+    // the app just to pick delete targets.
+    const stale = await this.db
+      .select({ id: gameSaves.id })
       .from(gameSaves)
-      .where(and(eq(gameSaves.userId, userId), eq(gameSaves.isAutosave, true)))
-      .orderBy(desc(gameSaves.updatedAt));
+      .where(and(
+        eq(gameSaves.userId, userId),
+        eq(gameSaves.isAutosave, true),
+        sql`game_saves.game_state->'gameState'->>'id' = ${gameId}`,
+      ))
+      .orderBy(desc(gameSaves.updatedAt))
+      .offset(keep);
 
-    const idsToDelete: string[] = [];
-    let seenForGame = 0;
-
-    for (const save of autosaves) {
-      const snapshotGameId = (save.gameState as any)?.gameState?.id;
-      if (snapshotGameId !== gameId) {
-        continue;
-      }
-
-      if (seenForGame < keep) {
-        seenForGame += 1;
-        continue;
-      }
-
-      idsToDelete.push(save.id);
+    if (stale.length > 0) {
+      await this.db.delete(gameSaves).where(inArray(gameSaves.id, stale.map(row => row.id)));
     }
+  }
 
-    if (idsToDelete.length > 0) {
-      await this.db.delete(gameSaves).where(inArray(gameSaves.id, idsToDelete));
-    }
+  async renameGameSave(id: string, userId: string, name: string): Promise<GameSave | undefined> {
+    // Name-only update on purpose: does NOT bump updatedAt, so renaming a save
+    // doesn't reorder the recency-sorted save list.
+    const [save] = await this.db.update(gameSaves)
+      .set({ name })
+      .where(and(eq(gameSaves.id, id), eq(gameSaves.userId, userId)))
+      .returning();
+    return save || undefined;
+  }
+
+  async deleteGameSavesByGameId(userId: string, gameId: string): Promise<number> {
+    const deleted = await this.db
+      .delete(gameSaves)
+      .where(and(
+        eq(gameSaves.userId, userId),
+        sql`game_saves.game_state->'gameState'->>'id' = ${gameId}`,
+      ))
+      .returning({ id: gameSaves.id });
+    return deleted.length;
   }
 
   // Game state
