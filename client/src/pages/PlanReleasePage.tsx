@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,6 +20,11 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { BankedHypeAttachPreview } from '@/components/BankedHypeAttachPreview';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import {
+  getDefaultReleaseWeek,
+  getDefaultLeadSingleWeek,
+  resolveReleaseWeek
+} from '@/lib/releaseWeekDefaults';
 import {
   getSeasonFromWeek,
   getSeasonalMultiplierValue,
@@ -164,7 +169,21 @@ export default function PlanReleasePage() {
   const [editedTitle, setEditedTitle] = useState<string>('');
   const [songTitles, setSongTitles] = useState<Record<string, string>>({});
   const [releaseTitle, setReleaseTitle] = useState('');
-  const [releaseWeek, setReleaseWeek] = useState(6);
+  // Default to the earliest legally schedulable week (currentWeek + 1 — the
+  // server rejects scheduledReleaseWeek <= currentWeek). gameState can still be
+  // null on first render; the effect below re-syncs once it loads, and also
+  // clamps forward if the week advances past a previously picked week.
+  const [releaseWeek, setReleaseWeek] = useState(() => getDefaultReleaseWeek(gameState?.currentWeek));
+  const releaseWeekTouchedRef = useRef(false);
+  const handleReleaseWeekSelect = (week: number) => {
+    releaseWeekTouchedRef.current = true;
+    setReleaseWeek(week);
+  };
+  const currentWeek = gameState?.currentWeek;
+  useEffect(() => {
+    if (currentWeek == null) return;
+    setReleaseWeek(prev => resolveReleaseWeek(prev, currentWeek, releaseWeekTouchedRef.current));
+  }, [currentWeek]);
 
   // Marketing budget allocation per channel
   const [channelBudgets, setChannelBudgets] = useState<Record<string, number>>({
@@ -179,8 +198,21 @@ export default function PlanReleasePage() {
   // hits at launch). Steps of 10 up to 50%.
   const [preCampaignPct, setPreCampaignPct] = useState(0);
 
-  // Lead single timing (for multi-song releases)
-  const [leadSingleWeek, setLeadSingleWeek] = useState(5); // Default 1 week before main release
+  // Lead single timing (for multi-song releases) — defaults to 1 week before
+  // the main release and follows it until the player picks a week themselves.
+  const [leadSingleWeek, setLeadSingleWeek] = useState(() =>
+    getDefaultLeadSingleWeek(getDefaultReleaseWeek(gameState?.currentWeek))
+  );
+  const leadSingleWeekTouchedRef = useRef(false);
+  const handleLeadSingleWeekSelect = (week: number) => {
+    leadSingleWeekTouchedRef.current = true;
+    setLeadSingleWeek(week);
+  };
+  useEffect(() => {
+    setLeadSingleWeek(prev =>
+      leadSingleWeekTouchedRef.current ? prev : getDefaultLeadSingleWeek(releaseWeek)
+    );
+  }, [releaseWeek]);
   const [leadSingleBudget, setLeadSingleBudget] = useState<Record<string, number>>({
     radio: 0,
     digital: 1500,
@@ -1032,7 +1064,7 @@ export default function PlanReleasePage() {
                   <MusicCalendar
                     selectionMode={true}
                     selectedWeek={leadSingleWeek}
-                    onWeekSelect={setLeadSingleWeek}
+                    onWeekSelect={handleLeadSingleWeekSelect}
                     minWeek={gameState ? gameState.currentWeek + 1 : 1}
                     maxWeek={releaseWeek - 1}
                     className="max-w-lg"
@@ -1195,7 +1227,7 @@ export default function PlanReleasePage() {
                   <MusicCalendar
                     selectionMode={true}
                     selectedWeek={releaseWeek}
-                    onWeekSelect={setReleaseWeek}
+                    onWeekSelect={handleReleaseWeekSelect}
                     minWeek={gameState ? gameState.currentWeek + 1 : 1}
                     className="max-w-lg"
                   />
