@@ -4,9 +4,32 @@
  * Data sourced from data/balance/markets.json
  */
 
-import React from 'react';
-import { Music, Award, Star } from 'lucide-react';
 import { getSeasonalMultiplierValue } from './seasonalCalculations';
+
+/**
+ * Canonical channel/release-type → icon NAME maps (single source of truth).
+ *
+ * shared/ must stay framework-agnostic (it is imported server-side), so these maps
+ * expose lucide icon NAMES as plain strings — the client resolves name → component
+ * (see client/src/pages/PlanReleasePage.tsx). The old Font Awesome class strings
+ * ('fas fa-radio', …) are gone; no consumer used them directly.
+ */
+export const CHANNEL_ICON_NAMES: Record<string, string> = {
+  radio: 'radio',
+  digital: 'megaphone',
+  pr: 'newspaper',
+  influencer: 'users'
+} as const;
+
+export const DEFAULT_CHANNEL_ICON_NAME = 'megaphone';
+
+export const RELEASE_TYPE_ICON_NAMES: Record<string, string> = {
+  single: 'music',
+  ep: 'award',
+  album: 'star'
+} as const;
+
+export const DEFAULT_RELEASE_TYPE_ICON_NAME = 'music';
 
 /**
  * Universal marketing budget constraints applied to all channels
@@ -24,7 +47,7 @@ export interface MarketingChannel {
   minBudget: number;
   maxBudget: number;
   effectiveness: number;
-  icon: string;
+  icon: string; // lucide icon NAME (see CHANNEL_ICON_NAMES) — client maps name → component
   targetAudience: string;
   synergies?: string[];
 }
@@ -38,7 +61,7 @@ export interface ReleaseType {
   bonusType: string;
   bonusAmount: number;
   revenueMultiplier: number;
-  icon: React.ComponentType; // Icon component for UI display
+  icon: string; // lucide icon NAME (see RELEASE_TYPE_ICON_NAMES) — client maps name → component
 }
 
 /**
@@ -60,7 +83,7 @@ export function getMarketingChannelsFromBalance(balanceData?: any): MarketingCha
     minBudget: MARKETING_BUDGET_LIMITS.MIN,
     maxBudget: MARKETING_BUDGET_LIMITS.MAX,
     effectiveness: config.effectiveness || 0.85,
-    icon: getChannelIcon(channelId),
+    icon: getChannelIconName(channelId),
     targetAudience: getChannelAudience(channelId),
     synergies: config.synergies || []
   }));
@@ -77,14 +100,8 @@ function getChannelDisplayName(channelId: string): string {
   return names[channelId as keyof typeof names] || channelId;
 }
 
-function getChannelIcon(channelId: string): string {
-  const icons = {
-    radio: 'fas fa-radio',
-    digital: 'fas fa-ad',
-    pr: 'fas fa-newspaper',
-    influencer: 'fas fa-users'
-  };
-  return icons[channelId as keyof typeof icons] || 'fas fa-bullhorn';
+export function getChannelIconName(channelId: string): string {
+  return CHANNEL_ICON_NAMES[channelId] || DEFAULT_CHANNEL_ICON_NAME;
 }
 
 function getChannelAudience(channelId: string): string {
@@ -121,7 +138,7 @@ export function getReleaseTypesFromBalance(balanceData?: any): ReleaseType[] {
     bonusType: getReleaseTypeBonusType(typeId),
     bonusAmount: Math.round((config.revenue_multiplier - 1) * 100), // Convert multiplier to percentage
     revenueMultiplier: config.revenue_multiplier || 1.0,
-    icon: getReleaseTypeIcon(typeId)
+    icon: getReleaseTypeIconName(typeId)
   }));
 }
 
@@ -159,9 +176,8 @@ function getReleaseTypeBonusType(typeId: string): string {
   return bonusTypes[typeId as keyof typeof bonusTypes] || 'Bonus';
 }
 
-function getReleaseTypeIcon(typeId: string): React.ComponentType {
-  const icons = { single: Music, ep: Award, album: Star };
-  return icons[typeId as keyof typeof icons] || Music;
+export function getReleaseTypeIconName(typeId: string): string {
+  return RELEASE_TYPE_ICON_NAMES[typeId] || DEFAULT_RELEASE_TYPE_ICON_NAME;
 }
 
 // Legacy export removed - will hard fail without balance data

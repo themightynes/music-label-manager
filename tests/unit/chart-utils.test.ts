@@ -18,7 +18,11 @@ import {
   formatStreamCount,
   formatWeeksOnChart,
   getChartExitRisk,
-  isSignificantMovement
+  isSignificantMovement,
+  getChartPositionColor,
+  getMovementColor,
+  getChartExitRiskColor,
+  getChartExitRiskBgColor
 } from '@shared/utils/chartUtils';
 
 describe('chartUtils - Chart Movement', () => {
@@ -277,6 +281,69 @@ describe('chartUtils - Chart Exit Risk', () => {
     it('should return "low" for small drops with short tenure', () => {
       expect(getChartExitRisk(-3, 5)).toBe('low');
       expect(getChartExitRisk(-1, 2)).toBe('low');
+    });
+  });
+});
+
+describe('chartUtils - Color Classes (Design System v2 tokens)', () => {
+  // C52a: these functions must return v2 tokens only (surface-*/neon-*/semantic),
+  // never raw v1 palette classes (bg-yellow-500, text-green-600, ...).
+
+  describe('getChartPositionColor()', () => {
+    it('should return gold tinted chip for top 10', () => {
+      expect(getChartPositionColor(1)).toBe('bg-brand-gold/15 text-brand-gold border border-brand-gold/40');
+      expect(getChartPositionColor(10)).toBe('bg-brand-gold/15 text-brand-gold border border-brand-gold/40');
+    });
+
+    it('should return elevated neutral chip for 11-40', () => {
+      expect(getChartPositionColor(11)).toBe('bg-white/10 text-text-primary border border-white/20');
+      expect(getChartPositionColor(40)).toBe('bg-white/10 text-text-primary border border-white/20');
+    });
+
+    it('should return subdued chip for 41-100', () => {
+      expect(getChartPositionColor(41)).toBe('bg-surface-inner text-text-body border border-white/10');
+      expect(getChartPositionColor(100)).toBe('bg-surface-inner text-text-body border border-white/10');
+    });
+
+    it('should return ghost chip for null and out-of-chart positions', () => {
+      expect(getChartPositionColor(null)).toBe('bg-surface-inner text-text-muted border border-white/[0.08]');
+      expect(getChartPositionColor(101)).toBe('bg-surface-inner text-text-muted border border-white/[0.08]');
+    });
+
+    it('should never return v1 palette classes', () => {
+      for (const pos of [null, 1, 10, 11, 40, 41, 100, 101]) {
+        expect(getChartPositionColor(pos)).not.toMatch(/(gray|yellow|slate)-\d/);
+      }
+    });
+  });
+
+  describe('getMovementColor()', () => {
+    it('should return semantic positive for upward movement', () => {
+      expect(getMovementColor(5)).toBe('text-positive');
+    });
+
+    it('should return semantic negative for downward movement', () => {
+      expect(getMovementColor(-5)).toBe('text-negative');
+    });
+
+    it('should return muted text for no movement', () => {
+      expect(getMovementColor(0)).toBe('text-text-muted');
+    });
+  });
+
+  describe('getChartExitRiskColor()', () => {
+    it('should map risk levels to semantic text tokens', () => {
+      expect(getChartExitRiskColor('high')).toBe('text-negative');
+      expect(getChartExitRiskColor('medium')).toBe('text-warning');
+      expect(getChartExitRiskColor('low')).toBe('text-positive');
+    });
+  });
+
+  describe('getChartExitRiskBgColor()', () => {
+    it('should map risk levels to semantic bg tokens', () => {
+      expect(getChartExitRiskBgColor('high')).toBe('bg-negative');
+      expect(getChartExitRiskBgColor('medium')).toBe('bg-warning');
+      expect(getChartExitRiskBgColor('low')).toBe('bg-positive');
     });
   });
 });

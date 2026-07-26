@@ -944,7 +944,6 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                   chartUpdates={playerChartUpdates}
                   showHeader={false}
                   compact={true}
-                  variant="dark"
                   className="border-0 p-0 bg-transparent"
                 />
               </CardContent>
@@ -1307,7 +1306,7 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
 
   return (
     <motion.div
-      className="glass-panel chromatic-hairline hud-ticks rounded-card w-full max-w-7xl mx-auto text-text-primary"
+      className="glass-panel chromatic-hairline hud-ticks rounded-card w-full text-text-primary"
       initial={instant ? false : { opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
@@ -1486,7 +1485,6 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                 <div className="space-y-6">
                   <ChartPerformanceCard
                     chartUpdates={playerChartUpdates}
-                    variant="dark"
                     className="border-white/[0.08]"
                   />
 
