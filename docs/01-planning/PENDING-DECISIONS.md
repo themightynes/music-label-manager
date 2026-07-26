@@ -1,6 +1,6 @@
 # Pending Decisions — Nes's Queue
 
-*One entry per open product/strategy decision. Updated in place (resolved entries are deleted, not struck). Last updated: July 25, 2026, evening (#10 resolved — physical inventory deferred entirely to `implementation-specs/[FUTURE] physical-inventory-system.md`, content-wave blocker cleared. Earlier same day: debt-cleanup session appended entries #10–#20 — the designer queue distilled from the full 33-item backlog triage; every safe mechanical slice already shipped on `debt/cleanup-2026-07-25`. Previously remaining open: C32 email cap, desktop GUI, C62 sub-item semantics — all still open).*
+*One entry per open product/strategy decision. Updated in place (resolved entries are deleted, not struck). Last updated: July 25, 2026, evening (#10, #12, #13, #20 all resolved — #10 physical inventory deferred entirely to `implementation-specs/[FUTURE] physical-inventory-system.md`, content-wave blocker cleared; #12/#13/#20 the Group-A low-impact rulings pass — C61 copy ruled final, C89 same-loyalty-by-design, Buyout Letter gate rescaled to 440. Earlier same day: debt-cleanup session appended entries #10–#20 — the designer queue distilled from the full 33-item backlog triage; every safe mechanical slice already shipped on `debt/cleanup-2026-07-25`. Previously remaining open: C32 email cap, desktop GUI, C62 sub-item semantics — all still open).*
 
 ---
 
@@ -37,11 +37,9 @@
 ## 11. C55 — email-generation failure: rethrow or log-and-continue?
 **Q:** When weekly email generation/persist throws, should the week ABORT (all-or-nothing, moves golden master + re-arms D6 failure-injection tests) or keep committing without emails? **Shipped meanwhile:** `summary.emailGenerationFailed` flag so the failure is at least visible. **Defer cost:** low — failures remain observable but non-blocking.
 
-## 12. C61 — access-tier downgrade/loss copy tone
-**Q:** Final wording for the new direction-aware tier notifications. **Shipped meanwhile:** the lie is fixed — downgrades say "Downgraded", drop-to-none says "Access Lost" (neutral/factual, `type: reputation` so no phantom tier-unlock email), gated on `tierUnlockHistory` so only announced gains announce their loss. Newly relevant since #174 made reputation losses ×3. **Defer cost:** low (copy polish only).
+*(Former entry 12 — C61 access-tier downgrade/loss copy tone — resolved and removed July 25, 2026, evening: Nes ruled the shipped neutral/factual copy **final** ("… Access Downgraded" / "… Access Lost") — zero string changes. The flagged doc-sync loose end was fixed in the same pass: the Label Head's Guide "Access" veteran note (`client/src/lib/helpTopics.ts`) no longer claims a door can "quietly close" — the close is described as announced. Backlog C61 fully resolved.)*
 
-## 13. C89 — should AUTO-endorse grant different loyalty than a personal pick?
-**Q:** `auto_endorse_loyalty_gain` (progression.json, currently 5 = same as `loyalty_on_use`) is a reserved dead knob; the plumbing (an `autoEndorsed` marker through the confirm path) is trivial but pointless until a differing value is chosen. **Defer cost:** zero — both paths currently grant 5, indistinguishable by design or by accident.
+*(Former entry 13 — C89 AUTO-endorse loyalty — resolved and removed July 25, 2026, evening: Nes ruled **same loyalty by design** — AUTO-endorse and personal picks both grant 5 (`auto_endorse_loyalty_gain` stays == `loyalty_on_use`) intentionally, since AUTO already pays its own costs (CC budget, review gate) and shouldn't be taxed twice. The knob stays in `progression.json` as a reserved future tuning lever; the `autoEndorsed`-marker plumbing stays unbuilt unless a future ruling picks a differing value (re-open as a NEW C-item if so). Backlog C89 marked resolved-by-design; no code changed.)*
 
 ## 14. C90 — side-event `requires` vocabulary
 **Q:** The mechanism (generic `requires` on `data/events.json` events, reusing the proven M16 grammar, replacing the ad-hoc `hasSignedArtist` filter for `crisis_fired_dancers`) is agent-buildable without content. What's the canonical precondition vocabulary — is "≥1 signed artist" the first tag, and which future events need gates? **Defer cost:** low until more predetermined-target events ship; the ad-hoc filter holds today.
@@ -61,8 +59,7 @@
 ## 19. C63 — dead artist columns: wire or drop?
 **Q:** `massAppeal`/`stress`/`creativity`/`moodHistory`/`lastMoodEvent`/`moodTrend` have ZERO readers (verified July 25). Wire them into systems (interactivity-gap analysis flagged massAppeal as a candidate) or drop via migration + SNAPSHOT_VERSION review? **Shipped meanwhile:** the phantom `artist.loyalty` client fallbacks are gone. **Defer cost:** schema noise only.
 
-## 20. v3 CEO pool — "The Buyout Letter" reputation gate rescale
-**Q:** Its authoring note says `reputation >= 60` — a 0-100-era value (trivial on 0-700, start is 15). What's the intended gate on the new scale? The note is annotated as pending this ruling. **Defer cost:** none until that scenario is authored live.
+*(Former entry 20 — v3 CEO pool "The Buyout Letter" reputation gate rescale — resolved and removed July 25, 2026, evening: Nes rescaled the gate `reputation >= 60` → **`>= 440`** on the 0-700 scale (national-press-tier anchor; the week-40 gate remains the real limiter). Annotation updated in `client/src/admin/v3CeoPoolReview.ts`. Closes the C106 remaining designer note.)*
 
 ---
 

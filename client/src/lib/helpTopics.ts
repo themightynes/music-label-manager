@@ -165,7 +165,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       'Playlists carry your streams, press carries your name, venues carry your tours — know which door your plan needs next.',
     ],
     veteranNotes: [
-      'These doors swing both ways. Access follows your CURRENT standing, so a label that lets its reputation slide can watch a door quietly close on it. Protect the standing that got you into the room.',
+      'These doors swing both ways. Access follows your CURRENT standing, so a label that lets its reputation slide will be told — plainly — when a door closes on it. Protect the standing that got you into the room.',
     ],
   },
   {
