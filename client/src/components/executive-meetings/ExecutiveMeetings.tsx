@@ -10,9 +10,10 @@ import { AutoSelectReviewPanel } from './AutoSelectReviewPanel';
 import { Button } from '../ui/button';
 import { ArrowLeft, Loader2, Check, Wand2 } from 'lucide-react';
 import { fetchRoleMeetings, fetchMeetingDialogue, fetchAllRoles } from '../../services/executiveService';
+import { getChoiceCreativeCapitalCost } from '../../services/executiveAutoSelect';
 import { useGameStore } from '../../store/gameStore';
 import { useArtists } from '../../hooks/useArtists';
-import type { Executive } from '../../../../shared/types/gameTypes';
+import type { Executive, RoleMeeting } from '../../../../shared/types/gameTypes';
 
 /**
  * Exec Console redesign (2026-07-11, "Exec Meetings — Console" design direction):
@@ -120,6 +121,14 @@ export function ExecutiveMeetings({
   const [meetingPreviews, setMeetingPreviews] = useState<
     Record<string, { name: string; snippet: string; moreCount: number }>
   >({});
+  /**
+   * C75: full weekly meeting pools per role, captured from the SAME sit-out/
+   * urgency prefetch below (zero new requests). Used to price the CC cost of
+   * each already-queued action this week (roleId → meeting by actionId →
+   * choice by choiceId), so the affordability gate and AUTO budget see the
+   * CC *remaining after queued commitments*, not the raw current CC.
+   */
+  const [meetingPoolsByRole, setMeetingPoolsByRole] = useState<Record<string, RoleMeeting[]>>({});
 
   const { getAROfficeStatus, selectedActions } = useGameStore();
   // C74: the global GameHeader AUTO button sets this session intent + navigates
@@ -165,12 +174,48 @@ export function ExecutiveMeetings({
   // Stable, order-independent key so effects don't re-fire on Set identity.
   const usedExecutiveRolesKey = Array.from(usedExecutiveRoles).sort().join(',');
 
+  /**
+   * C75: CC already committed by this week's queued-but-unprocessed choices.
+   * Each queued action carries { roleId, actionId, choiceId }; we price it by
+   * looking the choice up in the prefetched weekly pools and running it through
+   * the SAME getChoiceCreativeCapitalCost helper the gate and AUTO budget use.
+   * Unresolvable actions (pool still loading / fetch error) price at 0 — fail
+   * open, which is exactly today's behavior, never a harder gate than intended.
+   */
+  const committedCreativeCapital = useMemo(() => {
+    let total = 0;
+    for (const actionString of selectedActions) {
+      try {
+        const action = JSON.parse(actionString);
+        const pool = meetingPoolsByRole[action.roleId] ?? [];
+        const meeting = pool.find((m) => m.id === action.actionId);
+        const choice = meeting?.choices?.find((c: any) => c?.id === action.choiceId);
+        if (choice) total += getChoiceCreativeCapitalCost(choice);
+      } catch {
+        // Ignore invalid action strings (same tolerance as used-role tracking).
+      }
+    }
+    return total;
+  }, [selectedActions, meetingPoolsByRole]);
+
+  /**
+   * C75: the CC actually still spendable this week — raw CC minus what queued
+   * choices will consume at advance. This (not the raw value) feeds the manual
+   * affordability gate AND the machine's AUTO budget, so a second same-week
+   * choice can no longer overdraw into the engine's Math.max(0, …) clamp.
+   * Undefined stays undefined (legacy no-gating behavior preserved).
+   */
+  const remainingCreativeCapital =
+    creativeCapital === undefined
+      ? undefined
+      : Math.max(0, creativeCapital - committedCreativeCapital);
+
   const [state, send] = useMachine(executiveMeetingMachine, {
     input: {
       gameId,
       currentWeek,
       focusSlotsTotal: focusSlots.total,
-      creativeCapital,
+      creativeCapital: remainingCreativeCapital,
       arOfficeSlotUsed: arOfficeSlotUsedInitial,
       usedExecutiveRoles: Array.from(usedExecutiveRoles),
       onActionSelected,
@@ -250,9 +295,9 @@ export function ExecutiveMeetings({
                   moreCount: meetings.length - 1,
                 }
               : null;
-            return [roleId, meetings.length, isReactive, preview] as const;
+            return [roleId, meetings.length, isReactive, preview, meetings] as const;
           } catch {
-            return [roleId, -1, false, null] as const; // unknown → fail open
+            return [roleId, -1, false, null, [] as RoleMeeting[]] as const; // unknown → fail open
           }
         })
       );
@@ -264,6 +309,12 @@ export function ExecutiveMeetings({
           results.filter(([, , , preview]) => !!preview).map(([roleId, , , preview]) => [roleId, preview!])
         )
       );
+      // C75: keep the full pools for queued-choice CC pricing. The server pick
+      // is deterministic per (gameId, week, roleId), so these pools match what
+      // the machine fetched when the action was queued.
+      setMeetingPoolsByRole(
+        Object.fromEntries(results.map(([roleId, , , , meetings]) => [roleId, meetings]))
+      );
     })();
 
     return () => {
@@ -272,18 +323,20 @@ export function ExecutiveMeetings({
   }, [gameId, currentWeek]);
 
   // Sync focus slots (plus the Creative Capital budget and AUTO's exclusion
-  // lists — AR-busy and already-used roles) with the machine
+  // lists — AR-busy and already-used roles) with the machine. C75: the budget
+  // synced here is the REMAINING CC (net of queued choices), so AUTO can never
+  // overdraw on top of manual picks queued earlier the same week.
   useEffect(() => {
     send({
       type: 'SYNC_SLOTS',
       used: focusSlots.used,
       total: focusSlots.total,
-      creativeCapital,
+      creativeCapital: remainingCreativeCapital,
       arOfficeSlotUsed,
       usedExecutiveRoles: usedExecutiveRolesKey ? usedExecutiveRolesKey.split(',') : [],
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- usedExecutiveRolesKey stands in for the Set (stable, order-independent)
-  }, [focusSlots.used, focusSlots.total, creativeCapital, arOfficeSlotUsed, usedExecutiveRolesKey, send]);
+  }, [focusSlots.used, focusSlots.total, remainingCreativeCapital, arOfficeSlotUsed, usedExecutiveRolesKey, send]);
 
   // Sync current week with the machine (clears cache when week changes)
   useEffect(() => {
@@ -409,7 +462,9 @@ export function ExecutiveMeetings({
           dialogue={context.currentDialogue}
           onSelectChoice={(choice) => send({ type: 'SELECT_CHOICE', choice })}
           onBack={() => send({ type: 'BACK_TO_MEETINGS' })}
-          availableCreativeCapital={creativeCapital}
+          // C75: gate against the CC remaining AFTER queued choices, so two
+          // 2-CC meetings can't both pass the gate on 2 CC.
+          availableCreativeCapital={remainingCreativeCapital}
           targetScope={context.selectedMeeting?.target_scope}
           selectedArtistName={
             context.selectedArtistId

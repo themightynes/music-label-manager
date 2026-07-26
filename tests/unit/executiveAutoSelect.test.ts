@@ -412,3 +412,73 @@ describe('appendCeoFillerOption — AUTO fills the 4th slot from the CEO lane (p
     expect(twice.filter((o) => o.executive.role === 'ceo')).toHaveLength(1);
   });
 });
+
+describe('C75 — AUTO budgets against REMAINING CC (raw CC minus already-queued commitments)', () => {
+  // The seam contract: ExecutiveMeetings prices this week's queued choices via
+  // getChoiceCreativeCapitalCost and passes `max(0, rawCC - committed)` as the
+  // budget. These tests exercise that composed flow end-to-end so the module's
+  // budget parameter is pinned to the remaining-CC notion, not the raw CC.
+  const exec = (role: string): Executive => ({ id: `exec-${role}`, role, level: 1, mood: 50, loyalty: 50 });
+
+  function meetingWith(id: string, role: string, choices: DialogueChoice[]): RoleMeeting {
+    return { id, prompt: id, target_scope: 'global', role_id: role, choices } as RoleMeeting;
+  }
+
+  // The queued manual pick: a 2-CC choice already committed this week.
+  const queuedChoice = choice('queued_cc2', { effects_immediate: { creative_capital: -2 } });
+
+  function remainingBudget(rawCC: number): number {
+    const committed = getChoiceCreativeCapitalCost(queuedChoice);
+    return Math.max(0, rawCC - committed);
+  }
+
+  it('with 2 raw CC and a queued 2-CC choice, AUTO cannot commit another CC-costing choice', () => {
+    // Pre-fix repro: raw CC (2) fed straight to AUTO let a second 2-CC pick
+    // through; the engine's Math.max(0, …) clamp silently ate the overdraw.
+    const cmoMeeting = meetingWith('cmo_m', 'cmo', [
+      choice('cmo_cc2', { effects_immediate: { creative_capital: -2, money: -1000 } }),
+    ]);
+    const options = prepareAutoSelectOptions([exec('cmo')], { cmo: [cmoMeeting] });
+
+    const picked = selectTopOptions(options, 2, remainingBudget(2));
+    expect(picked).toHaveLength(0);
+  });
+
+  it('with remaining CC 0, AUTO still fills slots from free choices (downgrade, not overdraw)', () => {
+    const cmoMeeting = meetingWith('cmo_m', 'cmo', [
+      choice('cmo_cc2', { effects_immediate: { creative_capital: -2 } }),
+      choice('cmo_free', { effects_immediate: { money: -800 } }),
+    ]);
+    const options = prepareAutoSelectOptions([exec('cmo')], { cmo: [cmoMeeting] });
+
+    const picked = selectTopOptions(options, 2, remainingBudget(2));
+    expect(picked).toHaveLength(1);
+    expect(picked[0].choice.id).toBe('cmo_free');
+  });
+
+  it('the CEO filler also respects the remaining-CC budget net of queued commitments', () => {
+    const ceoPool = [meetingWith('ceo_m', 'ceo', [
+      choice('ceo_cc1', { effects_immediate: { creative_capital: -1 } }),
+    ])];
+
+    // Raw 3 CC, queued 2 → remaining 1: the 1-CC CEO filler just fits.
+    const fits = appendCeoFillerOption([], 1, ceoPool, remainingBudget(3));
+    expect(fits).toHaveLength(1);
+    expect(fits[0].executive.role).toBe('ceo');
+
+    // Raw 2 CC, queued 2 → remaining 0: the filler must NOT overdraw.
+    const blocked = appendCeoFillerOption([], 1, ceoPool, remainingBudget(2));
+    expect(blocked).toHaveLength(0);
+  });
+
+  it('remaining budget floors at 0 even when queued commitments exceed raw CC', () => {
+    // Defensive: a stale queue larger than current CC must not go negative and
+    // must still block any CC-costing pick.
+    expect(remainingBudget(1)).toBe(0);
+    const cmoMeeting = meetingWith('cmo_m', 'cmo', [
+      choice('cmo_cc1', { effects_immediate: { creative_capital: -1 } }),
+    ]);
+    const options = prepareAutoSelectOptions([exec('cmo')], { cmo: [cmoMeeting] });
+    expect(selectTopOptions(options, 1, remainingBudget(1))).toHaveLength(0);
+  });
+});

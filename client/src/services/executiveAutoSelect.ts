@@ -2,8 +2,9 @@
  * Shared executive auto-selection logic
  *
  * Used by:
- * - GameSidebar (auto-select button)
- * - executiveMeetingMachine (AUTO_SELECT event)
+ * - executiveMeetingMachine (AUTO_SELECT event — triggered by the Executive
+ *   Suite AUTO button and the GameHeader AUTO intent; the old GameSidebar
+ *   auto-select button is gone, replaced by the CommandDock/GameHeader shell)
  *
  * Algorithm:
  * 1. Fetch executives and their available meetings
@@ -179,9 +180,16 @@ export function prepareAutoSelectOptions(
  *
  * Playtest bug #11.
  *
+ * C75: `creativeCapitalBudget` is the CC *remaining after already-queued
+ * choices this week* — ExecutiveMeetings subtracts the queued commitments
+ * before threading the budget through SYNC_SLOTS, so AUTO's affordability
+ * math and the manual gate share one remaining-CC notion. Callers must NOT
+ * pass the raw current CC when queued actions exist.
+ *
  * @param options - All available auto-selection options
  * @param availableSlots - Number of focus slots to fill
- * @param creativeCapitalBudget - Remaining CC AUTO may spend (default: unlimited)
+ * @param creativeCapitalBudget - Remaining CC AUTO may spend, net of queued
+ *   commitments (default: unlimited)
  * @returns Top-scored, budget-affordable options, sorted by score (descending)
  */
 export function selectTopOptions(
@@ -251,8 +259,9 @@ export const CEO_AUTO_EXECUTIVE: Executive = {
  * @param selected - options already chosen by selectTopOptions (score order)
  * @param availableSlots - total slots AUTO may fill this pass
  * @param ceoMeetings - the ceo role's meeting pool for this week
- * @param creativeCapitalBudget - CC budget for the WHOLE pass (the CEO filler
- *   only spends what the selected options left over)
+ * @param creativeCapitalBudget - CC budget for the WHOLE pass, already net of
+ *   this week's queued commitments (C75 — see selectTopOptions); the CEO
+ *   filler only spends what the selected options left over
  * @param usedExecutiveRoles - roles with an already-queued action this week
  * @returns a new array with the CEO option appended, or `selected` unchanged
  */
