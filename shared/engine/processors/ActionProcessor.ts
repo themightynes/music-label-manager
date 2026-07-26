@@ -40,6 +40,7 @@
  * via `(engine as any).applyEffects`) keep working byte-for-byte.
  */
 import type { WeekContext } from './types';
+import type { DbOrTx } from '@shared/types/db';
 import type { WeekSummary, ScheduleEventEffect, ScheduledEventEntry } from '../../types/gameTypes';
 import {
   ArtistChangeHelpers,
@@ -350,7 +351,7 @@ export class ActionProcessor {
   /**
    * Processes a single player action
    */
-  async processAction(ctx: WeekContext, action: GameEngineAction, dbTransaction?: any): Promise<void> {
+  async processAction(ctx: WeekContext, action: GameEngineAction, dbTransaction?: DbOrTx): Promise<void> {
     const { summary } = ctx;
     debugLog('[GAME-ENGINE processAction] Processing action:', JSON.stringify(action, null, 2));
     debugLog('[GAME-ENGINE processAction] Action type:', action.actionType);
@@ -382,7 +383,7 @@ export class ActionProcessor {
   /**
    * Processes a role meeting and applies effects
    */
-  async processRoleMeeting(ctx: WeekContext, action: GameEngineAction, dbTransaction?: any): Promise<void> {
+  async processRoleMeeting(ctx: WeekContext, action: GameEngineAction, dbTransaction?: DbOrTx): Promise<void> {
     const { summary } = ctx;
     if (!action.targetId) return;
 
@@ -772,7 +773,7 @@ export class ActionProcessor {
   async processExecutiveActions(
     ctx: WeekContext,
     action: GameEngineAction,
-    dbTransaction?: any,
+    dbTransaction?: DbOrTx,
     // Exec-meetings-revival PR-9: the caller (processRoleMeeting) already fetched the
     // executive row (to compute the mood modifier BEFORE effects landed) — thread it
     // in to avoid a redundant second getExecutive round-trip. When omitted (direct
@@ -928,7 +929,7 @@ export class ActionProcessor {
     executive: any,
     moodChange: number,
     extraUpdates: Record<string, any>,
-    dbTransaction?: any
+    dbTransaction?: DbOrTx
   ): Promise<number> {
     const newMood = this.clampExecutiveMood((executive.mood ?? 0) + moodChange);
     await ctx.storage.updateExecutive(
@@ -967,7 +968,7 @@ export class ActionProcessor {
     ctx: WeekContext,
     moodDelta: number,
     targetExecutive: string,
-    dbTransaction?: any,
+    dbTransaction?: DbOrTx,
     sourceLabel?: string
   ): Promise<void> {
     const { summary } = ctx;

@@ -13,6 +13,7 @@
 import { GameState, Artist, Project, Role, WeeklyAction, Song, Release, ReleaseSong } from '../schema';
 import { generateEmails } from "@shared/engine/EmailGenerator";
 import { ServerGameData } from '../../server/data/gameData';
+import type { DbOrTx } from '@shared/types/db';
 import { FinancialSystem } from './FinancialSystem';
 import { ChartService } from './ChartService';
 import { AchievementsEngine } from './AchievementsEngine';
@@ -143,7 +144,7 @@ export class GameEngine {
    * @param weeklyActions - Actions selected by the player this week
    * @returns Updated game state and summary of changes
    */
-  async advanceWeek(weeklyActions: GameEngineAction[], dbTransaction?: any, options?: {
+  async advanceWeek(weeklyActions: GameEngineAction[], dbTransaction?: DbOrTx, options?: {
     // Mandatory Side Events ("Crisis on the Desk"): the player's resolution for
     // the pending crisis, carried WITH the advance request (mirrors the optional
     // expectedCurrentWeek guard). Applied during this advance, queued like a
@@ -548,7 +549,7 @@ export class GameEngine {
     this.gameState.flags = flags;
   }
 
-  private async generateAndPersistEmails(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async generateAndPersistEmails(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     console.log('[EMAIL GENERATION] Starting email generation for week', summary.week);
 
     if (!this.storage || !this.storage.createEmails) {
@@ -682,7 +683,7 @@ export class GameEngine {
    * engine's single seeded RNG stream — preserving draw ORDER, which is behavior
    * (see processors/types.ts). Do not hand processors a fresh RNG.
    */
-  private weekContext(summary: WeekSummary, dbTransaction?: any): WeekContext {
+  private weekContext(summary: WeekSummary, dbTransaction?: DbOrTx): WeekContext {
     return {
       gameState: this.gameState,
       summary,
@@ -694,14 +695,14 @@ export class GameEngine {
     };
   }
 
-  private async processAROfficeWeekly(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async processAROfficeWeekly(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     return new AROfficeProcessor().processAROfficeWeekly(this.weekContext(summary, dbTransaction));
   }
 
   /**
    * Processes a single player action
    */
-  private async processAction(action: GameEngineAction, summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async processAction(action: GameEngineAction, summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     return new ActionProcessor().processAction(
       this.weekContext(summary, dbTransaction),
       action,
@@ -736,7 +737,7 @@ export class GameEngine {
    */
   private async resolveAutonomousExecMeetings(
     summary: WeekSummary,
-    dbTransaction?: any,
+    dbTransaction?: DbOrTx,
     headArBusyWithAROffice = false,
   ): Promise<void> {
     const storage = this.storage;
@@ -1029,7 +1030,7 @@ export class GameEngine {
    * check — escalation runs first in the pipeline, so it wins ties by
    * construction; first-set wins, matching the roll's existing discard rule).
    */
-  private async applyEscalation(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async applyEscalation(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     const pending = (summary as any)._pendingEscalation as
       | { roleId: string; eventId: string }
       | undefined;
@@ -1129,7 +1130,7 @@ export class GameEngine {
    * and every isolated seed are untouched (GM-safe when the queue is empty,
    * which is every pre-slice save: `flags.scheduled_events` simply never exists).
    */
-  private async promoteScheduledEvents(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async promoteScheduledEvents(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     const flags = (this.gameState.flags || {}) as Record<string, any>;
     this.gameState.flags = flags;
 
@@ -1312,7 +1313,7 @@ export class GameEngine {
    * Processes ongoing projects (recordings, tours, etc)
    * NOTE: This function is currently unused but kept for potential future use
    */
-  // private async processOngoingProjects(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  // private async processOngoingProjects(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
   //   // Projects are now managed via flags since they're not part of database gameState
   //   const flags = this.gameState.flags || {};
   //   const projects = (flags as any)['active_projects'] || [];
@@ -1349,7 +1350,7 @@ export class GameEngine {
    */
   // DELEGATED TO ReleaseProcessor (Phase 2 engine-seams PR-10). Same-signature
   // wrapper; still called from advanceWeek.
-  private async processReleasedProjects(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async processReleasedProjects(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     return new ReleaseProcessor().processReleasedProjects(
       this.weekContext(summary, dbTransaction),
       summary
@@ -1362,7 +1363,7 @@ export class GameEngine {
    */
   // DELEGATED TO ReleaseProcessor (Phase 2 engine-seams PR-10). Same-signature
   // wrapper; still called from advanceWeek.
-  private async processLeadSingles(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async processLeadSingles(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     return new ReleaseProcessor().processLeadSingles(
       this.weekContext(summary, dbTransaction),
       summary,
@@ -1372,7 +1373,7 @@ export class GameEngine {
 
   // Buzz-v2 slice 3: DELEGATED TO ReleaseProcessor. Pre-release anticipation build
   // for planned releases carrying a metadata.preCampaign block.
-  private async processPreCampaigns(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async processPreCampaigns(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     return new ReleaseProcessor().processPreCampaigns(
       this.weekContext(summary, dbTransaction),
       summary,
@@ -1386,7 +1387,7 @@ export class GameEngine {
    */
   // DELEGATED TO ReleaseProcessor (Phase 2 engine-seams PR-10). Same-signature
   // wrapper; still called from advanceWeek.
-  private async processPlannedReleases(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async processPlannedReleases(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     return new ReleaseProcessor().processPlannedReleases(
       this.weekContext(summary, dbTransaction),
       summary,
@@ -1412,7 +1413,7 @@ export class GameEngine {
    */
   // DELEGATED TO SongGenerationProcessor (Phase 2 engine-seams PR-8). Same-signature
   // wrapper; still called from advanceWeek (stays in engine until later PRs).
-  private async processRecordingProjects(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async processRecordingProjects(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     return new SongGenerationProcessor().processRecordingProjects(
       this.weekContext(summary, dbTransaction),
       dbTransaction
@@ -1497,7 +1498,7 @@ export class GameEngine {
    * Processes changes accumulated in summary.artistChanges[artistId].mood/energy
    * Note: Artist loyalty was refactored to energy
    */
-  private async applyArtistChangesToDatabase(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async applyArtistChangesToDatabase(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     return new ArtistStateProcessor().applyArtistChangesToDatabase(
       this.weekContext(summary, dbTransaction),
       dbTransaction
@@ -1511,7 +1512,7 @@ export class GameEngine {
    * 2. Workload stress (too many projects)
    * 3. Natural drift toward neutral (50)
    */
-  private async processWeeklyMoodChanges(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async processWeeklyMoodChanges(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     return new ArtistStateProcessor().processWeeklyMoodChanges(this.weekContext(summary, dbTransaction));
   }
 
@@ -1519,7 +1520,7 @@ export class GameEngine {
    * Volatility-economy slice 1: passive artist-energy lifecycle
    * (recording drain + idle recovery). Delegates to ArtistStateProcessor.
    */
-  private async processWeeklyEnergyLifecycle(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async processWeeklyEnergyLifecycle(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     return new ArtistStateProcessor().processWeeklyEnergyLifecycle(this.weekContext(summary, dbTransaction));
   }
 
@@ -1528,7 +1529,7 @@ export class GameEngine {
    * UNIFIED FORMAT: Now reads from per-artist objects (artistChanges[artistId].popularity)
    * Mirrors processWeeklyMoodChanges pattern for consistency
    */
-  private async processWeeklyPopularityChanges(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async processWeeklyPopularityChanges(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     return new ArtistStateProcessor().processWeeklyPopularityChanges(this.weekContext(summary, dbTransaction));
   }
 
@@ -1537,7 +1538,7 @@ export class GameEngine {
    * - Loyalty decays when executives are ignored for 3+ weeks
    * - Mood naturally drifts toward neutral (50) over time
    */
-  private async processExecutiveMoodDecay(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async processExecutiveMoodDecay(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     return new ArtistStateProcessor().processExecutiveMoodDecay(
       this.weekContext(summary, dbTransaction),
       dbTransaction
@@ -1566,7 +1567,7 @@ export class GameEngine {
    * ARRIVAL week; the pending event belongs to (and is consumed during) that
    * same week.
    */
-  private async checkForEvents(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async checkForEvents(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     const currentWeek = this.gameState.currentWeek || 0;
     const flags = (this.gameState.flags || {}) as Record<string, any>;
     this.gameState.flags = flags;
@@ -1702,7 +1703,7 @@ export class GameEngine {
   private async processPendingSideEventResolution(
     summary: WeekSummary,
     sideEventChoice: { eventId: string; choiceId: string } | null,
-    dbTransaction?: any
+    dbTransaction?: DbOrTx
   ): Promise<void> {
     if (!sideEventChoice) return;
 
@@ -1944,7 +1945,7 @@ export class GameEngine {
   /**
    * Process weekly charts after releases have been processed
    */
-  private async processWeeklyCharts(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async processWeeklyCharts(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     try {
       // Generate chart week from current week
       const chartWeek = ChartService.generateChartWeekFromGameWeek(this.gameState.currentWeek || 1);
@@ -1984,7 +1985,13 @@ export class GameEngine {
       this.applyChartMilestoneBonuses(currentWeekEntries, summary);
     } catch (error) {
       console.error('[CHART PROCESSING] Error generating weekly chart:', error);
-      // Don't throw - chart generation should not break weekly processing
+      // Don't throw - chart generation should not break weekly processing.
+      // C108 observability slice (mirrors C55): the swallow semantics stay
+      // (rethrow-vs-log is PENDING-DECISIONS #11) — but the week summary now
+      // carries a structured signal so UI/telemetry can surface that the week
+      // committed WITHOUT its chart rows/updates/milestone bonuses. Only set on
+      // failure (snapshot-safe).
+      summary.chartGenerationFailed = true;
     }
   }
 
@@ -2184,7 +2191,7 @@ export class GameEngine {
   // wrapper; still called from advanceWeek. The processor calls TourProcessor
   // directly for mid-tour city revenue (same behavior as the old inline
   // this.processUnifiedTourRevenue delegate call).
-  private async advanceProjectStages(summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  private async advanceProjectStages(summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     return new ProjectStageProcessor().advanceProjectStages(
       this.weekContext(summary, dbTransaction),
       summary,

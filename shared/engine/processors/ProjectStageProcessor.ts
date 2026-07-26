@@ -35,11 +35,12 @@
  * the pre-extraction engine, which required the tx and early-returned without one).
  */
 import type { WeekContext } from './types';
+import type { DbOrTx } from '@shared/types/db';
 import type { WeekSummary } from '../../types/gameTypes';
 import { TourProcessor } from './TourProcessor';
 
 export class ProjectStageProcessor {
-  async advanceProjectStages(ctx: WeekContext, summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  async advanceProjectStages(ctx: WeekContext, summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     if (!dbTransaction) {
       console.warn('[PROJECT ADVANCEMENT] No database transaction provided - cannot advance project stages');
       return;
@@ -133,7 +134,7 @@ export class ProjectStageProcessor {
           // eventual city-1 reveal's pre-variance numbers.
           if (project.type === 'Mini-Tour') {
             try {
-              const artist = await ctx.gameData.getArtistById(project.artistId);
+              const artist = await ctx.gameData.getArtistById(project.artistId!);
               const fore = TourProcessor.estimatePlanningForeshadow(ctx, project, artist);
               const artistName = artist?.name;
               summary.changes.push({
@@ -146,7 +147,7 @@ export class ProjectStageProcessor {
                 estTickets: fore.estTickets,
                 cityNumber: 1,
                 citiesTotal: fore.citiesTotal,
-                artistId: project.artistId,
+                artistId: project.artistId ?? undefined,
                 artistName
               });
             } catch (error) {
@@ -157,7 +158,7 @@ export class ProjectStageProcessor {
           // production -> marketing/completed
           if (!isRecordingProject && project.type === 'Mini-Tour') {
             // Enhanced tour logic: 1 week per city + planning week
-            const citiesPlanned = project.metadata?.cities || 1;
+            const citiesPlanned = (project.metadata as any)?.cities || 1;
             const weeksInProduction = weeksElapsed - 1; // Subtract planning week
 
             if (weeksInProduction >= citiesPlanned) {
@@ -166,7 +167,7 @@ export class ProjectStageProcessor {
               // to detect completion only on the NEXT advance). Fall through to a
               // pure completion when weeksInProduction has already passed the
               // final city (legacy in-flight saves that predate this fix).
-              let tourStats = project.metadata?.tourStats;
+              let tourStats = (project.metadata as any)?.tourStats;
               if (weeksInProduction === citiesPlanned && weeksInProduction > 0) {
                 // processUnifiedTourRevenue returns the UPDATED tourStats
                 // (including this final city) — the project row fetched at loop

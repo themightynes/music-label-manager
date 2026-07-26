@@ -1003,4 +1003,9 @@ export interface WeekSummary {
   // was swallowed (the week committed WITHOUT its emails). Optional/additive —
   // only ever set on failure, so successful weeks are byte-identical.
   emailGenerationFailed?: boolean;
+  // C108 observability: true when weekly chart generation/persistence threw and
+  // was swallowed (the week committed WITHOUT chart rows, chartUpdates, or
+  // chart-milestone bonuses). Optional/additive — only ever set on failure, so
+  // successful weeks are byte-identical.
+  chartGenerationFailed?: boolean;
 }

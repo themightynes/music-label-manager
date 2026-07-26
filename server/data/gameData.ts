@@ -1,6 +1,7 @@
 import { gameDataLoader } from '../../shared/utils/dataLoader';
 import { applyStartingMoneyMultiplier, type DifficultyLevel } from '../../shared/utils/startingValues';
 import { DEFAULT_EXEC_DELEGATION_CONFIG, type ExecDelegationConfig } from '../../shared/utils/executiveDelegation';
+import type { DbOrTx } from '@shared/types/db';
 import type { 
   GameDataFiles, 
   GameArtist, 
@@ -1218,7 +1219,7 @@ export class ServerGameData {
     return storage.getSongsByGame(gameId);
   }
 
-  async getSongsByArtist(artistId: string, gameId: string, dbTransaction?: any) {
+  async getSongsByArtist(artistId: string, gameId: string, dbTransaction?: DbOrTx) {
     console.log('[ServerGameData] getSongsByArtist called with:', { artistId, gameId, transaction: !!dbTransaction });
     try {
       // Engine-verbs M1b: optional tx pass-through so spawn_release's
@@ -1245,7 +1246,7 @@ export class ServerGameData {
     return storage.createRelease(release);
   }
 
-  async getReleasesByGame(gameId: string, dbTransaction?: any) {
+  async getReleasesByGame(gameId: string, dbTransaction?: DbOrTx) {
     console.log('[ServerGameData] 📦 getReleasesByGame called');
     console.log('[ServerGameData] 🎮 Game ID:', gameId);
     console.log('[ServerGameData] 💾 Transaction available:', !!dbTransaction);
@@ -1277,7 +1278,7 @@ export class ServerGameData {
     }
   }
 
-  async getPlannedReleases(gameId: string, week: number, dbTransaction?: any) {
+  async getPlannedReleases(gameId: string, week: number, dbTransaction?: DbOrTx) {
     console.log('[ServerGameData] getPlannedReleases called for gameId:', gameId, 'week:', week, 'transaction:', !!dbTransaction);
     try {
       const plannedReleases = await storage.getPlannedReleases(gameId, week, dbTransaction);
@@ -1289,7 +1290,7 @@ export class ServerGameData {
     }
   }
 
-  async getSongsByRelease(releaseId: string, dbTransaction?: any) {
+  async getSongsByRelease(releaseId: string, dbTransaction?: DbOrTx) {
     console.log('[ServerGameData] 🎵 getSongsByRelease called');
     console.log('[ServerGameData] 📀 Release ID:', releaseId);
     console.log('[ServerGameData] 💾 Transaction available:', !!dbTransaction);
@@ -1320,7 +1321,7 @@ export class ServerGameData {
     }
   }
 
-  async updateReleaseStatus(releaseId: string, status: string, metadata?: any, dbTransaction?: any) {
+  async updateReleaseStatus(releaseId: string, status: string, metadata?: any, dbTransaction?: DbOrTx) {
     console.log('[ServerGameData] updateReleaseStatus called for release:', releaseId, 'status:', status, 'transaction:', !!dbTransaction);
     try {
       const result = await storage.updateReleaseStatus(releaseId, status, metadata, dbTransaction);
@@ -1344,7 +1345,7 @@ export class ServerGameData {
     }
   }
 
-  async updateSongs(songUpdates: any[], dbTransaction?: any) {
+  async updateSongs(songUpdates: any[], dbTransaction?: DbOrTx) {
     console.log('[ServerGameData] 🎯🎯🎯 === UPDATESONGS CALLED === 🎯🎯🎯');
     console.log('[ServerGameData] 📦 Number of updates:', songUpdates.length);
     console.log('[ServerGameData] 💾 Transaction available:', !!dbTransaction);

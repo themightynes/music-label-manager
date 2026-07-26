@@ -16,6 +16,7 @@
 import type { InsertChartEntry, ChartEntry as DbChartEntry } from '../schema';
 import type { CompetitorSong, SongPerformance } from '../types/gameTypes';
 import { calculateChartMovement } from '../utils/chartUtils';
+import type { DbOrTx } from '@shared/types/db';
 import { DEFAULT_CHART_COMPETITORS } from './chartCompetitors';
 
 // Song data interface for chart operations
@@ -30,15 +31,15 @@ export interface ReleasedSongData {
 // Storage interface for chart operations
 export interface IChartStorage {
   // Song-related operations
-  getReleasedSongsByGame(gameId: string, dbTransaction?: any): Promise<ReleasedSongData[]>;
+  getReleasedSongsByGame(gameId: string, dbTransaction?: DbOrTx): Promise<ReleasedSongData[]>;
 
   // Chart entry operations
   // NOTE: Implementation should use upsert semantics (ON CONFLICT DO NOTHING)
   // to handle duplicate insertions gracefully with the unique index
-  createChartEntries(entries: InsertChartEntry[], dbTransaction?: any): Promise<void>;
-  getChartEntriesBySongAndGame(songId: string, gameId: string, dbTransaction?: any): Promise<DbChartEntry[]>;
-  getChartEntriesByWeekAndGame(chartWeek: Date, gameId: string, dbTransaction?: any): Promise<DbChartEntry[]>; // chartWeek: Date object
-  getChartEntriesBySongsAndGame(songIds: string[], gameId: string, dbTransaction?: any): Promise<DbChartEntry[]>;
+  createChartEntries(entries: InsertChartEntry[], dbTransaction?: DbOrTx): Promise<void>;
+  getChartEntriesBySongAndGame(songId: string, gameId: string, dbTransaction?: DbOrTx): Promise<DbChartEntry[]>;
+  getChartEntriesByWeekAndGame(chartWeek: Date, gameId: string, dbTransaction?: DbOrTx): Promise<DbChartEntry[]>; // chartWeek: Date object
+  getChartEntriesBySongsAndGame(songIds: string[], gameId: string, dbTransaction?: DbOrTx): Promise<DbChartEntry[]>;
 }
 
 interface ChartServiceOptions {
@@ -78,7 +79,7 @@ export class ChartService {
    * @param chartWeek Date object or ISO date string (YYYY-MM-DD) representing the first day of the week
    * @param dbTransaction Optional database transaction
    */
-  async generateWeeklyChart(chartWeek: Date | string, dbTransaction?: any): Promise<void> {
+  async generateWeeklyChart(chartWeek: Date | string, dbTransaction?: DbOrTx): Promise<void> {
     try {
       // Get active player songs (released songs with streaming data)
       const playerSongs = await this.getActiveSongs(dbTransaction);
@@ -101,7 +102,7 @@ export class ChartService {
   /**
    * Gets active player songs that are eligible for charting
    */
-  private async getActiveSongs(dbTransaction?: any): Promise<SongPerformance[]> {
+  private async getActiveSongs(dbTransaction?: DbOrTx): Promise<SongPerformance[]> {
     try {
       // Get all released songs with streaming data for this game
       const releasedSongs = await this.storage.getReleasedSongsByGame(this.gameId, dbTransaction);
@@ -180,7 +181,7 @@ export class ChartService {
    * @param chartWeek Date object or ISO date string (YYYY-MM-DD) representing the first day of the week
    * @param dbTransaction Optional database transaction
    */
-  private async createChartEntries(chartWeek: Date | string, rankedSongs: SongPerformance[], dbTransaction?: any): Promise<void> {
+  private async createChartEntries(chartWeek: Date | string, rankedSongs: SongPerformance[], dbTransaction?: DbOrTx): Promise<void> {
     // Normalize chart week to Date object for calculations, then convert to string for database
     const normalizedChartWeek = this.toDbDate(chartWeek);
     const chartWeekString = normalizedChartWeek.toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -363,7 +364,7 @@ export class ChartService {
    * @param currentChartWeek Date object or ISO date string (YYYY-MM-DD)
    * @param dbTransaction Optional database transaction
    */
-  private async isFirstTimeCharting(songId: string, currentChartWeek: Date | string, dbTransaction?: any): Promise<boolean> {
+  private async isFirstTimeCharting(songId: string, currentChartWeek: Date | string, dbTransaction?: DbOrTx): Promise<boolean> {
     try {
       const previousEntries = await this.storage.getChartEntriesBySongAndGame(songId, this.gameId, dbTransaction);
 
@@ -472,7 +473,7 @@ export class ChartService {
    * Gets chart entries for the current week with song details for summary display
    * @param dbTransaction Optional database transaction
    */
-  async getCurrentWeekChartEntries(chartWeek: Date | string, dbTransaction?: any): Promise<Array<DbChartEntry & {
+  async getCurrentWeekChartEntries(chartWeek: Date | string, dbTransaction?: DbOrTx): Promise<Array<DbChartEntry & {
     songTitle: string;
     artistName: string;
     weeksOnChart: number;
@@ -555,7 +556,7 @@ export class ChartService {
   /**
    * Builds a map of songs for efficient lookup
    */
-  private async buildSongsMap(dbTransaction?: any): Promise<Map<string, ReleasedSongData>> {
+  private async buildSongsMap(dbTransaction?: DbOrTx): Promise<Map<string, ReleasedSongData>> {
     if (this.songsCache) {
       return this.songsCache;
     }
@@ -570,7 +571,7 @@ export class ChartService {
   /**
    * Batch fetches chart data for multiple songs to optimize API performance
    */
-  async getBatchChartData(songIds: string[], dbTransaction?: any): Promise<Map<string, {
+  async getBatchChartData(songIds: string[], dbTransaction?: DbOrTx): Promise<Map<string, {
     currentPosition: number | null;
     movement: number;
     weeksOnChart: number;
@@ -696,7 +697,7 @@ export class ChartService {
   /**
    * Gets Top 10 chart data with enhanced details for UI display
    */
-  async getTop10ChartData(chartWeek: Date | string, dbTransaction?: any): Promise<Array<{
+  async getTop10ChartData(chartWeek: Date | string, dbTransaction?: DbOrTx): Promise<Array<{
     position: number;
     songId: string | null;
     songTitle: string;

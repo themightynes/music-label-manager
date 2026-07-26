@@ -37,6 +37,7 @@
  *   the golden-master tour snapshot was regenerated for this.
  */
 import type { WeekContext } from './types';
+import type { DbOrTx } from '@shared/types/db';
 import { VenueCapacityManager } from '../FinancialSystem';
 import { popularitySaturationMultiplier } from '../../utils/popularitySaturation';
 
@@ -45,7 +46,7 @@ export class TourProcessor {
    * Processes tour revenue using unified FinancialSystem calculations
    * Replaces legacy random-based city revenue system
    */
-  async processUnifiedTourRevenue(ctx: WeekContext, project: any, cityNumber: number, dbTransaction?: any): Promise<any> {
+  async processUnifiedTourRevenue(ctx: WeekContext, project: any, cityNumber: number, dbTransaction?: DbOrTx): Promise<any> {
     const { summary } = ctx;
     console.log(`[UNIFIED TOUR] Processing city ${cityNumber} for tour "${project.title}"`);
 
@@ -330,7 +331,7 @@ export class TourProcessor {
     ctx: WeekContext,
     artistId: string,
     cityData: any,
-    dbTransaction: any
+    dbTransaction?: DbOrTx
   ): Promise<{ moodChange: number; popularityChange: number }> {
     const { summary } = ctx;
     try {

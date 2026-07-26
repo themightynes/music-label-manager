@@ -25,6 +25,7 @@
 import type { GameState } from '../../schema';
 import type { WeekSummary } from '../../types/gameTypes';
 import type { ServerGameData } from '../../../server/data/gameData';
+import type { DbOrTx } from '@shared/types/db';
 import type { FinancialSystem } from '../FinancialSystem';
 
 export interface WeekContext {
@@ -51,5 +52,5 @@ export interface WeekContext {
    */
   getRandom: (min: number, max: number) => number;
   /** Optional per-step DB transaction handle, threaded verbatim (D6). */
-  dbTransaction?: any;
+  dbTransaction?: DbOrTx;
 }

@@ -28,6 +28,7 @@
  * `(engine as any).method`) keep working byte-for-byte.
  */
 import type { WeekContext } from './types';
+import type { DbOrTx } from '@shared/types/db';
 import type { Artist } from '../../schema';
 import type { WeekSummary, GameArtist } from '../../types/gameTypes';
 import { ArtistChangeHelpers } from '../../types/gameTypes';
@@ -40,7 +41,7 @@ export class ArtistStateProcessor {
    * Processes changes accumulated in summary.artistChanges[artistId].mood/energy
    * Note: Artist loyalty was refactored to energy
    */
-  async applyArtistChangesToDatabase(ctx: WeekContext, dbTransaction?: any): Promise<void> {
+  async applyArtistChangesToDatabase(ctx: WeekContext, dbTransaction?: DbOrTx): Promise<void> {
     const { summary } = ctx;
     // Check if there are any artist changes to apply
     if (!summary.artistChanges || Object.keys(summary.artistChanges).length === 0) {
@@ -458,7 +459,7 @@ export class ArtistStateProcessor {
    * - Loyalty decays when executives are ignored for 3+ weeks
    * - Mood naturally drifts toward neutral (50) over time
    */
-  async processExecutiveMoodDecay(ctx: WeekContext, dbTransaction?: any): Promise<void> {
+  async processExecutiveMoodDecay(ctx: WeekContext, dbTransaction?: DbOrTx): Promise<void> {
     const { summary } = ctx;
     try {
       // Check if storage has executive methods

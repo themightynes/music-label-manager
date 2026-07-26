@@ -16,6 +16,7 @@
 import type { WeekSummary } from '../types/gameTypes';
 import type { WeeklyFinancials } from './game-engine';
 import { MAX_REPUTATION_FALLBACK } from '../utils/reputationScaling';
+import type { DbOrTx } from '@shared/types/db';
 
 /**
  * Types for tour calculation parameters and results
@@ -315,7 +316,7 @@ export class InvestmentTracker {
    */
   private async applyMarketingAllocations(
     updates: Array<{ songId: string; marketingAllocation: number }>,
-    dbTransaction?: any
+    dbTransaction?: DbOrTx
   ): Promise<void> {
     if (!updates || updates.length === 0) return;
     await this.storage.updateSongs(updates, dbTransaction);
@@ -329,7 +330,7 @@ export class InvestmentTracker {
     songId: string,
     projectId: string,
     productionBudget: number,
-    dbTransaction?: any
+    dbTransaction?: DbOrTx
   ): Promise<void> {
     await this.storage.updateSong(songId, {
       projectId,
@@ -344,7 +345,7 @@ export class InvestmentTracker {
   async allocateMarketingInvestment(
     releaseId: string,
     totalMarketingBudget: number,
-    dbTransaction?: any
+    dbTransaction?: DbOrTx
   ): Promise<{ allocations: Array<{ songId: string; delta: number }>; skipped: boolean }> {
     // Idempotency: check release metadata flag and set it within the same transaction
     const release = await this.storage.getRelease(releaseId, dbTransaction);
@@ -394,7 +395,7 @@ export class InvestmentTracker {
     releaseId: string,
     songId: string,
     amount: number,
-    dbTransaction?: any
+    dbTransaction?: DbOrTx
   ): Promise<{ allocations: Array<{ songId: string; delta: number }>; skipped: boolean }> {
     const release = await this.storage.getRelease(releaseId, dbTransaction);
     const releaseMeta = (release?.metadata as any) || {};
@@ -425,7 +426,7 @@ export class InvestmentTracker {
   /**
    * Gets comprehensive investment metrics for an artist
    */
-  async getArtistInvestmentMetrics(artistId: string, gameId: string, dbTransaction?: any): Promise<{
+  async getArtistInvestmentMetrics(artistId: string, gameId: string, dbTransaction?: DbOrTx): Promise<{
     totalProductionInvestment: number;
     totalMarketingInvestment: number;
     totalInvestment: number;

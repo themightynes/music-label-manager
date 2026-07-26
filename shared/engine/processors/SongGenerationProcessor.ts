@@ -36,6 +36,7 @@
  * as the pre-extraction engine methods called them.
  */
 import type { WeekContext } from './types';
+import type { DbOrTx } from '@shared/types/db';
 import type { WeekSummary } from '../../types/gameTypes';
 import { FinancialSystem } from '../FinancialSystem';
 
@@ -64,7 +65,7 @@ export function computeMoodVarianceWiden(
 }
 
 export class SongGenerationProcessor {
-  async processRecordingProjects(ctx: WeekContext, dbTransaction?: any): Promise<void> {
+  async processRecordingProjects(ctx: WeekContext, dbTransaction?: DbOrTx): Promise<void> {
     const { summary } = ctx;
 
     try {
@@ -202,7 +203,7 @@ export class SongGenerationProcessor {
   /**
    * Generates songs for a recording project during weekly processing
    */
-  async generateWeeklyProjectSongs(ctx: WeekContext, project: any, summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  async generateWeeklyProjectSongs(ctx: WeekContext, project: any, summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
 
     try {
       const artist = await ctx.gameData.getArtistById(project.artistId);

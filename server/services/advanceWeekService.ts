@@ -186,6 +186,23 @@ export class AdvanceWeekService {
         .from(artists)
         .where(eq(artists.gameId, gameId));
 
+      // C109 (determinism heisenbug): resolve the RNG seed ONCE, persisting it on
+      // first use. Previously the fallback `?? Math.random()...` (below) generated a
+      // FRESH seed on EVERY advance for any row lacking a seed, silently breaking
+      // the seeded-RNG determinism the engine otherwise maintains (golden-master
+      // reproduction, save replay, seeded gambles). Persist-on-first-use guarantees
+      // the fallback can never fire twice for the same row. Rows that ALREADY have a
+      // seed take no extra write and behave identically (golden master unaffected).
+      let resolvedRngSeed = gameState.rngSeed;
+      if (!resolvedRngSeed) {
+        resolvedRngSeed = Math.random().toString(36).substring(7);
+        await tx
+          .update(gameStates)
+          .set({ rngSeed: resolvedRngSeed })
+          .where(eq(gameStates.id, gameId));
+        console.warn(`[RNG] gameState ${gameId} had no rngSeed; generated and persisted "${resolvedRngSeed}" to restore determinism.`);
+      }
+
       // Convert database gameState to proper GameState type
       const gameStateForEngine = {
         ...gameState,
@@ -203,7 +220,7 @@ export class AdvanceWeekService {
         pressAccess: gameState.pressAccess ?? 'none',
         venueAccess: gameState.venueAccess ?? 'none',
         campaignType: gameState.campaignType ?? 'standard',
-        rngSeed: gameState.rngSeed ?? Math.random().toString(36).substring(7),
+        rngSeed: resolvedRngSeed,
         flags: gameState.flags ?? {},
         weeklyStats: gameState.weeklyStats ?? {},
         // BUGFIX: Reset campaignCompleted flag if we're clearly not at the end

@@ -56,6 +56,7 @@
  * The processor is stateless — all state flows through the `WeekContext`.
  */
 import type { WeekContext } from './types';
+import type { DbOrTx } from '@shared/types/db';
 import type { WeekSummary } from '../../types/gameTypes';
 import { ArtistChangeHelpers } from '../../types/gameTypes';
 import { getSeasonFromWeek, getSeasonalMultiplier } from '../../utils/seasonalCalculations';
@@ -1218,7 +1219,7 @@ export class ReleaseProcessor {
    * attachedHype seed (slice 2): the seed is additive to whatever awareness the song
    * already built here.
    */
-  async processPreCampaigns(ctx: WeekContext, summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  async processPreCampaigns(ctx: WeekContext, summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     const currentWeek = ctx.gameState.currentWeek || 1;
 
     try {
@@ -1342,7 +1343,7 @@ export class ReleaseProcessor {
    * Processes lead singles that are scheduled for release this week (before the main release)
    * Checks all planned releases for lead single strategies and releases them early
    */
-  async processLeadSingles(ctx: WeekContext, summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  async processLeadSingles(ctx: WeekContext, summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     const currentWeek = ctx.gameState.currentWeek || 1;
     
     try {
@@ -1462,7 +1463,7 @@ export class ReleaseProcessor {
    * Processes planned releases that are scheduled for the current week
    * This executes the release, generates initial revenue, and updates song statuses
    */
-  async processPlannedReleases(ctx: WeekContext, summary: WeekSummary, dbTransaction?: any): Promise<void> {
+  async processPlannedReleases(ctx: WeekContext, summary: WeekSummary, dbTransaction?: DbOrTx): Promise<void> {
     
     try {
       // Get planned releases scheduled for this week
