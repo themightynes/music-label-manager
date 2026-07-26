@@ -342,13 +342,19 @@ export function summarizeAnticipation(songs: any[] | null | undefined): string |
  *
  * PURE display helper backing the "Cancel release" confirmation dialog. It
  * derives the refund PREVIEW the same way the server DELETE endpoint computes
- * the authoritative refund (fork E). The money is ONE POT: the full paid amount
- * (main marketing + lead single) is stored on `release.marketingBudget`, and the
- * pre-campaign pot is a SHARE of it. Refund = marketingBudget MINUS the
- * pre-campaign share already converted to awareness (spentToDate, clamped into
- * [0, preCampaign.totalBudget]), floored at 0. The dialog shows this as a
- * preview; the store adopts the server's returned refundedAmount as the source
- * of truth.
+ * the authoritative refund (releasePlanningService.deleteRelease — keep the two
+ * in lockstep). The money is ONE POT: the full paid amount (main marketing +
+ * lead single) is stored on `release.marketingBudget`, and the pre-campaign pot
+ * is a SHARE of it. Refund = marketingBudget MINUS the pre-campaign share
+ * already converted to awareness (spentToDate, clamped into
+ * [0, preCampaign.totalBudget]) MINUS the lead-single share when the lead
+ * single already SHIPPED (C83 — its song row is released, so that marketing
+ * converted too; detected from the optional `songs` arg, any array containing
+ * the lead single's song row, e.g. the card's releaseSongs), floored at 0.
+ * Without songs data the lead-single deduction cannot be detected and is
+ * skipped (preview may then over-state; the server stays authoritative). The
+ * dialog shows this as a preview; the store adopts the server's returned
+ * refundedAmount as the source of truth.
  *
  * The consequence lines are QUALITATIVE (fork E standing rule): no ×N multiplier
  * strings anywhere. `hasPreBuzz` gates whether the "anticipation lost" line is
@@ -366,14 +372,15 @@ export interface CancelReleasePreview {
   consequences: string[];
 }
 
-export function summarizeCancelRelease(release: any): CancelReleasePreview {
+export function summarizeCancelRelease(release: any, songs?: any[] | null): CancelReleasePreview {
   const metadata = (release?.metadata ?? {}) as Record<string, any>;
   const marketingBudget = typeof release?.marketingBudget === 'number' ? release.marketingBudget : 0;
 
   const preCampaign = metadata.preCampaign;
   const hasPreCampaign = !!preCampaign && typeof preCampaign === 'object';
   // Converted share: spentToDate clamped into [0, totalBudget] so drift can
-  // neither over- nor under-credit (mirrors the server rule exactly).
+  // neither over- nor under-credit (mirrors the server rule exactly:
+  // releasePlanningService.deleteRelease).
   const spentPreCampaign = hasPreCampaign
     ? Math.min(
         Math.max(0, typeof preCampaign.spentToDate === 'number' ? preCampaign.spentToDate : 0),
@@ -381,7 +388,26 @@ export function summarizeCancelRelease(release: any): CancelReleasePreview {
       )
     : 0;
 
-  const refundAmount = Math.max(0, marketingBudget - spentPreCampaign);
+  // C83 — lead-single share, mirroring releasePlanningService.deleteRelease:
+  // when the lead single already SHIPPED (its song row isReleased/is_released),
+  // its stored budget share converted like a spent pre-campaign share and is
+  // deducted from the refund. Same read priority as the server/engine:
+  // leadSingleBudgetBreakdown first, then legacy leadSingleBudget; negatives
+  // ignored (drift guard only). Without the song row in `songs`, no deduction —
+  // the server result stays authoritative.
+  const leadSingleStrategy = metadata.leadSingleStrategy;
+  let spentLeadSingle = 0;
+  if (leadSingleStrategy?.leadSingleId) {
+    const leadSong = (songs ?? []).find((s) => s?.id === leadSingleStrategy.leadSingleId);
+    if (leadSong && Boolean(leadSong.isReleased ?? leadSong.is_released)) {
+      const breakdown = leadSingleStrategy.leadSingleBudgetBreakdown
+        || leadSingleStrategy.leadSingleBudget || {};
+      spentLeadSingle = Object.values(breakdown as Record<string, unknown>)
+        .reduce((sum: number, v) => sum + (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0), 0);
+    }
+  }
+
+  const refundAmount = Math.max(0, marketingBudget - spentPreCampaign - spentLeadSingle);
 
   // A pre-campaign share was diverted → anticipation was (or is being) built.
   const hasPreBuzz = hasPreCampaign

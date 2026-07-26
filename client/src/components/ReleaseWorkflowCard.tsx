@@ -99,7 +99,7 @@ export function ReleaseWorkflowCard({
   // The refund preview + consequence copy come from the pure helper (fork E);
   // the store adopts the server's authoritative refund on confirm.
   const isPlanned = release.status === 'planned';
-  const cancelPreview = isPlanned ? summarizeCancelRelease(release) : null;
+  const cancelPreview = isPlanned ? summarizeCancelRelease(release, releaseSongs) : null;
 
   const handleConfirmCancel = async () => {
     if (isCancelling) return;

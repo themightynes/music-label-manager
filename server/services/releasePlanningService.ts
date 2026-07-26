@@ -474,13 +474,18 @@ export class ReleasePlanningService {
    *     this release row, which is deleted, and nothing re-credits any pool.
    * Everything below runs in ONE transaction with the refund.
    *
-   * KNOWN PRE-EXISTING OVER-REFUND (deliberately NOT changed here; orchestrator
-   * is logging it as debt): the refund includes the lead-single budget share even
-   * when the lead single already shipped and its marketing converted — that
-   * behavior predates this arc.
+   * LEAD-SINGLE SHARE (C83, formerly a known over-refund): the paid pot also
+   * contains the lead-single marketing share (leadSingleStrategy budget, summed
+   * into totalBudget at plan time). If the lead single has ALREADY SHIPPED
+   * (its song row is_released — set by ReleaseProcessor's weekly lead-single
+   * pass), that share converted to streams/marketing exactly like a spent
+   * pre-campaign share, so it is subtracted from the refund too:
+   *   refund = marketingBudget − convertedPreCampaign − convertedLeadSingle,
+   * floored at 0. An unshipped lead single deducts nothing (its share comes
+   * back in full, unchanged from before).
    *
    * Returns the same payload shape the original DELETE handler sent;
-   * `refundedAmount` is the paid pot minus the converted pre-campaign share.
+   * `refundedAmount` is the paid pot minus the converted shares above.
    */
   async deleteRelease(userId: string | undefined, gameId: string, releaseId: string) {
     // Get the release to return marketing budget
@@ -513,7 +518,30 @@ export class ReleasePlanningService {
           typeof preCampaign.totalBudget === 'number' ? preCampaign.totalBudget : 0,
         )
       : 0;
-    const refundedAmount = Math.max(0, (release.marketingBudget || 0) - spentPreCampaign);
+
+    // C83 — lead-single share. If the lead single already SHIPPED (its song row
+    // is_released, set by ReleaseProcessor's weekly lead-single pass), its
+    // budget share of the paid pot converted too, mirroring the pre-campaign
+    // rule above: deduct the STORED lead-single budget (per-channel breakdown
+    // summed, negatives ignored — plan validation rejects them, this only
+    // guards drift), never a client-supplied amount. Unshipped lead single →
+    // deduct nothing (full share refunds, unchanged behavior).
+    const leadSingleStrategy = (release.metadata as any)?.leadSingleStrategy;
+    let spentLeadSingle = 0;
+    if (leadSingleStrategy?.leadSingleId) {
+      const [leadSong] = await this.db.select().from(songs)
+        .where(and(eq(songs.id, leadSingleStrategy.leadSingleId), eq(songs.gameId, gameId)));
+      if (leadSong?.isReleased) {
+        // Same read priority as ReleaseProcessor: breakdown first, then the raw
+        // leadSingleBudget field (legacy rows).
+        const breakdown = leadSingleStrategy.leadSingleBudgetBreakdown
+          || leadSingleStrategy.leadSingleBudget || {};
+        spentLeadSingle = Object.values(breakdown as Record<string, unknown>)
+          .reduce((sum: number, v) => sum + (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0), 0);
+      }
+    }
+
+    const refundedAmount = Math.max(0, (release.marketingBudget || 0) - spentPreCampaign - spentLeadSingle);
 
     // Execute deletion in transaction
     const result = await this.db.transaction(async (tx) => {
