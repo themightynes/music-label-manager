@@ -285,7 +285,12 @@ export class ProgressionProcessor {
     // balance-JSON accessor pattern as every other channel (progression.json
     // reputation_system, via ServerGameData.getAwardConfigSync).
     const awardConfig = ctx.gameData.getAwardConfigSync();
-    const campaignResults = AchievementsEngine.calculateCampaignResults(ctx.gameState, awardConfig);
+    // C62 — thread the roster in so AchievementsEngine can score "successful
+    // artists" (popularity >= threshold). Same storage accessor the engine uses
+    // elsewhere (game-engine.ts:810-815); knobs from progression.json campaign_scoring.
+    const artists = await ctx.storage.getArtistsByGame(ctx.gameState.id, ctx.dbTransaction);
+    const scoringConfig = ctx.gameData.getCampaignScoringConfigSync();
+    const campaignResults = AchievementsEngine.calculateCampaignResults(ctx.gameState, awardConfig, artists, scoringConfig);
 
     // Add campaign completion to summary
     summary.changes.push({

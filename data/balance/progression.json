@@ -7,16 +7,16 @@
     "hit_single_bonus": 3,
     "number_one_bonus": 7,
     "reputation_gain_scaling": 3,
-    "_reputation_gain_scaling_note": "Round-4 REDESIGN (2026-07-25, replaces the round-3 damper): reputation moved from a 0-100 scale to a 0-700 scale so the goalposts stretch instead of the gains shrinking — flagship playlists now open at 510 ('last year should open 500+'). reputation_gain_scaling is now an AMPLIFIER (x3) applied to EVERY reputation delta, GAINS AND LOSSES ALIKE, via shared/utils/reputationScaling.scaleReputationGain (chart milestones, press coverage, PR-push/digital-ads, meeting immediate + delayed effects, the flop sink). Authored content values stay small (+1..+6); applied deltas are authored x3, and the choice-badge preview shows the SAME x3 value, so what the player is promised is exactly what lands. Trajectory anchor: undamped 0-100 pace was ~4.75 rep/week; x3 with authored 3/7 chart bonuses gives ~13/week -> flagship 510 lands ~week 40 of 52. Keep this value in lockstep with DEFAULT_REPUTATION_GAIN_SCALING in shared/utils/reputationScaling.ts (tripwire-tested).",
+    "_reputation_gain_scaling_note": "Round-4 REDESIGN (2026-07-25, replaces the round-3 damper): reputation moved from a 0-100 scale to a 0-700 scale so the goalposts stretch instead of the gains shrinking \u2014 flagship playlists now open at 510 ('last year should open 500+'). reputation_gain_scaling is now an AMPLIFIER (x3) applied to EVERY reputation delta, GAINS AND LOSSES ALIKE, via shared/utils/reputationScaling.scaleReputationGain (chart milestones, press coverage, PR-push/digital-ads, meeting immediate + delayed effects, the flop sink). Authored content values stay small (+1..+6); applied deltas are authored x3, and the choice-badge preview shows the SAME x3 value, so what the player is promised is exactly what lands. Trajectory anchor: undamped 0-100 pace was ~4.75 rep/week; x3 with authored 3/7 chart bonuses gives ~13/week -> flagship 510 lands ~week 40 of 52. Keep this value in lockstep with DEFAULT_REPUTATION_GAIN_SCALING in shared/utils/reputationScaling.ts (tripwire-tested).",
     "flop_penalty": 8,
     "flop_revenue_ratio": 0.3,
     "flop_investment_floor": 10000,
     "flop_artist_mood_penalty": -12,
-    "_flop_artist_mood_penalty_note": "Volatility-economy slice 2: a flop doesn't just cost the label reputation (flop_penalty) — it wounds the release artist's morale. Applied ONCE, alongside the flop reputation sink (same once-only flag, same deterministic gate), to summary.artistChanges[release.artistId].mood; clamped 0-100 downstream. Signed value (negative = a drop). Zero RNG. Round-2 tuning (2026-07-12): flop_penalty 5 -> 8, flop_artist_mood_penalty -8 -> -12.",
+    "_flop_artist_mood_penalty_note": "Volatility-economy slice 2: a flop doesn't just cost the label reputation (flop_penalty) \u2014 it wounds the release artist's morale. Applied ONCE, alongside the flop reputation sink (same once-only flag, same deterministic gate), to summary.artistChanges[release.artistId].mood; clamped 0-100 downstream. Signed value (negative = a drop). Zero RNG. Round-2 tuning (2026-07-12): flop_penalty 5 -> 8, flop_artist_mood_penalty -8 -> -12.",
     "creative_capital_milestones": {
       "cc_top10_bonus": 1,
       "cc_number_one_bonus": 2,
-      "_note": "PENDING-DECISIONS #9 (2026-07-12): milestone-sourced Creative Capital — a small trickle from chart milestones so CC income isn't gated on one cco meeting choice. Fires via GameEngine.applyChartMilestoneBonuses on the SAME once-per-song flags as hit_single_bonus/number_one_bonus: cc_top10_bonus the week a song FIRST enters the top 10, cc_number_one_bonus the week it FIRST hits No. 1. NO-STACK: a #1 debut (both milestones same week) grants max(cc_top10_bonus, cc_number_one_bonus), not the sum — unlike the reputation bonuses, which stack. Not scaled by reputation_gain_scaling. No upper CC cap exists in the engine (floor 0 only)."
+      "_note": "PENDING-DECISIONS #9 (2026-07-12): milestone-sourced Creative Capital \u2014 a small trickle from chart milestones so CC income isn't gated on one cco meeting choice. Fires via GameEngine.applyChartMilestoneBonuses on the SAME once-per-song flags as hit_single_bonus/number_one_bonus: cc_top10_bonus the week a song FIRST enters the top 10, cc_number_one_bonus the week it FIRST hits No. 1. NO-STACK: a #1 debut (both milestones same week) grants max(cc_top10_bonus, cc_number_one_bonus), not the sum \u2014 unlike the reputation bonuses, which stack. Not scaled by reputation_gain_scaling. No upper CC cap exists in the engine (floor 0 only)."
     },
     "award_chance_per_point": 0.08,
     "award_chance_cap": 0.8,
@@ -196,5 +196,10 @@
       "reputation_decay": 1.5,
       "market_variance": 1.3
     }
+  },
+  "campaign_scoring": {
+    "_comment": "C62 (Nes, 2026-07-26): campaign-end \"successful artist\" score component. A successful artist = popularity >= threshold; each adds points_per_successful_artist to scoreBreakdown.artistsSuccessful (and finalScore).",
+    "artist_success_popularity_threshold": 70,
+    "points_per_successful_artist": 5
   }
 }

@@ -710,6 +710,18 @@ export class ServerGameData {
     };
   }
 
+  // C62 — campaign-score "successful artist" knobs. Designer ruling (Nes,
+  // 2026-07-26): a successful artist = popularity >= threshold; each adds
+  // points_per_successful_artist to AchievementsEngine's artistsSuccessful.
+  // Lives in data/balance/progression.json under campaign_scoring.
+  getCampaignScoringConfigSync() {
+    const campaignScoring = ((this.balanceData?.campaign_scoring) || {}) as Record<string, any>;
+    return {
+      artist_success_popularity_threshold: campaignScoring.artist_success_popularity_threshold ?? 70,
+      points_per_successful_artist: campaignScoring.points_per_successful_artist ?? 5
+    };
+  }
+
   // Exec-meetings-revival PR-9 (C6/D) — executive-mood meeting-outcome modifiers.
   // Band boundaries + cost/effect multipliers. Lives in data/balance/progression.json
   // under reputation_system.exec_mood_modifiers. The SHARED util

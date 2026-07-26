@@ -4,7 +4,7 @@
  * Handles all campaign completion scoring, achievements, and results
  */
 
-import type { GameState } from '../schema';
+import type { GameState, Artist } from '../schema';
 import { seededRandom } from '../utils/seededRandom';
 
 interface ScoreBreakdown {
@@ -39,6 +39,26 @@ const DEFAULT_AWARD_CONFIG: AwardConfig = {
   award_nominee_pool_threshold: 5
 };
 
+/**
+ * C62 — campaign-score knobs for the "successful artist" component. Designer
+ * ruling (Nes, 2026-07-26): a "successful artist" = popularity >= threshold,
+ * each such artist adds `points_per_successful_artist` to scoreBreakdown.
+ * artistsSuccessful (and thus finalScore). Optional/defaulted for the SAME
+ * reason as AwardConfig above: callers that don't thread it (existing direct
+ * unit tests) get these defaults, which mirror the authoritative values in
+ * data/balance/progression.json campaign_scoring (via
+ * ServerGameData.getCampaignScoringConfigSync). NOT hardcoded at the call site.
+ */
+export interface CampaignScoringConfig {
+  artist_success_popularity_threshold: number;
+  points_per_successful_artist: number;
+}
+
+const DEFAULT_CAMPAIGN_SCORING_CONFIG: CampaignScoringConfig = {
+  artist_success_popularity_threshold: 70,
+  points_per_successful_artist: 5
+};
+
 interface CampaignResults {
   campaignCompleted: boolean;
   finalScore: number;
@@ -54,7 +74,14 @@ export class AchievementsEngine {
   /**
    * Calculate complete campaign results including scores, achievements, and victory type
    */
-  static calculateCampaignResults(gameState: GameState, awardConfig: AwardConfig = DEFAULT_AWARD_CONFIG): CampaignResults {
+  static calculateCampaignResults(
+    gameState: GameState,
+    awardConfig: AwardConfig = DEFAULT_AWARD_CONFIG,
+    // C62: optional (default []) so existing direct unit tests that call this
+    // with only gameState[/awardConfig] still pass and yield artistsSuccessful=0.
+    artists: Artist[] = [],
+    scoringConfig: CampaignScoringConfig = DEFAULT_CAMPAIGN_SCORING_CONFIG
+  ): CampaignResults {
     // Exec-meetings-revival PR-7 (C5) — campaign-end award roll. Consumes
     // flags.awardChances (an accumulating, never-expiring pool — see
     // ActionProcessor's award_chances case) via an ISOLATED seeded roll (shared/
@@ -72,20 +99,23 @@ export class AchievementsEngine {
     const industryAward = awardPool > 0 && awardRoll < awardChance;
     const awardBonus = industryAward ? awardConfig.award_score_bonus : 0;
 
+    // C62 — "successful artist" campaign-score component. Designer ruling (Nes,
+    // 2026-07-26): a successful artist = popularity >= threshold; each one adds
+    // points_per_successful_artist. Both knobs come from data/balance/
+    // progression.json campaign_scoring (defaults 70 / 5), threaded in via
+    // scoringConfig — NOT hardcoded here.
+    const successfulArtists = artists.filter(
+      a => (a.popularity ?? 0) >= scoringConfig.artist_success_popularity_threshold
+    ).length;
+
     // Calculate score breakdown
     const scoreBreakdown: ScoreBreakdown = {
       money: Math.max(0, Math.floor((gameState.money || 0) / 1000)), // 1 point per $1k
       reputation: Math.max(0, Math.floor((gameState.reputation || 0) / 30)), // 1 point per 30 reputation (round-4: 0-700 scale; keeps max contribution ~23, in line with the old /5 on 0-100)
-      // TODO (C62): still hardcoded 0. No doc (ACHIEVEMENTS_DEPENDENCY_CHART.md,
-      // ACHIEVEMENTS_KNOWLEDGE_CHART.md, technical-debt-backlog.md) defines what
-      // "successful artist" or "completed project" means for campaign scoring,
-      // and this function only receives `gameState` (the scalar game_states row)
-      // — no `artists[]`/`projects[]` arrays, which live in separate tables and
-      // aren't passed in by the sole call site (ProgressionProcessor.
-      // checkCampaignCompletion). Computing this needs both a design decision on
-      // the semantics AND a signature change to thread artist/project data in.
-      // Left as-is per C62 scope (do not invent semantics).
-      artistsSuccessful: 0,
+      artistsSuccessful: successfulArtists * scoringConfig.points_per_successful_artist,
+      // TODO (C62): projectsCompleted still hardcoded 0 — separate pending
+      // decision (no defined semantics for "completed project" scoring yet, and
+      // no projects[] threaded in). Left as-is per C62 scope for this component.
       projectsCompleted: 0,
       accessTierBonus: this.calculateAccessTierBonus(gameState),
       awardBonus
