@@ -276,11 +276,14 @@ export function ExecutiveCard({
         <div className="mb-4 flex w-full items-center justify-between">
           <span className="font-mono text-[9px] uppercase tracking-[0.26em] text-money">master</span>
           {hasReactiveMeeting && !sitOut && (
-            <span
-              data-testid="urgency-dot-ceo"
-              aria-label="Something happened this week"
-              className="h-2.5 w-2.5 rounded-full bg-neon-cyan shadow-[0_0_8px_2px_rgba(34,211,238,0.6)] animate-pulse"
-            />
+            <span className="relative inline-flex">
+              <span className="absolute inset-0 rounded-full bg-neon-cyan/60 animate-ping" aria-hidden="true" />
+              <span
+                data-testid="urgency-dot-ceo"
+                aria-label="Something happened this week"
+                className="relative h-3.5 w-3.5 rounded-full bg-neon-cyan shadow-[0_0_12px_4px_rgba(34,211,238,0.7)] animate-pulse"
+              />
+            </span>
           )}
         </div>
         <HoloDisc size={56} spinSeconds={12} className="mb-3.5" />
@@ -327,7 +330,7 @@ export function ExecutiveCard({
         effectiveDisabled ? 'border-white/[0.07]' : 'border-white/[0.14] hover:border-white/25'
       } bg-gradient-to-b ${config.tint} to-surface-inner/90 px-4 py-5 transition-all duration-200 ${
         effectiveDisabled ? (queued ? 'opacity-75' : 'opacity-55') : 'cursor-pointer hover:-translate-y-1.5'
-      } ${hasReactiveMeeting && !effectiveDisabled ? 'shadow-[0_0_34px_rgba(55,214,255,0.16)]' : ''}`}
+      } ${hasReactiveMeeting && !effectiveDisabled ? 'shadow-[0_0_34px_rgba(55,214,255,0.32)]' : ''}`}
     >
       {/* channel head */}
       <div className="mb-4 flex w-full items-center justify-between">
@@ -337,11 +340,14 @@ export function ExecutiveCard({
         {queued ? (
           queuedChip
         ) : hasReactiveMeeting && !sitOut ? (
-          <span
-            data-testid={`urgency-dot-${executive.role}`}
-            aria-label="Something happened this week"
-            className="h-2.5 w-2.5 rounded-full bg-neon-cyan shadow-[0_0_8px_2px_rgba(34,211,238,0.6)] animate-pulse"
-          />
+          <span className="relative inline-flex">
+            <span className="absolute inset-0 rounded-full bg-neon-cyan/60 animate-ping" aria-hidden="true" />
+            <span
+              data-testid={`urgency-dot-${executive.role}`}
+              aria-label="Something happened this week"
+              className="relative h-3.5 w-3.5 rounded-full bg-neon-cyan shadow-[0_0_12px_4px_rgba(34,211,238,0.7)] animate-pulse"
+            />
+          </span>
         ) : null}
       </div>
 

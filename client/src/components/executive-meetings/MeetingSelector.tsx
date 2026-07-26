@@ -63,15 +63,21 @@ function ScopeBadge({ scope }: { scope: string }) {
  * week happening). Reveal is the payoff: this line only appears once the
  * player has opened the meeting, never on the exec card itself (that's the
  * urgency dot's job — see ExecutiveCard).
+ *
+ * Shared across the console brief/artist-picker views and the AUTO review
+ * panel (PENDING-DECISIONS #16 consolidation) — `compact` reproduces the
+ * review panel's tighter sizing.
  */
-function WhyNowLine({ meeting }: { meeting: RoleMeeting }) {
+export function WhyNowLine({ meeting, compact }: { meeting: RoleMeeting; compact?: boolean }) {
   if (!meeting.reactiveContext) return null;
   return (
     <div
       data-testid="why-now-line"
-      className="inline-flex items-center gap-2 rounded-pill border border-neon-cyan/30 bg-neon-cyan/10 px-3 py-1.5 text-[11.5px] text-neon-cyan"
+      className={`inline-flex items-center rounded-pill border border-neon-cyan/60 bg-neon-cyan/20 text-neon-cyan animate-pulse ${
+        compact ? 'gap-1.5 px-2.5 py-1 text-[12px]' : 'gap-2 px-3 py-1.5 text-[13.5px]'
+      }`}
     >
-      <Sparkles className="h-3 w-3 shrink-0 animate-pulse" />
+      <Sparkles className="h-3 w-3 shrink-0" />
       <span className="font-mono">{formatWhyNow(meeting.reactiveContext)}</span>
     </div>
   );

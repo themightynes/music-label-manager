@@ -1,11 +1,11 @@
 import React from 'react';
 import { Button } from '../ui/button';
-import { Check, X, Zap, Sparkles, Wand2 } from 'lucide-react';
+import { Check, X, Zap, Wand2 } from 'lucide-react';
 import type { RoleMeeting, DialogueChoice, Executive } from '../../../../shared/types/gameTypes';
 import { ChoiceEffects } from './DialogueInterface';
 import { roleConfig } from './ExecutiveCard';
+import { WhyNowLine } from './MeetingSelector';
 import { getChoiceCreativeCapitalCost } from '../../services/executiveAutoSelect';
-import { formatWhyNow } from '../../utils/reactiveContextCopy';
 
 /**
  * Meeting-relevance PR-3 — AUTO Option A (propose-then-confirm), restyled as the
@@ -141,12 +141,8 @@ export function AutoSelectReviewPanel({
                       <span className="font-medium text-text-primary">{option.choice.label}</span>
                     </div>
                     {option.meeting.reactiveContext && (
-                      <div
-                        data-testid="why-now-line"
-                        className="mt-2 inline-flex items-center gap-1.5 rounded-pill border border-neon-cyan/30 bg-neon-cyan/10 px-2.5 py-0.5 text-[11px] text-neon-cyan"
-                      >
-                        <Sparkles className="h-3 w-3 shrink-0" />
-                        <span className="font-mono">{formatWhyNow(option.meeting.reactiveContext)}</span>
+                      <div className="mt-2">
+                        <WhyNowLine meeting={option.meeting} compact />
                       </div>
                     )}
                     <div className="mt-2.5">
