@@ -9,11 +9,11 @@
 
 - **Created**: September 2025 (Artist Mood System Implementation - commit `4991ab3`)
 - **Last Updated**: July 25, 2026
-- **Total Items**: 106 (C1–C106, no gaps; C106 added July 25, 2026 during the round-4 reputation rescale (PR #174); C104–C105 added July 21, 2026 during the meeting-content-session code review; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69; a second drift fixed July 6: this Pending line had said 13 without absorbing C76; C86–C88 added July 10, 2026 during the balance-integrity arc closure; C89–C91 added July 12, 2026 during the Executive Delegation & Trust arc doc-sync pass; C92 added July 12, 2026 during the Executive Delegation & Trust live-playtest round 3; C93–C96 added July 12, 2026 during the round-2 knob-tuning (PR #169) doc-sync pass; C97 logged in-slice July 12, 2026 by the engine-verbs live-economy slice (the header had drifted stale at 96, not counting it, until this pass); C98–C103 added July 12, 2026 during the engine-verbs + v3 content session-end doc-sync pass)
-- **Completed**: 70 — C99 (DialogueInterface structured-badge landmine — qualitative number-free badges for structured/misleading-numeric effect keys) resolved July 20, 2026 on `content/meeting-content-session`; C91 (self-serving hint sweep) resolved July 12, 2026 by the v2 stakes-revision content pass; C92 (outcome_summary schema + renderers, `52a9682`), C93 (flop ratio 0.10→0.30 per PENDING-DECISIONS #8, `ad155d8`, pending round-4 confirmation) + C94 (CC from chart milestones per #9, `2a74a24`; exec-pool/CEO-lane grants ride the v3 content wave) resolved July 12, 2026 on `content/meeting-content-session`; C65 (uncapped press rep) resolved July 11, 2026 by the volatility-economy arc (PR #161); C76 + C85 + C86 + C87 resolved July 11, 2026 by the small-ready-slices arc (`feat/small-ready-slices`: C87 tour energy drain `e1a543f`, C86 four additive GM fixtures `fbbcc53`, C76 audit/negotiate retune `b56a968`, C85 four new guide topics `7f007c2`); C79 (awareness dead-config spots) resolved July 10, 2026 by the balance-integrity arc slice 1 (knob liberation, commit `f065637`)
+- **Total Items**: 110 (C1–C110, no gaps; C107–C110 added July 25, 2026 during the debt-cleanup session on `debt/cleanup-2026-07-25` (C107 cancel-release awareness over-zeroing, found during the C83 fix; C108–C110 promoted from the D6 plan doc's discovered-debt list by the C59 triage); C106 added July 25, 2026 during the round-4 reputation rescale (PR #174); C104–C105 added July 21, 2026 during the meeting-content-session code review; header previously said 68 with buckets summing to 67 — pre-existing drift, the Completed count had never absorbed C54 and C69; a second drift fixed July 6: this Pending line had said 13 without absorbing C76; C86–C88 added July 10, 2026 during the balance-integrity arc closure; C89–C91 added July 12, 2026 during the Executive Delegation & Trust arc doc-sync pass; C92 added July 12, 2026 during the Executive Delegation & Trust live-playtest round 3; C93–C96 added July 12, 2026 during the round-2 knob-tuning (PR #169) doc-sync pass; C97 logged in-slice July 12, 2026 by the engine-verbs live-economy slice (the header had drifted stale at 96, not counting it, until this pass); C98–C103 added July 12, 2026 during the engine-verbs + v3 content session-end doc-sync pass)
+- **Completed**: 86 — 16 resolved July 25, 2026 by the debt-cleanup session (branch `debt/cleanup-2026-07-25`): C50 (vitest project split) + C77 (=== cadence fixture) + C66-partial (log gating + backup untracked) `6924597`; C52 + C53 (v2 token/dead-code/container sweep) `ee8a822` + `b46e2b0`; C56 (`useSyncExternalStoreWithSelector`) + C57 (cold-cache guard + dev warn) + C82 (knob tripwire) + C106 (0-700 admin sweep; Buyout-Letter gate → PENDING-DECISIONS #20) `b46e2b0`; C75 (remaining-CC gate) `0852cb4`; C83 (lead-single refund share) `b32e1af`; C80 (structured awareness fields) + C81 (hype twin-entry fold) `2f00a4e`; C102 (spawn_release budget deduction) + C105 (schedule_event dedupe) `195f0da`; C59 (21-item triage → C108–C110 promoted) + C84 (Buzz-v2 docs sync) in the session's docs pass; previously: C99 (DialogueInterface structured-badge landmine — qualitative number-free badges for structured/misleading-numeric effect keys) resolved July 20, 2026 on `content/meeting-content-session`; C91 (self-serving hint sweep) resolved July 12, 2026 by the v2 stakes-revision content pass; C92 (outcome_summary schema + renderers, `52a9682`), C93 (flop ratio 0.10→0.30 per PENDING-DECISIONS #8, `ad155d8`, pending round-4 confirmation) + C94 (CC from chart milestones per #9, `2a74a24`; exec-pool/CEO-lane grants ride the v3 content wave) resolved July 12, 2026 on `content/meeting-content-session`; C65 (uncapped press rep) resolved July 11, 2026 by the volatility-economy arc (PR #161); C76 + C85 + C86 + C87 resolved July 11, 2026 by the small-ready-slices arc (`feat/small-ready-slices`: C87 tour energy drain `e1a543f`, C86 four additive GM fixtures `fbbcc53`, C76 audit/negotiate retune `b56a968`, C85 four new guide topics `7f007c2`); C79 (awareness dead-config spots) resolved July 10, 2026 by the balance-integrity arc slice 1 (knob liberation, commit `f065637`)
 - **Deferred by decision**: 3 (C32, C42 — decided July 6, 2026: wire awareness fully player-facing; build EXECUTED same evening on `feat/awareness-surfacing`, held with PR #149 pending playtest; C43)
 - **In Progress**: 0
-- **Pending**: 33 (C106 — admin strings describe the retired 0-100 reputation scale, July 25, 2026; C104–C105 — meeting-content-session code-review finds, July 21, 2026 (C104 inventory money printer + content-dead verbs, C105 schedule_event double-queue), C50, C52, C53, C55, C56, C57, C59, C61, C62 — remaining scope: zeroed score components only, C63, C66, C75 — CC gate ignores queued choices, July 5, 2026, C77–C78 — tour-tier1 session finds, July 6, 2026, C80 — awareness-surfacing session find, July 6, 2026, C81–C84 — buzz-v2 arc finds, July 6–7, 2026, C88 — balance-integrity arc find, July 10, 2026, C89–C90 — Executive Delegation & Trust arc doc-sync finds, July 12, 2026, C95–C96 — round-2 knob-tuning (PR #169) doc-sync finds, July 12, 2026, C97 — engine-verbs live-economy doc-sync find (scope broadened to all 13 verbs), July 12, 2026, C98 + C100–C103 — engine-verbs + v3 content session-end doc-sync finds, July 12, 2026; C99 resolved July 20, 2026) — C91 (v2 stakes-revision hint sweep) + C92 (outcome_summary schema) + C93 (#8 flop ratio) + C94 (#9 CC milestones) resolved July 12, 2026 on `content/meeting-content-session`; C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026; C79 (awareness dead-config spots) resolved July 10, 2026 by the balance-integrity arc slice 1
+- **Pending**: 21 (C107 — cancel-release awareness over-zeroing for a shipped lead single, July 25, 2026; C108 — processWeeklyCharts error swallow, C109 — rngSeed Math.random() fallback, C110 — `dbTransaction?: any` / no DbOrTx, all promoted July 25, 2026 from the D6 discovered-debt list by the C59 triage; C55 — partial: `emailGenerationFailed` flag shipped `195f0da`, rethrow ruling → PENDING-DECISIONS #11; C61 — partial: direction-aware notifications shipped `195f0da`, copy tone → #12; C62 — remaining scope: zeroed score components only; C63 — partial: phantom loyalty fallbacks removed `b46e2b0`, wire-vs-drop → #19; C66 — partial: log gating + backup done `6924597`, loose-schema tightening remains; C104 — partial: content-dead-verb soft lint shipped `2f00a4e`, ⚠️ retune HARD BLOCKER → #10; C78 — tour-tier1 session find, July 6, 2026; C88 → #18, C89 → #13, C90 → #14, C95 → #15, C96 → #16, C100 → #17 — blocked on design decisions, triaged July 25, 2026; C97 + C98 + C101 + C103 (narrowed July 25, 2026: part (2) false since `2063f68` — 3 verdict events + 3 authored schedule_event effects are live; singleton escalation pools remain) — BLOCKED-ON-CONTENT-WAVE) — C50 + C52 + C53 + C56 + C57 + C59 + C75 + C77 + C80 + C81 + C82 + C83 + C84 + C102 + C105 + C106 resolved July 25, 2026 (debt-cleanup session, see Completed); C91 (v2 stakes-revision hint sweep) + C92 (outcome_summary schema) + C93 (#8 flop ratio) + C94 (#9 CC milestones) resolved July 12, 2026 on `content/meeting-content-session`; C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026; C79 (awareness dead-config spots) resolved July 10, 2026 by the balance-integrity arc slice 1
 
 > ⚠️ **Stale-entry corrections (July 3, 2026 interactivity-gap analysis, see `docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md`)**: C42's premise is outdated — awareness IS live in streaming revenue (`shared/engine/FinancialSystem.ts:983-1013`, config enabled); the remaining gap is player-facing UI only — a first awareness readout (Buzz chip) shipped in SongCatalog in PR #119 (July 3-4, 2026), but the release page and dashboard still show nothing. C43 is half-outdated — a transactional DELETE-release endpoint with server-side refund exists (`server/routes/releases.ts:665-683`); only the client UI is missing. Also in PR #119: a delayed-effect bug where `details?.choiceId` was read incorrectly (never had a C-number) was fixed as PR-1 of that revival branch.
 
@@ -802,7 +802,8 @@ Two small leftovers from the release trace: (1) `data/balance/markets.json` `str
 
 ---
 
-### [ ] Comment 50: DB-free client tests still require the Docker test database via shared tests/setup.ts 🔵
+### [x] ~~Comment 50: DB-free client tests still require the Docker test database via shared tests/setup.ts~~ ✅ RESOLVED 🔵
+**Status**: ✅ **RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `6924597`) — vitest split into two projects: `client` (happy-dom, DB-free setup; `tests/client|unit|shared|utils` + `client/**`) and `db` (engine/features/endpoints/task-0001/server-routes with the Docker DB lifecycle). Evidence-driven split; `npm run test:run` / CI semantics unchanged (`vitest run` executes both projects).
 **Priority**: 🔵 Low
 **Impact**: Test ergonomics (client tests can't run without Docker Postgres)
 **Effort**: Low-Medium
@@ -831,7 +832,8 @@ The Design System v2 comps layer a liquid-chrome photograph under every page at 
 
 ---
 
-### [ ] Comment 52: shared/utils chartUtils + marketingUtils still emit v1 styling primitives
+### [x] ~~Comment 52: shared/utils chartUtils + marketingUtils still emit v1 styling primitives~~ ✅ RESOLVED
+**Status**: ✅ **RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `ee8a822`) — chartUtils position/movement/risk classes migrated to v2 tokens (brand-gold tier chip, semantic positive/negative/warning, surface-inner ghosts) with a no-v1-palette regex guard test; marketingUtils now exposes framework-agnostic icon-NAME maps (FA strings deleted; sole consumer PlanReleasePage maps names→lucide locally). The chart components' own inline styling (`chartColumns.tsx` etc.) was deliberately left untouched — this entry's scope was the shared helpers.
 **Priority**: 🔵 Low
 **Impact**: Theme consistency drift risk for remaining consumers
 **Effort**: Small
@@ -846,7 +848,8 @@ The Design System v2 comps layer a liquid-chrome photograph under every page at 
 
 ---
 
-### [ ] Comment 53: v2 redesign leftovers — ChartPerformanceCard light variant, dead widget code, double page containers
+### [x] ~~Comment 53: v2 redesign leftovers — ChartPerformanceCard light variant, dead widget code, double page containers~~ ✅ RESOLVED
+**Status**: ✅ **RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commits `b46e2b0` + `ee8a822`) — (1) ChartPerformanceCard's `variant` prop + v1 light branch deleted (both callers were dark; interior v1 leftovers migrated); (2) dead `formatTimestamp` (InboxWidget) and `getReleaseTypeBadge`/`getStatusBadge` + unused icon imports (ActiveReleases) deleted; (3) redundant inner `max-w-7xl` containers removed from PlanReleasePage/WeekSummary. **Remaining LOW cosmetics, not re-tracked**: the session's survey found ~10 more pages still carrying their own nested containers (see the ee8a822 session report) — pure polish, fold into any future layout pass. Sub-item (4), the stale `executiveAutoSelect.ts` GameSidebar comment, rides along as trivia.
 **Priority**: 🔵 Low
 **Impact**: Dead code / minor layout polish
 **Effort**: Small
@@ -879,6 +882,7 @@ Two different "is the tour done?" definitions disagree by exactly one week. The 
 ---
 
 ### [ ] Comment 55: Engine silently swallows email-creation errors during week advance
+**Status**: 🔶 **PARTIALLY RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `195f0da`) — safe slice shipped: `summary.emailGenerationFailed` is now set when email generation/persist throws (`shared/engine/game-engine.ts:661`, typed on `WeekSummary`), so the failure is at least visible to the client/summary surfaces. Swallow semantics deliberately unchanged. **Remaining scope**: the rethrow-vs-log-and-continue ruling — see `docs/01-planning/PENDING-DECISIONS.md` #11 (rethrow would abort/roll back the week and re-arm the D6 failure-injection tests; a golden-master-visible decision).
 **Priority**: 🔵 Low
 **Impact**: A failed `createEmails` during week advance is caught and discarded — the week commits without its emails, with no surfacing
 **Effort**: Small
@@ -892,7 +896,8 @@ Two different "is the tour done?" definitions disagree by exactly one week. The 
 
 ---
 
-### [ ] Comment 56: `useGameState(selector)` lacks value-level re-render bail-out
+### [x] ~~Comment 56: `useGameState(selector)` lacks value-level re-render bail-out~~ ✅ RESOLVED
+**Status**: ✅ **RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `b46e2b0`) — the façade now uses `useSyncExternalStoreWithSelector` (from `use-sync-external-store/with-selector`, the exact fix this entry prescribed): `Object.is` value-level bail-out with an optional `isEqual` parameter; same-tick QueryCache subscription semantics preserved; dependency pinned to the lockfile's existing transitive version. **Remaining designer/API note**: none — selector consumers no longer re-render on unchanged selected values.
 **Priority**: 🔵 Low
 **Impact**: Selector-form consumers re-render on every gameState commit even when the selected value is unchanged (perf only, no correctness issue)
 **Effort**: Small
@@ -906,7 +911,8 @@ Phase 3.5 PR-5 flipped the façade to `useSyncExternalStore` on the QueryCache (
 
 ---
 
-### [ ] Comment 57: `useGameState` cold-cache fallback 404s silently if mounted before a game exists
+### [x] ~~Comment 57: `useGameState` cold-cache fallback 404s silently if mounted before a game exists~~ ✅ RESOLVED
+**Status**: ✅ **RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `b46e2b0`) — the entry's own prescribed remedy ("a guard or an explanatory comment"): the fallback query's `enabled` guard now never fires before a game id exists, the funnel assumption is documented at the site (`useGameState.ts` C57 comments), and a dev-only warning surfaces a 404 on the cold-cache fallback instead of silent rejection.
 **Priority**: 🔵 Low
 **Impact**: Latent sharp edge, not a live bug — the "queryFn never fires against a populated cache" invariant rests entirely on funnel ordering
 **Effort**: Small (comment/guard)
@@ -936,18 +942,19 @@ D6 (PR #107) made the week advance one atomic transaction with `SELECT ... FOR U
 
 ---
 
-### [ ] Comment 59: Triage the discovered-debt lists in the Phase 3.5 and D6 plan docs (~21 itemized findings)
+### [x] ~~Comment 59: Triage the discovered-debt lists in the Phase 3.5 and D6 plan docs (~21 itemized findings)~~ ✅ RESOLVED
+**Status**: ✅ **RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, docs pass) — all 21 items now carry a dated disposition annotation in place in the two (now `COMPLETED/[COMPLETE]`) plan docs. Outcome: 5 verified already-resolved (P3.5 #1 `updateGameState` dead code, #2 `availableSlots`; D6 #1 `updateProject` tx drop, #6 `ServerGameData` inline SQL — now delegates to tx-aware storage, #10 optimistic week guard — shipped as C58), 2 mitigated/by-design (D6 #4 deliberate double flush, commented at the site; D6 #5 InvestmentTracker reads now tx-threaded under `FOR UPDATE` serialization), 3 PROMOTED to real ledger entries — **C108** (D6 #3 `processWeeklyCharts` swallows errors — chartless week can commit), **C109** (D6 #9 `rngSeed ?? Math.random()` nondeterminism fallback), **C110** (D6 #2 `dbTransaction?: any` everywhere, no `DbOrTx` type) — and the remaining 11 marked `[TRIAGED 2026-07-25 — remains in this list, not ledger-tracked]` (P3.5 #3 full-bundle refetch, #4 dual bootstrap, #5 Zustand snapshot-input arrays, #6 advanceWeek merge precedence + hardcoded `usedFocusSlots`, #7 stale comment, #8 console noise, #9 dep-list quirk, #10 any-typed fields; D6 #7 hot-path logs, #8 even revenue split, #11 hardcoded `|| 14`).
 **Priority**: 🔵 Low
 **Impact**: Documentation/triage task — findings with file:line refs that were logged but never promoted to this backlog
 **Effort**: Small (triage session)
 
-Both July 3, 2026 plan docs carry a "Discovered debt" section with code-verified findings deliberately not fixed during execution: `[READY] phase-3.5-gamestate-tanstack-plan.md` §7 (10 items — incl. dual bootstrap paths GameContext `/api/games` vs GamePage `/api/game-state`, full-bundle refetch in useProjects/useArtists queryFns, advanceWeek merge-precedence quirk) and `[READY] d6-week-transaction-atomicity-plan.md` §7 (11 items). Triage each: promote to a numbered backlog entry, fix, or explicitly dismiss.
+Both July 3, 2026 plan docs carry a "Discovered debt" section with code-verified findings deliberately not fixed during execution: `[COMPLETE] phase-3.5-gamestate-tanstack-plan.md` §7 (10 items — incl. dual bootstrap paths GameContext `/api/games` vs GamePage `/api/game-state`, full-bundle refetch in useProjects/useArtists queryFns, advanceWeek merge-precedence quirk) and `[COMPLETE] d6-week-transaction-atomicity-plan.md` §7 (11 items). Triage each: promote to a numbered backlog entry, fix, or explicitly dismiss.
 
 **Relevant Files**:
-- [docs/01-planning/implementation-specs/[READY] phase-3.5-gamestate-tanstack-plan.md](docs/01-planning/implementation-specs/[READY]%20phase-3.5-gamestate-tanstack-plan.md)
-- [docs/01-planning/implementation-specs/[READY] d6-week-transaction-atomicity-plan.md](docs/01-planning/implementation-specs/[READY]%20d6-week-transaction-atomicity-plan.md)
+- [docs/01-planning/implementation-specs/COMPLETED/[COMPLETE] phase-3.5-gamestate-tanstack-plan.md](docs/01-planning/implementation-specs/COMPLETED/[COMPLETE]%20phase-3.5-gamestate-tanstack-plan.md)
+- [docs/01-planning/implementation-specs/COMPLETED/[COMPLETE] d6-week-transaction-atomicity-plan.md](docs/01-planning/implementation-specs/COMPLETED/[COMPLETE]%20d6-week-transaction-atomicity-plan.md)
 
-*Logged July 3, 2026 at Phase 3.5 + D6 session wrap-up.*
+*Logged July 3, 2026 at Phase 3.5 + D6 session wrap-up; triaged July 25, 2026.*
 
 ---
 
@@ -969,6 +976,7 @@ The `artist_mood` case in `applyEffects` respects per-artist targeting, but the 
 ---
 
 ### [ ] Comment 61: Access-tier downgrades announce "Upgraded"; drop to `none` announces nothing 🔵
+**Status**: 🔶 **PARTIALLY RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `195f0da`) — the lie is fixed: tier notifications are direction-aware. Downgrades say "… Access Downgraded", a drop to `none` says "… Access Lost" (both `type: 'reputation'`, so no phantom tier-unlock email), gated on the new `gameState.tierUnlockHistory` so only access the player was previously TOLD they gained announces its loss (pre-existing GM fixtures with unearned seeded tiers stay silent; upgrade path byte-identical, golden master unchanged 26/26). Newly relevant since PR #174 made reputation losses ×3. **Remaining scope**: final copy tone for the downgrade/loss strings — see `docs/01-planning/PENDING-DECISIONS.md` #12 (current wording is neutral/factual placeholder-quality). Doc-sync note (July 25, 2026): the Label Head's Guide "Access" topic (`client/src/lib/helpTopics.ts`, code — not edited in the docs pass) says a slipping label can "watch a door quietly close on it" — post-C61 the close is announced, so fold a one-word copy touch into the #12 pass; `game-system-workflows.md`'s tier section WAS updated (direction-aware flow + 0-700 thresholds).
 **Priority**: 🔵 Low
 **Impact**: Misleading notification copy on a code path that becomes live the moment reputation can fall (decay/flop penalties)
 **Effort**: Small
@@ -999,6 +1007,7 @@ In `shared/engine/AchievementsEngine.ts`: (1) `artistsSuccessful: 0` and `projec
 ---
 
 ### [ ] Comment 63: Dead artist columns (massAppeal, stress, creativity, moodHistory, lastMoodEvent, moodTrend) + phantom `artist.loyalty` fallbacks 🔵
+**Status**: 🔶 **PARTIALLY RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `b46e2b0`) — safe slice shipped: the unreachable `(artist as any).loyalty` client fallbacks are gone (4 sites; zero-readers re-verified July 25). **Remaining scope**: the wire-vs-drop decision per dead column (`massAppeal`/`stress`/`creativity`/`moodHistory`/`lastMoodEvent`/`moodTrend`) — see `docs/01-planning/PENDING-DECISIONS.md` #19 (dropping needs a migration + `SNAPSHOT_VERSION` review; wiring is a design call, interactivity-gap analysis flagged `massAppeal` as the candidate).
 **Priority**: 🔵 Low
 **Impact**: Schema/serialization dead weight with live CHECK constraints; misleading fields ride along in every API response and save snapshot
 **Effort**: Small (triage decision) — Medium if dropping columns
@@ -1049,6 +1058,7 @@ Verified never read AND never written by any engine/server/client code (only sch
 ---
 
 ### [ ] Comment 66: Stray loose-schema loaders + verbose engine debug logging (exec-meetings revival Phase A finds) 🔵
+**Status**: 🔶 **PARTIALLY RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `6924597`) — sub-item 2 done: ActionProcessor's 75 hot-path `console.log`s now sit behind a `DEBUG_ENGINE`/`VITE_DEBUG_ENGINE`-gated `debugLog` helper (warn/error untouched; the C105 dedupe-skip line stays `console.log` — test-pinned). Sub-item 3 done: `data/actions.json.backup` untracked and gitignored (write-only admin artifact). **Remaining scope = sub-item 1 only**: the loose `z.record(z.any())`/passthrough schemas in `dataLoader.ts`'s non-actions loaders (`loadWorldData`, balance loaders) — the looseness class that let 71 dead effect keys accumulate silently.
 **Priority**: 🔵 Low
 **Impact**: Authoring/validation hygiene; noisy logs in the week-advance hot path
 **Effort**: Small
@@ -1201,7 +1211,8 @@ Found by the July 5, 2026 fresh-context verifier (finding F1) after the meeting-
 
 ---
 
-### [ ] Comment 75 (C75): CC affordability gate ignores already-queued choices in the same week 🔵
+### [x] ~~Comment 75 (C75): CC affordability gate ignores already-queued choices in the same week~~ ✅ RESOLVED 🔵
+**Status**: ✅ **RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `0852cb4`) — the gate now budgets against **remaining** CC: current CC minus the CC costs of choices already queued this week, threaded to the DialogueInterface gate, the executiveMeetingMachine, `SYNC_SLOTS`, and the AUTO path (including the CEO filler pick), so stacking individually-affordable meetings can no longer overdraw and silently clamp at advance time.
 **Priority**: 🔵 Low
 **Impact**: A player can still stack CC overdraw across MULTIPLE meetings in one week (each individually affordable against CURRENT CC); the engine's `Math.max(0, …)` clamp then silently absorbs the overdraft at advance time — a smaller residue of the free-lunch bug the gate fixed
 **Effort**: Small-Medium (needs queued-CC accounting)
@@ -1234,7 +1245,8 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 
 ---
 
-### [ ] Comment 77 (C77): tour-completion tests only exercise the legacy fall-through path 🔵
+### [x] ~~Comment 77 (C77): tour-completion tests only exercise the legacy fall-through path~~ ✅ RESOLVED 🔵
+**Status**: ✅ **RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `6924597`) — `tour-completion.test.ts` gained a dedicated same-pass `weeksInProduction === citiesPlanned` cadence fixture (tour milestone label + coherent net-profit assertions), closing the symmetry/ownership gap; the legacy fall-through fixtures remain for the in-flight-save path.
 **Priority**: 🔵 Low
 **Impact**: `tests/engine/tour-completion.test.ts` fixtures place a 1-city tour at `weeksInProduction=2`, which hits the legacy `>` fall-through completion branch (kept for in-flight saves that predate the phantom-week fix), not the new same-pass `=== citiesPlanned` cadence. The new cadence IS covered by `tests/engine/tour-tier1-slice1.test.ts`; this is a symmetry/ownership gap, not a coverage hole.
 **Effort**: Small (migrate or add one fixture at the `===` cadence)
@@ -1277,7 +1289,8 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 
 ---
 
-### [ ] Comment 80 (C80): awareness change entries are description-only (no structured song fields) 🔵
+### [x] ~~Comment 80 (C80): awareness change entries are description-only (no structured song fields)~~ ✅ RESOLVED 🔵
+**Status**: ✅ **RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `2f00a4e`) — exactly the entry's prescribed additive change: `awareness_gain`/`awareness_decay`/`breakthrough` entries now carry structured `songId`/`artistId`/`songTitle`/`awarenessChange` (applied deltas); a new `getAwarenessDetails` in `categorizeChanges.ts` prefers the structured fields with the tolerant-regex parse retained as fallback for old snapshots. Descriptions byte-identical; golden master unmoved (audited 26/26 ×3).
 **Priority**: 🔵 Low
 **Impact**: `awareness_gain` / `awareness_decay` / `breakthrough` summary changes carry only `{ type, description, amount: 0 }` — no `songId`, `artistId`, `title`, or delta fields (`ReleaseProcessor.ts` ~715-780). The WeekSummary buzz aggregation therefore parses deltas/titles from description text with tolerant regexes (`client/src/components/week-summary/categorizeChanges.ts` — malformed descriptions count but contribute 0). Works, but any future UI wanting per-change song linkage (click-through, per-artist grouping) needs the engine to emit structured fields — an additive engine change with GM re-bless (the tour arc's structured-city-fields pattern is the template).
 **Effort**: Small (additive fields + GM re-bless + swap the parser to prefer fields)
@@ -1290,7 +1303,8 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 
 ---
 
-### [ ] Comment 81 (C81): hype lifecycle moments double-listed (generic `meeting` entry + structured `hype_*` entry) 🔵
+### [x] ~~Comment 81 (C81): hype lifecycle moments double-listed (generic `meeting` entry + structured `hype_*` entry)~~ ✅ RESOLVED 🔵
+**Status**: ✅ **RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `2f00a4e`) — the deferred consolidation, as prescribed: the generic `type:'meeting'` twin entries for hype banking/consumption are folded into `hype_banked` (which now carries `appliedEffects` so the Buzz badge survives, rendered by WeekSummary on the hype line) and `hype_applied`; zero-value boosts emit nothing; old-snapshot `meeting` entries still render (compat test pinned). Golden master unmoved.
 **Priority**: 🔵 Low
 **Impact**: Banking hype emits BOTH the pre-existing generic `type:'meeting'` entry (drives the meetings-card effect badge, asserted by `awareness-channel.test.ts`) AND the new structured `hype_banked` entry (routine Hype line); consumption likewise emits `meeting` + `hype_applied`. One event, two WeekSummary appearances. Cleanup = fold the generic awareness `meeting` entries into the `hype_*` types (carrying `appliedEffects` so the badge survives) and delete the duplicates — deferred in buzz-v2 slice 1 to stay strictly additive and keep existing tests green.
 **Effort**: Small (engine consolidation + retarget `awareness-channel.test.ts` assertions + GM re-bless)
@@ -1303,7 +1317,8 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 
 ---
 
-### [ ] Comment 82 (C82): `BANKED_HYPE_EXPIRY_WEEKS` client mirror has no drift tripwire 🔵
+### [x] ~~Comment 82 (C82): `BANKED_HYPE_EXPIRY_WEEKS` client mirror has no drift tripwire~~ ✅ RESOLVED 🔵
+**Status**: ✅ **RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `b46e2b0`) — the one-test fix: a tripwire test pins `BANKED_HYPE_EXPIRY_WEEKS` to `markets.json`'s `pending_awareness_boost_expiry_weeks`, plus a frozen `BUZZ_BUILDING_WEEKS` assertion with a pointer at its inline engine literal.
 **Priority**: 🔵 Low
 **Impact**: The core-status chip's "fades wk W" countdown uses `BANKED_HYPE_EXPIRY_WEEKS = 8` in `client/src/lib/releaseBuzz.ts`, a display-only HARDCODED mirror of the engine knob `pending_awareness_boost_expiry_weeks` (`data/balance/markets.json`). Nothing enforces they stay equal — unlike the exec-mood-modifier mirror, which has a tripwire test. Same pre-existing class as the `BUZZ_BUILDING_WEEKS` mirror in the same file; a single tripwire test importing the markets.json value could pin all the mirrors at once.
 **Effort**: Tiny (one tripwire test)
@@ -1316,7 +1331,8 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 
 ---
 
-### [ ] Comment 83 (C83): cancel-release refund includes the lead-single budget even after the lead single shipped 🔵
+### [x] ~~Comment 83 (C83): cancel-release refund includes the lead-single budget even after the lead single shipped~~ ✅ RESOLVED 🔵
+**Status**: ✅ **RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `b32e1af`) — exactly the prescribed fix shape: `deleteRelease` now subtracts the STORED lead-single budget share (breakdown-first read, negatives ignored) from the refund when the lead single's song row `is_released`, mirroring the spent-pre-campaign subtraction; refund floored at 0. Preview parity: `summarizeCancelRelease` gained an optional `songs` arg to detect the shipped lead single and mirror the deduction (without songs data it skips the deduction and the server stays authoritative). During this fix the C107 over-zeroing find surfaced (see below).
 **Priority**: 🔵 Low
 **Impact**: `ReleasePlanningService.deleteRelease` refunds the stored `release.marketingBudget`, which is `marketingTotal + leadSingleTotal` — the FULL amount paid at plan time. If the release's lead single has ALREADY released (lead singles ship before the main release) and its marketing budget already converted, cancelling the still-planned main release refunds the lead-single share anyway — a small over-refund that PREDATES the buzz-v2 arc (the arc's slice-4 follow-up fixed the analogous pre-campaign case by subtracting the converted share; the lead-single share was deliberately left as-is to keep the slice contained). Fix shape: subtract the lead-single budget from the refund when the lead single has released, mirroring the spent-pre-campaign subtraction.
 **Effort**: Small (one subtraction + endpoint test; refund-preview copy in `summarizeCancelRelease` must mirror it)
@@ -1329,7 +1345,8 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 
 ---
 
-### [ ] Comment 84 (C84): descriptive release-planning docs stale after Buzz v2 (doc-sync rule log) 🔵
+### [x] ~~Comment 84 (C84): descriptive release-planning docs stale after Buzz v2 (doc-sync rule log)~~ ✅ RESOLVED 🔵
+**Status**: ✅ **RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, docs pass) — the promised docs pass landed: `plan-release-system-workflows.md` gained a "Buzz v2: Pre-Campaign, Attached Hype & Cancellation" section (pre-campaign budget split, attach-at-plan hype consumption, cancellation + refund rule incl. the C83 lead-single share), and `backend-architecture.md`'s service/endpoint description now covers the plan-time transaction (preCampaign metadata + hype attachment) and the DELETE refund rule (`refund = marketingBudget − converted pre-campaign share − shipped lead-single share, floored at 0`) with `summarizeCancelRelease` preview parity. Semantics sourced from `releasePlanningService.ts` + `releaseBuzz.ts`, post-C83.
 **Priority**: 🔵 Low
 **Impact**: Per the documentation-governance doc-sync rule, logging what the Buzz-v2 arc (PR #152) made stale rather than rewriting at session end: `docs/03-workflows/plan-release-system-workflows.md` (and any release-planning flow in `game-system-workflows.md`) does not know about the pre-campaign budget split, attach-at-plan hype, or release cancellation; `docs/05-backend/backend-architecture.md` describes the plan/DELETE endpoints without the attach-at-plan transaction or the refund-minus-converted-share rule. The exec-meetings [REFERENCE] doc's `awareness_boost` row and `client/CLAUDE.md`'s spine-writer list WERE updated in-arc (this entry covers the remainder).
 **Effort**: Small (one docs pass through the two workflow/backend docs once the PR merges and behavior is final)
@@ -1388,6 +1405,7 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 ---
 
 ### [ ] Comment 88 (C88): marketing attribution not surfaced as structured data 🔵
+**Status**: ⏸️ **BLOCKED ON DESIGN DECISION** (triaged July 25, 2026, debt-cleanup session) — needs a definition of the attribution model (which streams/revenue count as marketing-driven) before any build; see `docs/01-planning/PENDING-DECISIONS.md` #18. Defer cost: the loss-leader view stays qualitative.
 **Priority**: 🔵 Low
 **Impact**: The loss-leader view shipped in balance-integrity slice 3 is qualitative copy only (honest framing of marketing spend as a loss-leader, no numbers). A future engine surface could emit structured marketing-attributed stream/revenue estimates on release change entries so the UI could show real attributed numbers instead of prose. Engine-additive and GM-affecting, so deliberately out of scope for slice 3.
 **Effort**: Medium (new change-entry fields + attribution estimate in the release/financial processors + GM re-bless + UI to consume the fields)
@@ -1401,6 +1419,7 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 ---
 
 ### [ ] Comment 89 (C89): AUTO-endorse vs. manual are server-indistinguishable — `auto_endorse_loyalty_gain` is a reserved dead knob 🔵
+**Status**: ⏸️ **BLOCKED ON DESIGN DECISION** (triaged July 25, 2026, debt-cleanup session) — the `autoEndorsed`-marker plumbing is trivial but pointless until a differing loyalty value is chosen; see `docs/01-planning/PENDING-DECISIONS.md` #13. Defer cost: zero (both paths grant the same 5 today).
 **Priority**: 🔵 Low
 **Impact**: The Executive Delegation & Trust plan's §4.5 fork (d) shipped AUTO-endorse and personally-chosen meetings both granting `loyalty_on_use`, with a SEPARATE `auto_endorse_loyalty_gain` knob (currently `== loyalty_on_use`) reserved for a future tuning pass that differentiates the two. There is no persisted marker on a resolved meeting distinguishing "the player clicked AUTO and confirmed" from "the player personally chose this exact choice" — both routed through the identical manual-commit code path pre-arc, and the arc did not add one. Only neglect (0 slots, `neglect_loyalty_gain`) is actually distinguishable from attended (1 slot, `loyalty_on_use`) today. Until a marker exists, tuning `auto_endorse_loyalty_gain` away from `loyalty_on_use` would have no effect.
 **Effort**: Small–Medium (thread an `autoEndorsed: boolean` through the AUTO review-panel confirm path into the `role_meeting` action's metadata, read it in `ActionProcessor.processExecutiveActions` to select `auto_endorse_loyalty_gain` vs. `loyalty_on_use`; no schema migration — an additive `GameChange`/action metadata field, same posture as the `autonomous` marker)
@@ -1415,6 +1434,7 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 ---
 
 ### [ ] Comment 90 (C90): side events lack a general `requires`/precondition mechanism 🔵
+**Status**: ⏸️ **BLOCKED ON DESIGN DECISION** (triaged July 25, 2026, debt-cleanup session) — the mechanism is agent-buildable (reuse the M16 grammar), but the canonical precondition vocabulary needs the designer's call; see `docs/01-planning/PENDING-DECISIONS.md` #14. Defer cost: low — the ad-hoc `crisis_fired_dancers` filter holds today.
 **Priority**: 🔵 Low
 **Impact**: Meetings support a `requires: RelevanceTag[]` precondition (meeting-relevance Tier 0), but side events (`data/events.json`) have no equivalent gating field — this is now LOAD-BEARING, not just a gap. The `ceo_crisis` migration (Executive Delegation & Trust arc, Tier 1, §8/§11.1) moved the fired-dancers crisis into the side-events pipeline as `crisis_fired_dancers` with predetermined highest-popularity-artist targeting, but the event has no way to declare "requires at least one signed artist" — it is guarded only AD HOC, by the predetermined-target resolver having no artist to resolve against (treated as a sit-out). A general `requires` mechanism on side events would let this (and any future predetermined-target or artist-scoped event) declare its precondition explicitly instead of relying on the resolver's fallback behavior to paper over an ungated event with no valid target.
 **Effort**: Medium (add an optional `requires` field to the side-event schema mirroring `RelevanceTag`, filter the weighted-roll pool + escalation injection against it, data-lint + characterization tests, doc-sync the `[REFERENCE]` doc and mandatory-side-events reference material)
@@ -1490,6 +1510,7 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 ---
 
 ### [ ] Comment 95 (C95): release Buzz section hidden at zero awareness during the weeks-1–4 building window 🔵
+**Status**: ⏸️ **BLOCKED ON DESIGN DECISION** (triaged July 25, 2026, debt-cleanup session) — the fix is designed and scaffolded in `releaseBuzz.ts`, but always-rendering the bar reveals a currently-hidden surface; confirm intent first — see `docs/01-planning/PENDING-DECISIONS.md` #15.
 **Priority**: 🔵 Low
 **Impact**: `summarizeReleaseBuzz` (`client/src/lib/releaseBuzz.ts:470-472`) returns `{ hottestSong: null, phase: null, ... }` when no released song has `awareness > 0`, and `ReleaseBuzzSection.tsx:25` (`if (!buzz.hottestSong) return null;`) hides the entire section on that null. During the weeks-1–4 building window this reads as ambiguous — the player can't tell if Buzz just hasn't started yet or isn't tracked for this release at all (round-2 playtest carryover, first observed 2026-07-11 "Glass Houses"). A candidate fix is already designed: always render the bar during building weeks, labeled "building," instead of hiding it at exactly-zero awareness.
 **Effort**: Small (client-only — `ReleaseBuzzSection.tsx` + `summarizeReleaseBuzz`'s null-hottest branch, no engine/schema change).
@@ -1503,6 +1524,7 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 ---
 
 ### [ ] Comment 96 (C96): reactive-meeting "why now" line has low noticed-ness 🔵
+**Status**: ⏸️ **BLOCKED ON DESIGN DECISION** (triaged July 25, 2026, debt-cleanup session) — pure UX design call (contrast/size/placement); recommended fold-in: the next meeting-content working session — see `docs/01-planning/PENDING-DECISIONS.md` #16.
 **Priority**: 🔵 Low
 **Impact**: The Tier 2 "why now" relevance line (`client/src/utils/reactiveContextCopy.ts`, surfaced in `MeetingSelector.tsx` and `AutoSelectReviewPanel.tsx`) is designed as the payoff explaining why a meeting is reacting to label state, with an urgency dot on the exec card. Across 3 playtests the designer never consciously registered it firing despite reactive meetings actually triggering — round-2 delegation playtest survey (`docs/01-planning/PLAYTEST_FEEDBACK_2026-07-12-delegation.md` §6, line 84) offers "Never noticed it was there" as a checkbox option, selected in the round-2 response. This is a UI visibility/copy question (placement, contrast, or wording), not an engine bug — the underlying relevance computation fires correctly.
 **Effort**: Small (UI pass — increase visual weight of the urgency dot/why-now line, or reposition it) — fold into the meeting-content working session or a standalone small UI slice.
@@ -1517,6 +1539,7 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 ---
 
 ### [ ] Comment 97 (C97): systems map + Label Head's Guide not yet covering the engine-verbs channels (scope broadened 2026-07-12 doc-sync: ALL 13 new verbs, not just live-economy) 🔵
+**Status**: ⏸️ **BLOCKED-ON-CONTENT-WAVE** (triaged July 25, 2026, debt-cleanup session) — documenting the verbs before the v3 content wave decides which ones actually ship in scenarios would document dead capability; one coverage pass afterward keeps the map honest.
 **Priority**: 🔵 Low
 **Impact**: The engine-verbs arc's live-economy slice (branch `feat/ev-live-economy`, slices 8-10) added five effect keys (`promote_release`, `catalog_damage`, `cancel_project`, `grant_inventory`, `transfer_revenue_stream`), two flags ledgers (`flags.inventory[]`, `flags.revenue_transfers[]` — weekly pass at the end of `ReleaseProcessor.processReleasedProjects`), and four `market_formulas` knob blocks in `data/balance/markets.json` (`release_promotion`, `catalog_damage`, `physical_inventory`, `revenue_transfer`). The canonical reference doc (`[REFERENCE] executive-meetings-system-complete-reference.md` §2) is updated in-slice, but the admin systems map (`client/src/admin/systemsMapData.ts`) and the Label Head's Guide (`client/src/lib/helpTopics.ts`) don't yet describe these channels/knobs. Low urgency until the content-integration wave actually authors the keys into scenarios (they are engine-live but content-unused today).
 **Scope extension (2026-07-12 session-end doc-sync)**: the same gap covers the REST of the engine-verbs arc — the systems map has no nodes/edges for the `flags.scheduled_events[]` queue (workflow step 8b), `flags.story[]` narrative memory, `flags.execAbsence` benching, `spawn_prospect`/`grant_song`/`spawn_release` tangible-catalog spawns, `distribution_efficiency`/`press_scrutiny_flag` pools, the M13 `target_executive` directive, or the M16 `requires` threshold/flag/artist-state gates. The ONE engine-verbs-adjacent edge that IS live on the map is `e-chart-creative-capital` (CC from chart milestones, added by the #9 milestone slice, `systemsMapData.ts:843-850`). One coverage pass after the content wave decides which verbs actually ship in scenarios keeps the map honest without documenting dead capability.
@@ -1533,6 +1556,7 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 ---
 
 ### [ ] Comment 98 (C98): admin editors render structured effect values as raw-JSON badges — no dedicated editors 🔵
+**Status**: ⏸️ **BLOCKED-ON-CONTENT-WAVE** (triaged July 25, 2026, debt-cleanup session) — per-key structured editors only earn their build cost once the v3 wave authors these keys into real scenarios; data-lint guards the shapes meanwhile.
 **Priority**: 🔵 Low
 **Impact**: The seven `STRUCTURED_EFFECT_KEYS` (object/string-valued effects, `shared/engine/processors/ActionProcessor.ts:147-155`) have no authoring UX in the admin editors. ActionsViewer's effect chips fall back to `JSON.stringify(value)` for non-numeric values (`client/src/admin/ActionsViewer.tsx:1876`, `:1956`) and its numeric edit inputs render an empty string for object values (`:1847`, `:1931`) — a structured value can be SEEN but not edited without hand-writing JSON elsewhere. SideEventsEditor has the same stringify fallback (`client/src/admin/SideEventsEditor.tsx:1010`, `:1080`). Workable for the engine-verbs validation phase (data-lint guards the shapes), but the v3 content-integration wave — which authors these keys into real scenarios — will want per-key structured editors (e.g. an event-picker + defer-weeks stepper for `schedule_event`).
 **Effort**: Medium (per-key form components in ActionsViewer/SideEventsEditor, driven off the documented value shapes in the `STRUCTURED_EFFECT_KEYS` doc-comment; contentLint already knows the shapes)
@@ -1562,6 +1586,7 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 ---
 
 ### [ ] Comment 100 (C100): M16 cash gates read `gameState.money` mid-advance (PHASE 1) — documented in-week drift window vs. the route's fetch-time read 🔵
+**Status**: ⏸️ **BLOCKED ON DESIGN DECISION** (triaged July 25, 2026, debt-cleanup session) — accept-and-document vs. snapshot fetch-time money; dormant while zero cash-gated content exists — see `docs/01-planning/PENDING-DECISIONS.md` #17.
 **Priority**: 🔵 Low
 **Impact**: The two `requires`-gate evaluation sites share one lockstep helper (`buildRelevanceInput`, `shared/engine/meetingSelection.ts:165-192`, parity test `tests/engine/meeting-selection-two-site-parity.test.ts`), but they read money at different moments: the `/api/roles` route reads the persisted row at fetch time, while the engine's autonomous re-derivation reads `this.gameState.money` as of PHASE 1 of the advance — after the player's own meeting spends (`shared/engine/game-engine.ts:791-800`, the NOTE comment at :796). A `{stat:'cash'}` threshold can therefore pass at offer time and fail (or vice versa) at autonomous-resolution time within the same week. This is the SAME in-week drift window that already exists for artists/projects rows, is explicitly documented at the site, and is behavior-identical to the pre-M16 pipeline while no threshold content is authored — but once the v3 wave authors cash gates, a player may occasionally see an exec auto-resolve a meeting whose gate their own spending invalidated mid-week.
 **Effort**: Small–Medium (either accept + document in the reference doc's known-limitations list once cash-gated content ships, or snapshot the fetch-time money into the offered-meeting payload so re-derivation gates against the same figure)
@@ -1576,6 +1601,7 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 ---
 
 ### [ ] Comment 101 (C101): engine-verbs deferred mechanisms (grouped): M8 multi-version releases, M6 restart/delay, full inventory tables, M17 happening types, M18 mood prompt variants, M19 meeting cooldowns, M14 escalation artist threading 🔵
+**Status**: ⏸️ **BLOCKED-ON-CONTENT-WAVE** (triaged July 25, 2026, debt-cleanup session) — by the entry's own terms, each mechanism becomes real work only if a reviewed v3 scenario demands its fiction; nothing here blocks the wave itself.
 **Priority**: 🔵 Low
 **Impact**: The engine-verbs arc (`COMPLETED/[COMPLETE] engine-verbs-plan.md`) deliberately deferred, per its own "Deferred (post-arc, logged)" section: **M8** multi-version releases (deluxe/remaster of an existing release); **M6 restart/delay** of a cancelled project (fights the monotonic stage model — only soft-cancel shipped); **full inventory tables** (physical inventory shipped as a flags ledger MVP, `flags.inventory[]`, no dedicated table — avoids the one SNAPSHOT_VERSION-bump risk in the census); **M17** new happening types; **M18** mood prompt variants; **M19** meeting cooldowns. Plus the **M14 partial**: the scheduled-events queue carries the scheduling choice's pinned `artistId` (`shared/engine/game-engine.ts:1128-1136`), but `applyEscalation` does NOT thread the triggering meeting's resolved artist into autonomous escalations — TODO at `game-engine.ts:1008-1017` (the predetermined artist is resolved inside `ActionProcessor.processRoleMeeting` and never returned to `resolveAutonomousExecMeetings`), so predetermined directives on escalation events hit the highest-popularity artist, not the one who caused the wound. None of these blocks the v3 content wave; each becomes REAL work only if a reviewed scenario demands its fiction.
 **Effort**: Varies per mechanism (S for M14 threading once the resolver returns the artist; M–L for M8/M6-restart/inventory tables; content-shaped for M17/M18; S for M19)
@@ -1588,7 +1614,8 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 
 ---
 
-### [ ] Comment 102 (C102): `spawn_release` marketing budget is not deducted from cash — safe only while the knob defaults to 0 🔵
+### [x] ~~Comment 102 (C102): `spawn_release` marketing budget is not deducted from cash — safe only while the knob defaults to 0~~ ✅ RESOLVED 🔵
+**Status**: ✅ **RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `195f0da`) — the entry's prescribed deduction: `spawn_release`'s knobbed `default_marketing_budget` now lands in `summary.expenses` + `marketingCosts` when > 0, closing the free-lunch tripwire (no-op at the current 0 default; golden master unchanged). *(Note: this closure was not on the session's headline resolve list, but the commit ships exactly the entry's fix shape — marked resolved on the code evidence.)*
 **Priority**: 🔵 Low
 **Impact**: The M1b `spawn_release` effect creates a real planned release with `marketingBudget: defaultBudget` read from a balance knob, and the site carries an explicit HARDCODED note: the knobbed budget is NOT deducted from cash (`shared/engine/processors/ActionProcessor.ts:2067-2069` — "If this knob is ever tuned above 0, add a money deduction here or the marketing push is a free lunch"). Default is 0, so there is no exploit today — but this is exactly the class of money bug the buzz-v2 arc's refund exploit taught us to verify at the deduction site. Tripwire: anyone tuning that knob must add the deduction in the same change.
 **Effort**: Small (deduct `defaultBudget` from `gameState.money` in the spawn path when > 0 + a test; or pin the knob at 0 with a lint)
@@ -1600,9 +1627,10 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 
 ---
 
-### [ ] Comment 103 (C103): escalation second-events + scheduled/verdict events not yet authored in `data/events.json` — router arrays and the queue run on singleton/empty pools 🔵
+### [ ] Comment 103 (C103): escalation second-events not yet authored in `data/events.json` — router arrays run on singleton pools 🔵
+**Status**: ⏸️ **SCOPE NARROWED + BLOCKED-ON-CONTENT-WAVE** (July 25, 2026, debt-cleanup session) — **part (2) of this entry is no longer true**: the v3 Mac/Sam pool load (commit `2063f68`) authored 3 `scheduled_only: true` verdict events into `data/events.json` (`scheduled_mac_3am_demo_verdict`, `scheduled_mac_machine_verdict`, `scheduled_sam_documentary_release`) and 3 live `schedule_event` effects into `data/actions.json` — the `flags.scheduled_events[]` queue and step-8b promotion are exercised by real content (which is precisely how C105's double-queue became player-reachable). **Remaining scope = part (1) only**: every role's `ESCALATION_EVENT_BY_ROLE` pool is still a singleton stub, so the seeded pick short-circuits; the v3 escalations pool authors the second-events with the content wave.
 **Priority**: 🔵 Low
-**Impact**: Two engine-verbs mechanisms shipped with capability the data does not yet exercise. (1) The escalation router (`ESCALATION_EVENT_BY_ROLE`, `shared/utils/executiveDelegation.ts:114-119`) routes per-role ARRAYS with a seeded pick + the last-seen filter (`flags.escalationHistory`), but every role's pool is still a singleton — the four original stub events (`escalation_ar_botched_signing`, `escalation_cmo_narrative_lost`, `escalation_cco_artist_walkout`, `escalation_dist_deal_collapsed`) — so the seeded pick always short-circuits and the last-seen filter's fallback path is the common case. The v3 escalations pool (reviewed at `/admin/mac-pool-review`) authors the second-events; they land with the content wave. (2) NO event in `data/events.json` carries `scheduled_only: true` and NO choice in `data/actions.json`/`data/events.json` authors a `schedule_event` effect — the `flags.scheduled_events[]` queue and step-8b promotion are engine-live but content-dead, including the planned "verdict" events (scheduled events with isolated-seed gamble choices). Both are pure content dependencies, not code gaps.
+**Impact**: Two engine-verbs mechanisms shipped with capability the data does not yet exercise. (1) The escalation router (`ESCALATION_EVENT_BY_ROLE`, `shared/utils/executiveDelegation.ts:114-119`) routes per-role ARRAYS with a seeded pick + the last-seen filter (`flags.escalationHistory`), but every role's pool is still a singleton — the four original stub events (`escalation_ar_botched_signing`, `escalation_cmo_narrative_lost`, `escalation_cco_artist_walkout`, `escalation_dist_deal_collapsed`) — so the seeded pick always short-circuits and the last-seen filter's fallback path is the common case. The v3 escalations pool (reviewed at `/admin/mac-pool-review`) authors the second-events; they land with the content wave. (2) ~~NO event in `data/events.json` carries `scheduled_only: true` and NO choice in `data/actions.json`/`data/events.json` authors a `schedule_event` effect~~ **[FALSE as of `2063f68` — see Status above]**. Part (1) is a pure content dependency, not a code gap.
 **Effort**: Content-only (author the 4+ second escalation events + the scheduled/verdict events in the v3 wave; the data-lint shapes and router/queue mechanics are already in place)
 
 **Relevant Files**:
@@ -1615,6 +1643,7 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 ---
 
 ### [ ] Comment 104 (C104): `physical_inventory` knobs are a dormant money printer — guaranteed full sell-through at 3× return; five economy verbs remain content-dead and unlinted 🔵
+**Status**: 🔶 **PARTIALLY RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `2f00a4e`) — the "unlinted" half is closed: a soft data-lint (`tests/engine/data-lint-content-dead-verbs.test.ts`) pins the 7 content-dead verbs (`cancel_project`, `catalog_damage`, `distribution_efficiency`, `grant_inventory`, `press_scrutiny_flag`, `set_exec_absence`, `transfer_revenue_stream`) — pin drift fails, so `grant_inventory` content cannot slip in unnoticed, with the retune blocker documented at the pin. **Remaining scope: the knob retune itself — ⚠️ HARD BLOCKER for the content wave** (see `docs/01-planning/PENDING-DECISIONS.md` #10): the moment any v3 scenario wires `grant_inventory`, the retune (sell rate below `1/shelf_life_weeks`, narrower spread, or awareness-carried upside) is a mandatory gate.
 **Priority**: 🔵 Low (dormant today — becomes 🟡 the moment any content authors `grant_inventory`; same tripwire class as C102's spawn_release free lunch)
 **Impact**: The physical-inventory knobs (`data/balance/markets.json` `market_formulas.physical_inventory`, :276-285; defaults mirrored in `PHYSICAL_INVENTORY_DEFAULTS`, `shared/engine/flagsLedgers.ts:64-72`) are `unit_cost: 4`, `unit_price: 12`, `base_weekly_sell_rate: 0.12`, `shelf_life_weeks: 12`, `awareness_sell_rate_bonus_max: 1.0`, `min_weekly_units: 1`. The weekly sell step (`processInventoryWeek`, `shared/engine/flagsLedgers.ts:139-190`) sells `round(unitsInitial × 0.12 × (1 + awareness/100))` per week — even at ZERO awareness the nominal sell-through over the shelf life is 0.12 × 12 = 144%, so a pressing always sells out (in ≤9 weeks) before the write-off branch can ever fire at meaningful grant sizes. Every unit therefore converts at a guaranteed +$8 margin — a deterministic, zero-risk 3× return on the manufacturing cost charged at grant time (`shared/engine/processors/ActionProcessor.ts:2284-2359`). Currently DORMANT: no content in `data/actions.json`/`data/events.json`/`data/dialogue.json` authors `grant_inventory`, so no player can reach it — but it MUST be re-tuned (lower `base_weekly_sell_rate` below `1/shelf_life_weeks`, or narrow the cost/price spread, or make awareness carry the upside) before any v3 scenario wires to it. Related structural gap: five economy verbs are content-dead across all three content JSONs and NOTHING lints "engine-live verb, zero content" — `grant_inventory`, `transfer_revenue_stream`, `catalog_damage`, `cancel_project`, `press_scrutiny_flag` (the structured `distribution_efficiency` and `set_exec_absence` are likewise unused; verified by grep July 21, 2026). The data-lint suite guards keys that ARE authored; a dead verb's broken economics (like this one) surfaces only when content first touches it.
 **Effort**: Small (knob retune + a unit test asserting expected sell-through < 100% at zero awareness; optionally a soft lint listing content-dead LIVE_EFFECT_KEYS members so the content wave sees the roster)
@@ -1628,7 +1657,8 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 
 ---
 
-### [ ] Comment 105 (C105): `schedule_event` enqueue has no dedupe — re-drawable `machine_that_listens` can bank its verdict event twice 🟢
+### [x] ~~Comment 105 (C105): `schedule_event` enqueue has no dedupe — re-drawable `machine_that_listens` can bank its verdict event twice~~ ✅ RESOLVED 🟢
+**Status**: ✅ **RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `195f0da`) — the prescribed dedupe-on-enqueue: `schedule_event` now skips the enqueue when the `eventId` is already queued OR already sitting in `pending_side_event` (with a test-pinned console note; foreshadow line suppressed on the skip), so `machine_that_listens` can no longer bank its verdict crisis twice; any future re-drawable `schedule_event` carrier inherits the guard. Test: `tests/engine/schedule-event-dedupe.test.ts`.
 **Priority**: 🟢 Medium (player-reachable today: the scheduling content is live in `data/actions.json` as of this session's v3 Mac pool)
 **Impact**: The `schedule_event` case in `ActionProcessor.applyEffects` is a plain append — `flags.scheduled_events = [...queue, entry]` (`shared/engine/processors/ActionProcessor.ts:1020-1057`, append at :1043) — with no check against entries already in the queue, already promoted, or already resolved. Meetings have no cooldown (M19 deferred, see C101), and `machine_that_listens` (`data/actions.json:1388`) gates only on `requires: ["release_out"]`, so it is re-drawable week after week: picking `stake_mac_against_it` in two different weeks banks `scheduled_mac_machine_verdict` twice, and `promoteScheduledEvents` (`shared/engine/game-engine.ts:1058-1160`) then lands the SAME verdict crisis in two successive free-slot weeks — Mac stakes his ear against the machine, wins/loses, then does it again verbatim. Any future re-drawable meeting or repeatable event choice carrying `schedule_event` inherits the same double-queue (the chained-verdict path at `game-engine.ts:1773-1780` feeds the identical append).
 **Effort**: Small (dedupe on enqueue — skip when an entry with the same `eventId` is already queued, with a console note — or gate the scheduling choice behind a `story_flag`; plus a test in `tests/engine/` covering the double-draw)
@@ -1642,7 +1672,8 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 
 ---
 
-### [ ] Comment 106 (C106): admin systems-map + review-tool strings still describe the retired 0-100 reputation scale 🔵
+### [x] ~~Comment 106 (C106): admin systems-map + review-tool strings still describe the retired 0-100 reputation scale~~ ✅ RESOLVED 🔵
+**Status**: ✅ **RESOLVED** (July 25, 2026, branch `debt/cleanup-2026-07-25`, commit `b46e2b0`) — string sweep done: `systemsMapData.ts`'s reputation node prose moved to 0-700 and the sellThrough formula display corrected `/100` → `/700`. **Remaining designer note (not code)**: the v3 CEO pool's "The Buyout Letter" authoring note says `reputation >= 60` — a 0-100-era value, now annotated in `v3CeoPoolReview.ts` as pending the designer's rescale ruling — see `docs/01-planning/PENDING-DECISIONS.md` #20.
 **Priority**: 🔵 Low (admin-only display text; no gameplay impact)
 **Impact**: The round-4 reputation redesign (PR #174) moved reputation to a 0-700 scale (flagship 510, national 440, arenas 380; x3 delta scaler with badge-honest previews). Live-value reads in `client/src/admin/systemsMapData.ts` self-correct (they interpolate `reputationSystem.*`), but its hardcoded prose ("0-100", threshold narratives at lines ~158, 166, 174, 184, 192, 200, 709, 733, 834-836, 916-918) and the v3 pool-review / playtest-feedback authoring notes referencing "reputation ≥ 60"-era gates now describe the old scale. Player-facing docs were NOT affected (design-system and workflow docs carry no thresholds).
 **Effort**: Small (string sweep through `client/src/admin/systemsMapData.ts` + `v3*PoolReview.ts` / `playtestFeedbackForm*.ts`)
@@ -1655,19 +1686,70 @@ Discovered July 6, 2026 while scoping the Content Editor's side-events lint: app
 
 ---
 
+### [ ] Comment 107 (C107): cancel-release zeroes awareness/peak_awareness for ALL songs on the release — including an already-shipped lead single 🟢
+**Priority**: 🟢 Medium
+**Impact**: `ReleasePlanningService.deleteRelease`'s freed-songs update (`server/services/releasePlanningService.ts`, the `tx.update(songs).set({ releaseId: null, awareness: 0, peak_awareness: 0 }).where(eq(songs.releaseId, releaseId))` inside the delete transaction) hits EVERY song row carrying the releaseId, with no `isReleased` filter — but the site's own comment claims "These songs are unreleased, so peak_awareness held only pre-campaign build too." That assumption is false the moment a lead single has SHIPPED (lead singles release before the main release and keep their `releaseId`): cancelling the still-planned main release then unlinks the released lead single from its release AND zeroes its LIVE `awareness`/`peak_awareness`, killing real earned buzz (and its streaming multiplier) plus the historical peak, not just fork-E pre-campaign build. The same cancellation path C83 just made refund-honest is still awareness-dishonest for the shipped lead single.
+**Effort**: Small (scope the update to unreleased songs — e.g. add `isReleased = false` to the WHERE, and decide whether a shipped lead single should keep or lose its `releaseId` link — plus an endpoint test with a shipped lead single)
+
+**Relevant Files**:
+- [server/services/releasePlanningService.ts](server/services/releasePlanningService.ts) (deleteRelease freed-songs update)
+- [shared/engine/processors/ReleaseProcessor.ts](shared/engine/processors/ReleaseProcessor.ts) (lead-single weekly release pass sets `is_released`)
+
+*Identified July 25, 2026 during the C83 lead-single refund fix (debt-cleanup session); verified against the deleteRelease transaction.*
+
+---
+
+### [ ] Comment 108 (C108): `processWeeklyCharts` swallows all errors — a week can commit without chart rows 🟢
+**Priority**: 🟢 Medium
+**Impact**: `shared/engine/game-engine.ts` `processWeeklyCharts` wraps chart generation + entry fetch + milestone bonuses in a try/catch whose catch only logs ("Don't throw - chart generation should not break weekly processing"). Post-D6 the whole advance is one transaction, so a chart failure yields a COMMITTED week with no chart rows, no `chartUpdates` in the summary, and — because `applyChartMilestoneBonuses` lives inside the same try — silently skipped chart-milestone reputation/CC grants. Same silent-swallow class as C55 (email creation), and the same open decision applies: rethrow (week rolls back) vs. log-and-surface (a `summary.chartGenerationFailed` flag mirroring C55's `emailGenerationFailed` would be the safe first slice).
+**Effort**: Small (flag slice, mirroring C55) — Medium if the rethrow ruling lands (golden-master/failure-injection surface)
+
+**Relevant Files**:
+- [shared/engine/game-engine.ts](shared/engine/game-engine.ts) (processWeeklyCharts catch block)
+
+*Promoted July 25, 2026 from the D6 plan doc's discovered-debt list (§7 #3, logged July 3, 2026) during the C59 triage.*
+
+---
+
+### [ ] Comment 109 (C109): `rngSeed` falls back to `Math.random()` inside the advance-week service — nondeterminism for seedless rows 🔵
+**Priority**: 🔵 Low
+**Impact**: `server/services/advanceWeekService.ts:206` builds the engine's game state with `rngSeed: gameState.rngSeed ?? Math.random().toString(36).substring(7)` — a game-state row that lacks a seed gets a FRESH random seed every advance, silently breaking the seeded-RNG discipline the engine otherwise maintains (same discipline class as C64's unseeded side-event roll). Any determinism-dependent surface (golden-master reproduction of a live bug, replaying a save, seeded verdict gambles) misbehaves only for such rows, making it a heisenbug by construction. Fix shape: generate-and-PERSIST a seed once (at game creation or first advance) so the fallback can never run twice, and/or warn loudly when the fallback fires.
+**Effort**: Small (persist-on-first-use + a test that a seedless row advances identically twice)
+
+**Relevant Files**:
+- [server/services/advanceWeekService.ts](server/services/advanceWeekService.ts) (line 206)
+
+*Promoted July 25, 2026 from the D6 plan doc's discovered-debt list (§7 #9, logged July 3, 2026) during the C59 triage.*
+
+---
+
+### [ ] Comment 110 (C110): `dbTransaction?: any` across storage/engine (~113 occurrences) — no compile-time protection against dropped transactions 🔵
+**Priority**: 🔵 Low
+**Impact**: Every tx-aware signature in `server/storage.ts`, `server/data/gameData.ts`, and the engine processors types its transaction parameter `dbTransaction?: any` (113 occurrences as of July 25, 2026). This is exactly the typing gap that let `storage.updateProject` silently DROP a tx argument two callers were already passing (D6 §7 #1 — fixed incidentally by D6 PR-2, atomicity restored, but nothing prevents recurrence): with `any`, a signature that forgets the parameter or a caller that misplaces it still compiles, and the write silently escapes the week transaction. Fix shape: a shared `DbOrTx` union type (drizzle's transaction type | the db instance) adopted signature-by-signature — mechanical but wide.
+**Effort**: Medium (wide but mechanical sweep; `npm run check` is the whole verification)
+
+**Relevant Files**:
+- [server/storage.ts](server/storage.ts)
+- [server/data/gameData.ts](server/data/gameData.ts)
+- [shared/engine/processors/](shared/engine/processors/)
+
+*Promoted July 25, 2026 from the D6 plan doc's discovered-debt list (§7 #2, logged July 3, 2026) during the C59 triage.*
+
+---
+
 ## 📊 **Summary Statistics**
 
 ### By Priority
 - 🔴 Critical: 0 items (all completed! 🎉)
 - 🟡 High: 0 pending — C93 (flop trigger, PENDING-DECISIONS #8: ratio 0.10→0.30) + C94 (CC single positive source, #9: chart milestones live, content grants ride the v3 wave) both resolved July 12, 2026 on `content/meeting-content-session` — note: C40's header lacks the `~~strikethrough~~` convention despite being fixed (PR #66/#68); cosmetic only
-- 🟢 Medium: 2 deferred (C42 — decided July 6, 2026: wire awareness fully player-facing, build queued; C43 — product decision open, July 3, 2026; see stale-entry corrections in Document Information), 2 pending (C62 — remaining scope: zeroed `artistsSuccessful`/`projectsCompleted` score components only, needs design decision + plumbing; C105 — schedule_event enqueue has no dedupe, machine_that_listens verdict can queue twice, July 21, 2026) — C67 + C68 + C69 resolved July 4, 2026 (PR #119); C58 (stale-week guard) + C60 (delayed-effect targeting) + C62's other sub-items resolved July 4, 2026 (PR #120); C74 (header AUTO review-gate bypass + AR-busy AUTO fix) resolved July 5, 2026
-- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 32 pending (C106 — admin 0-100-scale strings, July 25, 2026; C104 — physical_inventory dormant money printer + content-dead economy verbs, July 21, 2026; C50 — client tests' incidental DB dependency; C52–C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5/D6 session findings, July 3, 2026; C61, C63 — interactivity-gap analysis findings, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; C77–C78 — tour-tier1 session finds, July 6, 2026; C80 — awareness-surfacing session find, July 6, 2026; C81–C84 — buzz-v2 arc finds, July 6–7, 2026; C88 — balance-integrity arc find, July 10, 2026; C89–C90 — Executive Delegation & Trust arc doc-sync finds, July 12, 2026; C95–C96 — round-2 knob-tuning doc-sync finds, July 12, 2026; C97 — engine-verbs doc-sync find (scope broadened to all 13 verbs), July 12, 2026; C98–C103 — engine-verbs + v3 content session-end doc-sync finds, July 12, 2026) — C91 (hint sweep) + C92 (outcome_summary schema) resolved July 12, 2026 on `content/meeting-content-session`; C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120); C71 (reference-doc staleness log) resolved July 5, 2026 (post-merge docs pass); C70 (12-week copy rot, PR #128) + C72–C73 (content-honesty warts, PRs #129–#130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2); C79 (awareness dead-config spots) resolved July 10, 2026 (balance-integrity arc slice 1)
+- 🟢 Medium: 2 deferred (C42 — decided July 6, 2026: wire awareness fully player-facing, build queued; C43 — product decision open, July 3, 2026; see stale-entry corrections in Document Information), 3 pending (C62 — remaining scope: zeroed `artistsSuccessful`/`projectsCompleted` score components only, needs design decision + plumbing; C107 — cancel-release awareness over-zeroing for a shipped lead single, July 25, 2026; C108 — processWeeklyCharts error swallow, promoted from D6 §7 #3, July 25, 2026) — C105 (schedule_event dedupe) resolved July 25, 2026 (`195f0da`); C67 + C68 + C69 resolved July 4, 2026 (PR #119); C58 (stale-week guard) + C60 (delayed-effect targeting) + C62's other sub-items resolved July 4, 2026 (PR #120); C74 (header AUTO review-gate bypass + AR-busy AUTO fix) resolved July 5, 2026
+- 🔵 Low: 1 deferred (C32 — cap unreachable; surfacing fixed), 18 pending (C55 — partial, rethrow ruling → PENDING-DECISIONS #11; C61 — partial, copy tone → #12; C63 — partial, wire-vs-drop → #19; C66 — partial, loose-schema scope remains; C104 — partial, ⚠️ retune HARD BLOCKER → #10; C78 — venue-name map duplication, July 6, 2026; C88 → #18, C89 → #13, C90 → #14, C95 → #15, C96 → #16, C100 → #17 — blocked on design decisions; C97, C98, C101, C103 (narrowed to singleton escalation pools) — BLOCKED-ON-CONTENT-WAVE; C109 — rngSeed fallback + C110 — DbOrTx typing, promoted from D6 §7, July 25, 2026) — C50 + C52 + C53 + C56 + C57 + C59 + C75 + C77 + C80 + C81 + C82 + C83 + C84 + C102 + C106 resolved July 25, 2026 (debt-cleanup session); C91 (hint sweep) + C92 (outcome_summary schema) resolved July 12, 2026 on `content/meeting-content-session`; C51 ("On Tour" badge lag) resolved July 4, 2026 (PR #120); C71 (reference-doc staleness log) resolved July 5, 2026 (post-merge docs pass); C70 (12-week copy rot, PR #128) + C72–C73 (content-honesty warts, PRs #129–#130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection) resolved July 5, 2026 (PR #138, Tier 2 MVP-2); C79 (awareness dead-config spots) resolved July 10, 2026 (balance-integrity arc slice 1)
 
 ### By Status
-- ✅ Completed: 70 items (66.7% of 105; 70 + 3 deferred + 32 pending = 105 ✓) — C99 (DialogueInterface structured-badge landmine) resolved July 20, 2026 on `content/meeting-content-session`; C91 + C92 + C93 + C94 resolved July 12, 2026 (`content/meeting-content-session`: v2 stakes-revision hint sweep, outcome_summary schema `52a9682`, #8 flop ratio `ad155d8`, #9 CC milestones `2a74a24`); C65 resolved July 11, 2026 (volatility-economy arc, PR #161); C76 + C85 + C86 + C87 resolved July 11, 2026 (small-ready-slices arc)
+- ✅ Completed: 86 items (78.2% of 110; 86 + 3 deferred + 21 pending = 110 ✓) — C50 + C52 + C53 + C56 + C57 + C59 + C75 + C77 + C80 + C81 + C82 + C83 + C84 + C102 + C105 + C106 resolved July 25, 2026 (debt-cleanup session, `debt/cleanup-2026-07-25`: `195f0da` C102/C105 + the C55/C61 safe slices, `b32e1af` C83, `b46e2b0` C53-dead-code/C56/C57/C82/C106 + the C63 safe slice, `0852cb4` C75, `6924597` C50/C77 + the C66 safe slice, `ee8a822` C52/C53-styling, `2f00a4e` C80/C81 + the C104 safe slice, docs pass C59/C84); C99 (DialogueInterface structured-badge landmine) resolved July 20, 2026 on `content/meeting-content-session`; C91 + C92 + C93 + C94 resolved July 12, 2026 (`content/meeting-content-session`: v2 stakes-revision hint sweep, outcome_summary schema `52a9682`, #8 flop ratio `ad155d8`, #9 CC milestones `2a74a24`); C65 resolved July 11, 2026 (volatility-economy arc, PR #161); C76 + C85 + C86 + C87 resolved July 11, 2026 (small-ready-slices arc)
 - 🚧 In Progress: 0 items
 - ⏸️ Deferred by decision: 3 items (C32, C42 — decided July 6, 2026: wire awareness fully player-facing (Nes); build EXECUTED same evening on `feat/awareness-surfacing`, held pending playtest; C43)
-- 📋 Pending: 32 items (C104–C105 — meeting-content-session code-review finds, July 21, 2026 (C104 low, C105 medium); C50 — logged July 3, 2026; C52, C53 — v2 redesign follow-ups; C55–C57, C59 — Phase 3.5 + D6 session findings; C61, C62 (remaining scope: zeroed score components only), C63 — interactivity-gap analysis, July 3, 2026; C66 — exec-meetings revival Phase A finds; C75 — CC gate ignores queued choices, July 5, 2026; C77–C78 — tour-tier1 session finds, July 6, 2026; C80 — awareness-surfacing session find, July 6, 2026; C81–C84 — buzz-v2 arc finds, July 6–7, 2026; C88 — balance-integrity arc find, July 10, 2026; C89–C90 — Executive Delegation & Trust arc doc-sync finds, July 12, 2026; C95–C96 — round-2 knob-tuning (PR #169) doc-sync finds, July 12, 2026; C97 — engine-verbs doc-sync find, scope broadened to all 13 verbs, July 12, 2026; C98 + C100–C103 — engine-verbs + v3 content session-end doc-sync finds, July 12, 2026 (C99 resolved July 20, 2026); all low except C62 + C105 medium, not scheduled). C91 (hint sweep, v2 stakes revision) + C92 (outcome_summary schema `52a9682`) + C93 (#8 flop ratio 0.10→0.30 `ad155d8`) + C94 (#9 CC milestones `2a74a24`) resolved July 12, 2026 on `content/meeting-content-session`; C76 (audit retune) + C85 (guide topics) + C86 (GM range fixtures) + C87 (tour energy drain) resolved July 11, 2026 (small-ready-slices arc); C70 (PR #128) + C72 (PR #129) + C73 (PR #130) resolved July 5, 2026 (evening debt-pile pass); C64 (seeded side-event selection, PR #138) resolved July 5, 2026 (Tier 2 MVP-2); C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) resolved July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) resolved July 4, 2026 on PR #120; C71 (reference-doc sync) resolved July 5, 2026 in the post-merge docs pass; C74 (header AUTO review-gate + AR-busy AUTO fix) resolved July 5, 2026; C79 (awareness dead-config spots) resolved July 10, 2026 (balance-integrity arc slice 1)
+- 📋 Pending: 21 items (C107 — cancel-release awareness over-zeroing, medium, July 25, 2026; C108 — chart-swallow, medium + C109 — rngSeed fallback + C110 — DbOrTx typing, promoted from the D6 discovered-debt list July 25, 2026; C55, C61, C63, C66, C104 — PARTIALLY RESOLVED July 25, 2026, remaining scopes tracked at the entries (C55 → PENDING-DECISIONS #11, C61 → #12, C63 → #19, C104 → #10 ⚠️ HARD BLOCKER, C66 → loose-schema tightening); C62 — remaining scope: zeroed score components only, medium; C78 — tour-tier1 find, July 6, 2026; C88–C90, C95–C96, C100 — blocked on design decisions (#18, #13, #14, #15, #16, #17), triaged July 25, 2026; C97, C98, C101, C103 — BLOCKED-ON-CONTENT-WAVE, triaged July 25, 2026 (C103 narrowed: verdict/scheduled events ARE authored since `2063f68`; singleton escalation pools remain)). Earlier resolutions: C91–C94 July 12, 2026 (`content/meeting-content-session`); C76 + C85 + C86 + C87 July 11, 2026 (small-ready-slices arc); C70 (PR #128) + C72 (PR #129) + C73 (PR #130) July 5, 2026 (evening debt-pile pass); C64 (PR #138) July 5, 2026; C67 (`071c6df`) + C68 (`5b44d9e`) + C69 (`1db5c39`) July 4, 2026 on PR #119; C51 (`6e945e3`) + C58 (`3d8066a`) + C60 (`7898de6`) + C62-partial (`f1b1315`) July 4, 2026 on PR #120; C71 July 5, 2026 (post-merge docs pass); C74 July 5, 2026; C79 July 10, 2026 (balance-integrity arc slice 1)
 
 ---
 

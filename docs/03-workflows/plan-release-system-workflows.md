@@ -168,6 +168,48 @@ Database Transaction:
 └── Junction Table: Create release_songs entries with track numbers
 ```
 
+### **Phase 4.5: Buzz v2 — Pre-Campaign, Attached Hype & Cancellation** *(added July 25, 2026; semantics from `server/services/releasePlanningService.ts` + `client/src/lib/releaseBuzz.ts`, post-C83)*
+
+The Buzz v2 arc (PR #152) extended the plan transaction and added a cancellation path. Three additions, all recorded on the release row at plan time:
+
+#### **4.5.1 Pre-Campaign Budget Split**
+```
+Player sets preCampaignPct (0, or a 10-step share up to the balance knob max_pct)
+     ↓
+Validation: nonzero pct requires ≥1 lead-up week (plan week < release week)
+     ↓
+Stored on release.metadata.preCampaign (ONLY when pct > 0 — pct 0 stores nothing,
+keeping the legacy path byte-identical):
+├── pct: the diverted share (10..max_pct)
+├── totalBudget: round(pct% of the MAIN marketing total) — the anticipation pot
+├── budgetPerChannel: each MAIN channel scaled by pct%
+└── spentToDate: accumulates weekly as the pre-campaign converts to pre-release
+    awareness during the lead-up weeks
+     ↓
+Launch-phase (weeks 1-4) marketing conversion scales DOWN by (1 − pct) — the
+money is ONE POT: the diverted share builds anticipation instead of launch reach
+```
+
+#### **4.5.2 Attach-at-Plan Hype**
+Banked hype (`flags.pendingAwarenessBoost` label pool, fork B: first-planned-takes-all, plus the artist's `flags.hypeArtistPools[artistId]` pool) is consumed **inside the plan transaction** and moved onto `release.metadata.attachedHype` (signed units). The flags pools are zeroed/deleted in the same write — attached hype no longer appears in the banked-hype chip and seeds the release's starting Buzz at execution.
+
+#### **4.5.3 Cancellation & the Refund Rule (C43 / fork E / C83)**
+`DELETE /api/game/:gameId/releases/:releaseId` (planned releases only; a released release 400s) runs one transaction in `releasePlanningService.deleteRelease`:
+
+```
+refund = release.marketingBudget                  (the FULL paid pot, stored at plan time)
+       − converted pre-campaign share             (preCampaign.spentToDate, clamped into
+                                                   [0, preCampaign.totalBudget])
+       − lead-single share IF the lead single     (C83, July 25, 2026: stored breakdown
+         has ALREADY SHIPPED (song row              summed, breakdown-first read, negatives
+         is_released)                               ignored; unshipped lead single deducts 0)
+       floored at 0 — always from STORED release data, never client input
+```
+
+- **Pre-buzz dies (fork E)**: songs are freed (`releaseId = null`) and their `awareness`/`peak_awareness` zeroed — built anticipation does not survive cancellation (leaving it would recreate the buzz-farming exploit). ⚠️ Known defect C107: this zeroing also hits an already-shipped lead single's live Buzz (see the technical-debt backlog).
+- **Attached hype dies implicitly**: it lives only on the deleted release row; nothing re-credits any pool.
+- **Preview parity**: the cancel-confirmation dialog derives its refund preview with `summarizeCancelRelease(release, songs)` (`client/src/lib/releaseBuzz.ts`) using the SAME subtraction rules; without the lead single's song row it skips that deduction and the server result stays authoritative. Consequence copy is qualitative only (fork E standing rule — no multiplier numbers).
+
 ### **Phase 5: Release Execution During Week Advancement**
 
 #### **5.1 Execution Trigger**
@@ -260,3 +302,4 @@ Released songs continue generating revenue via:
 **This workflow ensures complete data consistency between player expectations (preview) and actual game outcomes (execution), while maintaining realistic variance that represents music industry unpredictability.**
 
 *Updated: September 24, 2025 - Post data consistency fixes and marketing efficiency removal*
+*Updated: July 25, 2026 - Buzz v2 section added (pre-campaign split, attach-at-plan hype, cancellation + C83 refund rule) — C84 doc-sync*
