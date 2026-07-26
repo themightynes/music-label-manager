@@ -1341,6 +1341,20 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
           </CardContent>
         </Card>
       </RevealGroup>
+
+      {/* C55 observability (PENDING-DECISIONS #11): weekly email generation is
+          LOG-AND-CONTINUE — a failure never blocks the advance, but when it
+          happens summary.emailGenerationFailed is set so the player knows some
+          inbox notifications are missing this week. Subtle, non-blocking muted
+          warning line — informational, NOT an error banner. */}
+      {weeklyStats?.emailGenerationFailed && (
+        <RevealGroup revealed={currentStage >= STAGE_ROUTINE} instant={instant}>
+          <div className="flex items-center gap-2 px-1 text-xs text-warning/80">
+            <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+            <span>Some inbox messages couldn&apos;t be generated this week.</span>
+          </div>
+        </RevealGroup>
+      )}
     </div>
   );
 

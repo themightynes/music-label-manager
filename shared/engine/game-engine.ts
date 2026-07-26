@@ -2006,18 +2006,31 @@ export class GameEngine {
    * both in the same week gets both.
    *
    * "First" is tracked via `gameState.flags.chartMilestones[songId]` (documented
-   * choice, not `peakPosition`/`isDebut` off the chart-entry shape): ChartService's
-   * `peakPosition` only reflects PRIOR charting weeks captured in `chart_entries`,
-   * and a song that debuts directly at position <=10 (or at #1) needs the SAME
-   * week's bonus to fire — inferring "first" from movement/peak alone at this
-   * call site would require re-deriving history ChartService already computed
-   * differently for isDebut vs peakPosition. An explicit once-fired flag is
-   * simpler to reason about and immune to any future ChartService peak-tracking
-   * change. Competitor rows (no songId) are skipped — no reputation payout for
-   * NPC chart performance.
+   * choice, not `isDebut` off the chart-entry shape): a song that debuts directly
+   * at position <=10 (or at #1) needs the SAME week's bonus to fire, and an
+   * explicit once-fired flag is simpler to reason about and immune to any future
+   * ChartService peak-tracking change. Competitor rows (no songId) are skipped —
+   * no reputation payout for NPC chart performance.
+   *
+   * C108 — MILESTONE RECOVERY (PENDING-DECISIONS #11 ruling, "gameplay is more
+   * important"): weekly chart failures stay LOG-AND-CONTINUE (never block the
+   * player — see processWeeklyCharts' catch/summary.chartGenerationFailed). But a
+   * milestone grant SKIPPED by such a failure must not be silently lost forever.
+   * If the failure hit AFTER chart rows were written (a fetch/apply-stage failure),
+   * the rows survive in `chart_entries`, so the song's persisted `peakPosition`
+   * reflects the qualifying week even though the grant never fired. We therefore
+   * fire a milestone on EITHER the current-week position OR the persisted peak
+   * (`entry.peakPosition`), still guarded by the once-per-song flag — so the next
+   * successful advance re-attempts and grants the skipped bonus exactly once.
+   * GOLDEN-MASTER SAFETY: in normal (no-failure) play this adds ZERO grants — the
+   * week a song qualifies, its current position already fires and sets the flag,
+   * so once `peakPosition` catches up the flag is set and the peak branch is inert.
+   * RESIDUAL LIMITATION: if chart GENERATION itself failed (no rows ever written),
+   * that week's data never existed — its single-week milestone is genuinely
+   * unrecoverable. Only fetch/apply-stage skips (where rows persisted) recover.
    */
   private applyChartMilestoneBonuses(
-    entries: Array<{ songId?: string | null; songTitle: string; position: number | null; isCompetitorSong?: boolean | null }>,
+    entries: Array<{ songId?: string | null; songTitle: string; position: number | null; peakPosition?: number | null; isCompetitorSong?: boolean | null }>,
     summary: WeekSummary
   ): void {
     const reputationSystem = (this.gameData.getBalanceConfigSync() as any)?.reputation_system || {};
@@ -2041,12 +2054,20 @@ export class GameEngine {
     let milestonesChanged = false;
 
     for (const entry of entries) {
-      if (entry.isCompetitorSong || !entry.songId || entry.position === null) continue;
+      if (entry.isCompetitorSong || !entry.songId) continue;
+      // C108: a genuinely position-less row with no recoverable peak carries no
+      // milestone signal and is skipped. A non-null current position outside the
+      // top-10 (or a null position that still has a qualifying persisted peak)
+      // must NOT skip — its peak may recover a milestone a prior chart failure
+      // skipped (see method doc). peakPosition is optional on the entry shape.
+      const peak = entry.peakPosition;
+      if (entry.position === null && (peak === null || peak === undefined)) continue;
 
       const songId = entry.songId;
       const record = milestones[songId] || {};
-      const firstTop10 = entry.position <= 10 && !record.hitTop10;
-      const firstNumberOne = entry.position === 1 && !record.hitNumberOne;
+      const pos = entry.position;
+      const firstTop10 = ((pos != null && pos <= 10) || (peak != null && peak <= 10)) && !record.hitTop10;
+      const firstNumberOne = ((pos === 1) || (peak === 1)) && !record.hitNumberOne;
       let bonus = 0;
       const labels: string[] = [];
 
