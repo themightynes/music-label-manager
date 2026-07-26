@@ -1,5 +1,7 @@
 # Achievement System Knowledge Chart
 
+> Synced July 25, 2026 (evening): reputation values updated to the 0-700 scale (PR #174) and citations repointed after the processor split — this chart had been missed by the #174 residual audit. Tier thresholds now live in `data/balance/progression.json` (access tiers) and `data/balance/quality.json` (producer tiers); tier/producer/campaign checks live in `shared/engine/processors/ProgressionProcessor.ts`, and the summary UI is `WeekSummary.tsx` (the game advanced week-by-week terminology in the weeks migration).
+
 ## Visual Flow Diagram
 
 ```
@@ -11,7 +13,7 @@
 │   DATA SOURCES  │    │   GAME ENGINE    │    │   UI DISPLAY    │
 │                 │    │   PROCESSING     │    │                 │
 ├─────────────────┤    ├──────────────────┤    ├─────────────────┤
-│ gameState       │───▶│ Monthly Advance  │───▶│ MonthSummary    │
+│ gameState       │───▶│ Weekly Advance   │───▶│ WeekSummary     │
 │ - reputation    │    │ ┌──────────────┐ │    │ ┌─────────────┐ │
 │ - money         │    │ │ Achievement  │ │    │ │ Achievements│ │
 │ - access tiers  │    │ │ Checks       │ │    │ │ Section     │ │
@@ -36,37 +38,38 @@
 | **Trigger** | **Condition** | **Source Location** | **Icon** | **Frequency** |
 |-------------|---------------|---------------------|----------|---------------|
 | **System Progression** |
-| Focus Slot 4 | reputation >= 50 | `game-engine.ts:325` | 🔓 | Once |
-| Focus Slot 5 | reputation >= 100 | *Future expansion* | 🔓 | Once |
-| **Access Tier Upgrades** |
-| Playlist Niche | reputation >= 25 | `game-engine.ts:2641` | 🎵 | Once |
-| Playlist Mid | reputation >= 50 | `game-engine.ts:2641` | 🎵 | Once |
-| Playlist Flagship | reputation >= 100 | `game-engine.ts:2641` | 🎵 | Once |
-| Press Blogs | reputation >= 30 | `game-engine.ts:2652` | 📰 | Once |
-| Press Mid-Tier | reputation >= 60 | `game-engine.ts:2652` | 📰 | Once |
-| Press National | reputation >= 120 | `game-engine.ts:2652` | 📰 | Once |
-| Venue Clubs | reputation >= 20 | `game-engine.ts:2663` | 🎭 | Once |
-| Venue Theaters | reputation >= 70 | `game-engine.ts:2663` | 🎭 | Once |
-| Venue Arenas | reputation >= 150 | `game-engine.ts:2663` | 🎭 | Once |
-| **Producer Tiers** |
-| Home Studio | reputation >= 0 | `game-engine.ts:2700` | 🎛️ | Once |
-| Pro Studio | reputation >= 40 | `game-engine.ts:2700` | 🎛️ | Once |
-| Elite Studio | reputation >= 80 | `game-engine.ts:2700` | 🎛️ | Once |
+| Focus Slot 4 | reputation >= 280 (`progression.json` → `progression_thresholds.fourth_focus_slot_reputation`) | `game-engine.ts:455-466` | 🔓 | Once |
+| Focus Slot 5 | *Does not exist* — `focus_slots_max` is 4 (`data/balance/projects.json`); slot-unlock placeholders were removed (`processors/ProgressionProcessor.ts:27-31`) | — | 🔓 | n/a |
+| **Access Tier Upgrades** (thresholds: `data/balance/progression.json` → `access_tier_system`) |
+| Playlist Niche | reputation >= 40 | `processors/ProgressionProcessor.ts:118-151` | 🎵 | Once |
+| Playlist Mid | reputation >= 180 | `processors/ProgressionProcessor.ts:118-151` | 🎵 | Once |
+| Playlist Flagship | reputation >= 510 | `processors/ProgressionProcessor.ts:118-151` | 🎵 | Once |
+| Press Blogs | reputation >= 35 | `processors/ProgressionProcessor.ts:153-186` | 📰 | Once |
+| Press Mid-Tier | reputation >= 150 | `processors/ProgressionProcessor.ts:153-186` | 📰 | Once |
+| Press National | reputation >= 440 | `processors/ProgressionProcessor.ts:153-186` | 📰 | Once |
+| Venue Clubs | reputation >= 25 | `processors/ProgressionProcessor.ts:188-221` | 🎭 | Once |
+| Venue Theaters | reputation >= 110 | `processors/ProgressionProcessor.ts:188-221` | 🎭 | Once |
+| Venue Arenas | reputation >= 380 | `processors/ProgressionProcessor.ts:188-221` | 🎭 | Once |
+| **Producer Tiers** (thresholds: `data/balance/quality.json` → `producer_tier_system.*.unlock_rep`) |
+| Local | reputation >= 0 | `processors/ProgressionProcessor.ts:229-267` | 🎛️ | Once |
+| Regional | reputation >= 60 | `processors/ProgressionProcessor.ts:229-267` | 🎛️ | Once |
+| National | reputation >= 165 | `processors/ProgressionProcessor.ts:229-267` | 🎛️ | Once |
+| Legendary | reputation >= 380 | `processors/ProgressionProcessor.ts:229-267` | 🎛️ | Once |
 | **Content Milestones** |
-| Song Recorded | project completion | `game-engine.ts:1532` | 🎵 | Per song |
-| Project Advanced | time progression | `game-engine.ts:3649` | 📈 | Per stage |
+| Song Recorded | project's last song generated | `processors/SongGenerationProcessor.ts:269-274` | 🎵 | Per song |
+| Project Advanced | stage progression | `processors/ProjectStageProcessor.ts:281-285` | 📈 | Per stage |
 | **Performance Insights** |
-| Press Coverage | press pickups > 0 | `game-engine.ts:3349` | 📰 | Monthly |
-| Investment Report | project spending | `game-engine.ts:3444` | 💰 | Monthly |
-| Revenue Efficiency | ongoing revenue | `game-engine.ts:3457` | 📈 | Monthly |
-| Strategic Efficiency | reputation/cash ratio | `game-engine.ts:3470` | 🎯 | Monthly |
+| Press Coverage | *Removed as a summary insight* — press pickups now feed PR-push reputation effects (`processors/ActionProcessor.ts:2880-2887`), no 'unlock' change | — | 📰 | n/a |
+| Investment Report | project spending ("Weekly project investment") | `processors/WeeklyFinancesProcessor.ts:112-122` | 💰 | Weekly |
+| Revenue Efficiency | ongoing revenue ("Catalog revenue efficiency") | `processors/WeeklyFinancesProcessor.ts:124-135` | 📈 | Weekly |
+| Strategic Efficiency | *Removed* — "serves no gameplay purpose" (`processors/WeeklyFinancesProcessor.ts:137` comment) | — | 🎯 | n/a |
 | **Meta Events** |
-| Campaign Complete | month >= 36 | `game-engine.ts:3081` | 🎉 | Once |
+| Campaign Complete | week >= 52 (`campaign_length_weeks`, `data/balance/projects.json`) | `processors/ProgressionProcessor.ts:269-298` | 🎉 | Once |
 
 ## Code Interaction Flow
 
 ```typescript
-// 1. Achievement Check (game-engine.ts)
+// 1. Achievement Check (shared/engine/processors/*.ts, e.g. ProgressionProcessor.ts; some remain in game-engine.ts)
 function checkAchievements() {
   if (condition_met) {
     summary.changes.push({
@@ -77,8 +80,8 @@ function checkAchievements() {
   }
 }
 
-// 2. Categorization (MonthSummary.tsx)
-const categorizeChanges = (changes: GameChange[]) => {
+// 2. Categorization (client/src/components/week-summary/categorizeChanges.ts:115)
+const categorizeWeekChanges = (changes: GameChange[]) => {
   changes.forEach(change => {
     if (change.type === 'unlock') {
       categories.achievements.push(change);
@@ -86,7 +89,7 @@ const categorizeChanges = (changes: GameChange[]) => {
   });
 };
 
-// 3. UI Rendering (MonthSummary.tsx:290-308)
+// 3. UI Rendering (client/src/components/WeekSummary.tsx — unlock filter at :689, icons via getChangeIcon at :550)
 {categorizedChanges.achievements.map((change, index) => (
   <div key={index} className="achievement-card">
     <span>{getChangeIcon(change.type)}</span>
@@ -109,7 +112,7 @@ const categorizeChanges = (changes: GameChange[]) => {
 Examples:           Logic:          Structure:        Rendering:
 • Reputation +50    • if-conditions  • type: 'unlock' • Trophy icon
 • Song completed    • threshold      • description    • Achievement text
-• Month advanced    • comparisons    • amount?        • Badge styling
+• Week advanced     • comparisons    • amount?        • Badge styling
 • Access unlocked   • flag checks    • metadata       • Card layout
 ```
 
@@ -126,11 +129,11 @@ interface GameChange {
 }
 ```
 
-### MonthSummary Achievement Props
+### WeekSummary Achievement Props (client/src/components/WeekSummary.tsx:39-40)
 ```typescript
-interface MonthSummaryProps {
-  monthlyStats: {
-    changes: GameChange[];  // Contains all month changes
+interface WeekSummaryProps {
+  weeklyStats: {
+    changes: GameChange[];  // Contains all week changes
     // ... other properties
   };
 }
@@ -167,14 +170,14 @@ const getChangeIcon = (type: string) => {
 ## Extensibility Points
 
 ### Adding New Achievement Types
-1. **Trigger Location:** Add condition check in `game-engine.ts`
+1. **Trigger Location:** Add condition check in the relevant processor (`shared/engine/processors/*.ts`) or `game-engine.ts`
 2. **GameChange Creation:** Push new unlock object to summary
 3. **Icon Assignment:** Update achievement description with emoji
-4. **UI Handling:** Achievement automatically flows to MonthSummary
+4. **UI Handling:** Achievement automatically flows to WeekSummary
 
 ### Achievement Configuration
-- **Thresholds:** Modify `data/balance.json` reputation requirements
-- **Descriptions:** Update strings in game engine methods
+- **Thresholds:** Modify `data/balance/progression.json` (access tiers, focus slot) and `data/balance/quality.json` (producer tiers) reputation requirements
+- **Descriptions:** Update strings in the processor / game engine methods
 - **Frequency:** Adjust conditions (once vs. recurring)
 - **Categorization:** Already handled automatically by type filtering
 
@@ -184,7 +187,7 @@ const getChangeIcon = (type: string) => {
 ```typescript
 // Check if achievement triggered
 console.log('Achievement changes:',
-  monthlyStats.changes.filter(c => c.type === 'unlock')
+  weeklyStats.changes.filter(c => c.type === 'unlock')
 );
 
 // Verify categorization
@@ -194,7 +197,7 @@ console.log('Categorized achievements:',
 ```
 
 ### Common Issues
-- **Missing achievements:** Check reputation thresholds in balance.json
+- **Missing achievements:** Check reputation thresholds in `data/balance/progression.json` / `data/balance/quality.json`
 - **Duplicate achievements:** Verify one-time flag storage in gameState.flags
 - **Wrong display:** Ensure description formatting includes emoji
 - **Performance:** Monitor achievement generation frequency

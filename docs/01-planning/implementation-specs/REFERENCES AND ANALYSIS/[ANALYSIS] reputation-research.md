@@ -1,3 +1,5 @@
+> ⚠️ HISTORICAL ANALYSIS — point-in-time snapshot, banner added July 25, 2026. This research predates the reputation 0-700 redesign (PR #174, July 2026) and the engine processor split: it describes 0-100 reputation, month-based advancement, a /5 score divisor (now /30), and game-engine.ts line citations that no longer exist. Kept for the analysis reasoning, not as a description of the current system. Current truth: `data/balance/progression.json` + `shared/engine/processors/ProgressionProcessor.ts` + the two synced `[REFERENCE] ACHIEVEMENTS_*_CHART.md` docs.
+
 Complete File References for Reputation System Analysis
 
   1. Balance Configuration Files
