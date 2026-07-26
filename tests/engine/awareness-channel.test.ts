@@ -5,7 +5,8 @@
  *  (a) awareness_boost is in LIVE_EFFECT_KEYS.
  *  (b) ActionProcessor.applyEffects: awareness_boost accumulates (signed) into
  *      flags.pendingAwarenessBoost and stamps flags.pendingAwarenessBoostWeek;
- *      pushes a 'meeting' change carrying appliedEffects (so badges render).
+ *      pushes a single 'hype_banked' change carrying appliedEffects (so badges
+ *      render) — C81 folded the old duplicate 'meeting' entry into it.
  *  (c) ActionProcessor.processDelayedEffects: an unconsumed bank expires after
  *      pending_awareness_boost_expiry_weeks weeks (default 8, data/balance/markets.json);
  *      it survives if still within the window; games with no bank in play are
@@ -86,15 +87,19 @@ describe('ActionProcessor.applyEffects — awareness_boost', () => {
     expect((ctx.gameState.flags as any).pendingAwarenessBoost).toBe(1);
   });
 
-  it('pushes a meeting change carrying appliedEffects so badges render', async () => {
+  // C81: banking no longer double-lists — the generic 'meeting' entry was folded
+  // into the structured hype_banked entry, which now carries the appliedEffects
+  // payload that drives the effect badge.
+  it('pushes a single hype_banked change carrying appliedEffects so badges render (no duplicate meeting entry)', async () => {
     const processor = new ActionProcessor();
     const ctx = buildContext();
 
     await processor.applyEffects(ctx, { awareness_boost: 3 }, undefined, 'global');
     const entry = (ctx.summary.changes as any[]).find(
-      (c) => c.type === 'meeting' && c.appliedEffects?.awareness_boost === 3,
+      (c) => c.type === 'hype_banked' && c.appliedEffects?.awareness_boost === 3,
     );
     expect(entry).toBeDefined();
+    expect((ctx.summary.changes as any[]).filter((c) => c.type === 'meeting')).toHaveLength(0);
   });
 
   it('stacks two positive meeting boosts across the same week', async () => {
@@ -340,6 +345,121 @@ describe('ReleaseProcessor.processPlannedReleases — awareness_boost consumptio
 
     // The awareness seed is a pure arithmetic post-step — it must not draw RNG.
     expect(ctxYes.getDrawCount()).toBe(ctxNo.getDrawCount());
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C80 — structured fields on awareness lifecycle entries.
+// breakthrough / awareness_gain / awareness_decay used to ship description-only
+// (amount: 0); they now also carry songId/artistId/songTitle/awarenessChange
+// (additive — amount stays 0, descriptions unchanged).
+// ---------------------------------------------------------------------------
+describe('C80 — awareness entries carry structured fields', () => {
+  function buildCatalogCtx(opts: {
+    song: Record<string, any>;
+    currentWeek: number;
+    awarenessGain?: number;
+  }) {
+    const summary: any = {
+      week: opts.currentWeek, changes: [], revenue: 0, expenses: 0, streams: 0,
+      reputationChanges: {}, artistChanges: {},
+    };
+    const ctx: WeekContext = {
+      gameState: { id: 'game-1', currentWeek: opts.currentWeek } as any,
+      summary,
+      gameData: {
+        getReleasedSongs: async () => [opts.song],
+        getBalanceConfigSync: () => ({ market_formulas: markets.market_formulas }),
+        getStreamingConfigSync: () => markets.market_formulas.streaming_calculation,
+        updateSongs: async () => {},
+      } as any,
+      storage: {
+        getArtistsByGame: async () => [{ id: opts.song.artistId, name: 'Sol', popularity: 50 }],
+        getReleasesByGame: async () => [
+          { id: 'release-1', metadata: { marketingBudgetBreakdown: { radio: 1000 } } },
+        ],
+      } as any,
+      financialSystem: {
+        calculateOngoingSongRevenue: async () => 0,
+        calculateAwarenessGain: async () => opts.awarenessGain ?? 0,
+      } as any,
+      getRandom: () => 0.5,
+      dbTransaction: undefined,
+    };
+    return { ctx, summary };
+  }
+
+  it('awareness_gain carries songId/artistId/songTitle and the APPLIED delta', async () => {
+    const proc = new ReleaseProcessor();
+    const song = {
+      id: 'song-1', artistId: 'artist-1', title: 'Anthem', quality: 50,
+      awareness: 10, peak_awareness: 10, breakthrough_achieved: false,
+      releaseId: 'release-1', releaseWeek: 1, totalStreams: 0, totalRevenue: 0,
+    };
+    // weeksSinceRelease 1 (build phase, below the week-3 breakthrough window).
+    const { ctx, summary } = buildCatalogCtx({ song, currentWeek: 2, awarenessGain: 4.2 });
+
+    await proc.processReleasedProjects(ctx, summary);
+
+    const entry = (summary.changes as any[]).find((c) => c.type === 'awareness_gain');
+    expect(entry).toBeDefined();
+    expect(entry.amount).toBe(0); // unchanged — renderers key off description/amount
+    expect(entry.songId).toBe('song-1');
+    expect(entry.artistId).toBe('artist-1');
+    expect(entry.songTitle).toBe('Anthem');
+    // applied delta: round(min(10 + 4.2, 100)) − 10 = 4 (NOT the raw 4.2)
+    expect(entry.awarenessChange).toBe(4);
+  });
+
+  it('awareness_decay carries the structured fields with a negative delta', async () => {
+    const proc = new ReleaseProcessor();
+    const song = {
+      id: 'song-2', artistId: 'artist-2', title: 'Fade', quality: 50,
+      awareness: 40, peak_awareness: 40, breakthrough_achieved: false,
+      releaseId: 'release-1', releaseWeek: 1, totalStreams: 0, totalRevenue: 0,
+    };
+    // weeksSinceRelease 5 → decay phase; standard decay rate.
+    const { ctx, summary } = buildCatalogCtx({ song, currentWeek: 6 });
+
+    await proc.processReleasedProjects(ctx, summary);
+
+    const entry = (summary.changes as any[]).find((c) => c.type === 'awareness_decay');
+    expect(entry).toBeDefined();
+    expect(entry.amount).toBe(0);
+    expect(entry.songId).toBe('song-2');
+    expect(entry.artistId).toBe('artist-2');
+    expect(entry.songTitle).toBe('Fade');
+    const standardRate = markets.market_formulas.awareness_system.awareness_decay_rates.standard_songs;
+    const expected = Math.round(Math.max(0, 40 * (1 - standardRate))) - 40;
+    expect(entry.awarenessChange).toBe(expected);
+    expect(entry.awarenessChange).toBeLessThan(0);
+  });
+
+  it('breakthrough carries the structured fields with the explosion delta', async () => {
+    const proc = new ReleaseProcessor();
+    // Deterministic sin-seed breakthrough (mirrors mood-outcomes.test.ts):
+    // artistId '...00' → suffix 0, quality 80, week 4 (weeksSinceRelease 3),
+    // awareness 40, gain 0 → potential 0.65, random ≈ 0.002 → fires.
+    const song = {
+      id: 'song-3', artistId: 'artist-00', title: 'Anthem', quality: 80,
+      awareness: 40, peak_awareness: 40, breakthrough_achieved: false,
+      releaseId: 'release-1', releaseWeek: 1, totalStreams: 0, totalRevenue: 0,
+    };
+    const { ctx, summary } = buildCatalogCtx({ song, currentWeek: 4, awarenessGain: 0 });
+
+    await proc.processReleasedProjects(ctx, summary);
+
+    const entry = (summary.changes as any[]).find((c) => c.type === 'breakthrough');
+    expect(entry).toBeDefined();
+    expect(entry.amount).toBe(0);
+    expect(entry.songId).toBe('song-3');
+    expect(entry.artistId).toBe('artist-00');
+    expect(entry.songTitle).toBe('Anthem');
+    // pre-multiplier 40 → round(min(40 × multiplier, 100)) − 40
+    const multiplier = markets.market_formulas.awareness_system.breakthrough_effects.awareness_multiplier || 2.5;
+    const expected = Math.round(Math.min(40 * multiplier, 100)) - 40;
+    expect(entry.awarenessChange).toBe(expected);
+    expect(entry.awarenessChange).toBeGreaterThan(0);
   });
 });
 

@@ -714,6 +714,112 @@ describe('DELETE .../releases/:releaseId — fork-E cancel (buzz-v2 slice 4)', (
   });
 });
 
+// ---------------------------------------------------------------------------
+// C83 — cancel refund and the LEAD-SINGLE share. The paid pot (marketingBudget)
+// includes the lead-single budget (summed into totalBudget at plan time). Once
+// the lead single has SHIPPED (its song row is_released, set by the engine's
+// weekly lead-single pass), that share converted like a spent pre-campaign
+// share and must NOT come back on cancel:
+//   refund = marketingBudget − convertedPreCampaign − convertedLeadSingle, ≥ 0.
+// An UNSHIPPED lead single still refunds in full (unchanged behavior).
+// ---------------------------------------------------------------------------
+describe('DELETE .../releases/:releaseId — lead-single share (C83)', () => {
+  /** Seed a planned EP whose paid pot includes a $2000 lead-single share
+   *  (pr 1500 + digital 500) targeting songIds[1]. */
+  async function seedLeadSingleRelease(opts: {
+    money?: number;
+    marketingBudget?: number;
+    leadSingleShipped?: boolean;
+    preCampaign?: Record<string, unknown>;
+  }) {
+    const { gameId, artistId, songIds } = await seedGameWithSongs({
+      ownerId: TEST_USER_ID,
+      money: opts.money ?? 50000,
+      creativeCapital: 5,
+      songCount: 2,
+    });
+    const releaseId = crypto.randomUUID();
+    await db.insert(releases).values({
+      id: releaseId,
+      gameId,
+      artistId,
+      title: 'Lead Single To Cancel',
+      type: 'ep',
+      status: 'planned',
+      // ONE POT: 10000 main marketing + 2000 lead single = 12000 paid & stored.
+      marketingBudget: opts.marketingBudget ?? 12000,
+      metadata: {
+        attachedHype: 0,
+        leadSingleStrategy: {
+          leadSingleId: songIds[1],
+          leadSingleReleaseWeek: 3,
+          leadSingleBudgetBreakdown: { pr: 1500, digital: 500 },
+        },
+        ...(opts.preCampaign ? { preCampaign: opts.preCampaign } : {}),
+      },
+    });
+    await db.update(songs).set({ releaseId }).where(eq(songs.gameId, gameId));
+    if (opts.leadSingleShipped) {
+      // Mirror what ReleaseProcessor's lead-single pass does to the song row.
+      await db.update(songs)
+        .set({ isReleased: true, releaseWeek: 3 })
+        .where(eq(songs.id, songIds[1]));
+    }
+    return { gameId, artistId, songIds, releaseId };
+  }
+
+  it('lead single SHIPPED: refund excludes the lead-single share', async () => {
+    const { gameId, releaseId } = await seedLeadSingleRelease({
+      money: 50000,
+      marketingBudget: 12000,
+      leadSingleShipped: true,
+    });
+
+    const res = await request(app).delete(`/api/game/${gameId}/releases/${releaseId}`);
+    expect(res.status).toBe(200);
+    // 12000 paid − 2000 lead-single share already converted = 10000.
+    expect(res.body.refundedAmount).toBe(10000);
+    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+    expect(gs.money).toBe(50000 + 10000);
+  });
+
+  it('lead single NOT shipped: full pot refunds, lead-single share included (unchanged rule)', async () => {
+    const { gameId, releaseId } = await seedLeadSingleRelease({
+      money: 50000,
+      marketingBudget: 12000,
+      leadSingleShipped: false,
+    });
+
+    const res = await request(app).delete(`/api/game/${gameId}/releases/${releaseId}`);
+    expect(res.status).toBe(200);
+    expect(res.body.refundedAmount).toBe(12000);
+    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+    expect(gs.money).toBe(50000 + 12000);
+  });
+
+  it('shipped lead single AND spent pre-campaign: both converted shares deducted', async () => {
+    const { gameId, releaseId } = await seedLeadSingleRelease({
+      money: 50000,
+      marketingBudget: 12000,
+      leadSingleShipped: true,
+      preCampaign: {
+        pct: 30,
+        totalBudget: 3000, // 30% of the 10000 MAIN marketing share
+        budgetPerChannel: { pr: 3000 },
+        weeklySpend: 600,
+        spentToDate: 1200,
+      },
+    });
+
+    const res = await request(app).delete(`/api/game/${gameId}/releases/${releaseId}`);
+    expect(res.status).toBe(200);
+    // 12000 − 1200 (converted pre-campaign) − 2000 (shipped lead single) = 8800.
+    expect(res.body.refundedAmount).toBe(8800);
+    const [gs] = await db.select().from(gameStates).where(eq(gameStates.id, gameId));
+    expect(gs.money).toBe(50000 + 8800);
+  });
+});
+
 describe('POST /api/game/:gameId/releases (plain create, characterization)', () => {
   it('happy path: creates a release and links songs', async () => {
     const { gameId, artistId, songIds } = await seedGameWithSongs({ ownerId: TEST_USER_ID });

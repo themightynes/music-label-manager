@@ -66,6 +66,79 @@ describe('summarizeCancelRelease — refund preview (fork E)', () => {
   });
 });
 
+// C83 — the preview mirrors releasePlanningService.deleteRelease's lead-single
+// rule: a SHIPPED lead single's budget share (leadSingleBudgetBreakdown summed)
+// is deducted from the refund; unshipped deducts nothing. Shipped status comes
+// from the optional `songs` arg (the lead single's song row, isReleased /
+// is_released tolerant).
+describe('summarizeCancelRelease — lead-single share (C83, server parity)', () => {
+  const release = {
+    marketingBudget: 12000, // ONE POT: 10000 main + 2000 lead single
+    metadata: {
+      leadSingleStrategy: {
+        leadSingleId: 'song-lead',
+        leadSingleReleaseWeek: 3,
+        leadSingleBudgetBreakdown: { pr: 1500, digital: 500 },
+      },
+    },
+  };
+
+  it('lead single SHIPPED: preview excludes the lead-single share', () => {
+    const preview = summarizeCancelRelease(release, [
+      { id: 'song-lead', isReleased: true },
+      { id: 'song-other', isReleased: false },
+    ]);
+    // 12000 − 2000 shipped lead-single share = 10000 (same math as the server).
+    expect(preview.refundAmount).toBe(10000);
+  });
+
+  it('tolerates the raw-column is_released shape', () => {
+    const preview = summarizeCancelRelease(release, [{ id: 'song-lead', is_released: true }]);
+    expect(preview.refundAmount).toBe(10000);
+  });
+
+  it('lead single NOT shipped: full pot previews (unchanged rule)', () => {
+    const preview = summarizeCancelRelease(release, [{ id: 'song-lead', isReleased: false }]);
+    expect(preview.refundAmount).toBe(12000);
+  });
+
+  it('without songs data the deduction is skipped (server stays authoritative)', () => {
+    expect(summarizeCancelRelease(release).refundAmount).toBe(12000);
+    expect(summarizeCancelRelease(release, []).refundAmount).toBe(12000);
+  });
+
+  it('shipped lead single stacks with the converted pre-campaign share', () => {
+    const preview = summarizeCancelRelease(
+      {
+        marketingBudget: 12000,
+        metadata: {
+          ...release.metadata,
+          preCampaign: { pct: 30, totalBudget: 3000, spentToDate: 1200 },
+        },
+      },
+      [{ id: 'song-lead', isReleased: true }]
+    );
+    // 12000 − 1200 (pre-campaign converted) − 2000 (lead single shipped) = 8800.
+    expect(preview.refundAmount).toBe(8800);
+  });
+
+  it('legacy leadSingleBudget field (no breakdown) is honored, negatives ignored', () => {
+    const preview = summarizeCancelRelease(
+      {
+        marketingBudget: 5000,
+        metadata: {
+          leadSingleStrategy: {
+            leadSingleId: 'song-lead',
+            leadSingleBudget: { pr: 800, digital: -100 },
+          },
+        },
+      },
+      [{ id: 'song-lead', isReleased: true }]
+    );
+    expect(preview.refundAmount).toBe(5000 - 800);
+  });
+});
+
 describe('summarizeCancelRelease — consequence copy', () => {
   it('includes the anticipation-lost line only when a pre-campaign was diverted', () => {
     const withPre = summarizeCancelRelease({

@@ -14,29 +14,22 @@ interface ChartPerformanceCardProps {
   className?: string;
   showHeader?: boolean;
   compact?: boolean;
-  variant?: 'light' | 'dark';
 }
 
+// C53b: the app is dark-only in v2 — the old `variant: 'light' | 'dark'` prop (and its
+// v1 light branch) is gone; the v2 dark rendering is the only path.
 export const ChartPerformanceCard: React.FC<ChartPerformanceCardProps> = ({
   chartUpdates,
   className = '',
   showHeader = true,
-  compact = false,
-  variant = 'light'
+  compact = false
 }) => {
-
-  // Theme-aware styling
-  const isDark = variant === 'dark';
-  const containerClasses = isDark
-    ? 'glass-panel chromatic-hairline text-text-primary'
-    : 'bg-white border-gray-200 text-gray-900';
-
-  const headerTextClasses = isDark ? 'text-text-primary' : 'text-gray-900';
-  const subTextClasses = isDark ? 'text-text-body' : 'text-gray-500';
-  const sectionBgClasses = isDark ? 'bg-surface-inner/50' : 'bg-gray-50';
-  const debutBgClasses = isDark ? 'bg-positive/20 border-positive/30' : 'bg-green-50 border-green-200';
-  const movementBgClasses = isDark ? 'bg-neon-cyan/20 border-neon-cyan/30' : 'bg-blue-50 border-blue-200';
-  const itemHoverClasses = isDark ? 'hover:bg-white/5' : 'hover:bg-gray-50';
+  const containerClasses = 'glass-panel chromatic-hairline text-text-primary';
+  const headerTextClasses = 'text-text-primary';
+  const subTextClasses = 'text-text-body';
+  const debutBgClasses = 'bg-positive/20 border-positive/30';
+  const movementBgClasses = 'bg-neon-cyan/20 border-neon-cyan/30';
+  const itemHoverClasses = 'hover:bg-white/5';
   if (!chartUpdates || chartUpdates.length === 0) {
     return (
       <div className={`${containerClasses} rounded-lg p-4 ${className}`}>
@@ -69,7 +62,7 @@ export const ChartPerformanceCard: React.FC<ChartPerformanceCardProps> = ({
       {debuts.length > 0 && (
         <div className="mb-4">
           <h4 className={`text-sm font-medium ${headerTextClasses} mb-2 flex items-center`}>
-            <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+            <span className="inline-block w-2 h-2 bg-positive rounded-full mr-2"></span>
             New Debuts ({debuts.length})
           </h4>
           <div className="space-y-2">
@@ -85,7 +78,7 @@ export const ChartPerformanceCard: React.FC<ChartPerformanceCardProps> = ({
                   <span className={`px-2 py-1 text-xs font-semibold rounded ${getChartPositionColor(update.position)}`}>
                     {formatChartPosition(update.position)}
                   </span>
-                  <span className="text-xs text-green-600 font-medium">DEBUT</span>
+                  <span className="text-xs text-positive font-medium">DEBUT</span>
                 </div>
               </div>
             ))}
@@ -97,7 +90,7 @@ export const ChartPerformanceCard: React.FC<ChartPerformanceCardProps> = ({
       {significantMovements.length > 0 && (
         <div className="mb-4">
           <h4 className={`text-sm font-medium ${headerTextClasses} mb-2 flex items-center`}>
-            <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+            <span className="inline-block w-2 h-2 bg-neon-cyan rounded-full mr-2"></span>
             Big Moves ({significantMovements.length})
           </h4>
           <div className="space-y-2">
@@ -141,7 +134,7 @@ export const ChartPerformanceCard: React.FC<ChartPerformanceCardProps> = ({
       {!compact && (
         <div>
           <h4 className={`text-sm font-medium ${headerTextClasses} mb-2 flex items-center`}>
-            <span className="inline-block w-2 h-2 bg-gray-500 rounded-full mr-2"></span>
+            <span className="inline-block w-2 h-2 bg-white/30 rounded-full mr-2"></span>
             All Positions
           </h4>
           <div className="grid grid-cols-1 gap-2">
@@ -174,7 +167,7 @@ export const ChartPerformanceCard: React.FC<ChartPerformanceCardProps> = ({
                         </span>
                       )}
                       {update.isDebut && (
-                        <span className="text-xs bg-green-100 text-green-700 px-1 rounded">NEW</span>
+                        <span className="text-xs bg-positive/20 text-positive px-1 rounded">NEW</span>
                       )}
                     </div>
                   </div>
@@ -186,7 +179,7 @@ export const ChartPerformanceCard: React.FC<ChartPerformanceCardProps> = ({
 
       {/* Chart Summary Stats */}
       {chartUpdates.length > 3 && (
-        <div className={`mt-4 pt-3 border-t ${isDark ? 'border-white/[0.08]' : 'border-gray-200'}`}>
+        <div className="mt-4 pt-3 border-t border-white/[0.08]">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <div className={`text-lg font-semibold ${headerTextClasses}`}>

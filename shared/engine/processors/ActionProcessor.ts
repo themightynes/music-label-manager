@@ -73,6 +73,33 @@ import {
 import { DEFAULT_EXEC_DELEGATION_CONFIG } from '../../utils/executiveDelegation';
 
 /**
+ * C66: hot-path log gating. This file logged ~76 lines per action-processing
+ * pass; they now only emit when an engine debug flag is set. The file is shared
+ * client/server, so BOTH env surfaces are probed, each behind its own guard:
+ *  - Node/tsx/esbuild server bundle: `DEBUG_ENGINE=true` (process.env)
+ *  - Vite client bundle: `VITE_DEBUG_ENGINE=true` (import.meta.env)
+ * console.warn / console.error remain ungated. No logic changes.
+ */
+const DEBUG_ENGINE: boolean = (() => {
+  try {
+    if (typeof process !== 'undefined' && process.env?.DEBUG_ENGINE === 'true') return true;
+  } catch {
+    // process not available (browser bundle) — fall through
+  }
+  try {
+    const metaEnv = (import.meta as any)?.env;
+    if (metaEnv?.VITE_DEBUG_ENGINE === 'true') return true;
+  } catch {
+    // import.meta.env not available (CJS/node contexts) — fall through
+  }
+  return false;
+})();
+
+function debugLog(...args: unknown[]): void {
+  if (DEBUG_ENGINE) console.log(...args);
+}
+
+/**
  * Effect keys that applyEffects's switch actually implements (PR-1, truth infrastructure).
  * 'executive_mood' is intentionally excluded — it's read directly out of
  * effects_immediate by processExecutiveActions (outside this switch) and legitimately
@@ -325,14 +352,14 @@ export class ActionProcessor {
    */
   async processAction(ctx: WeekContext, action: GameEngineAction, dbTransaction?: any): Promise<void> {
     const { summary } = ctx;
-    console.log('[GAME-ENGINE processAction] Processing action:', JSON.stringify(action, null, 2));
-    console.log('[GAME-ENGINE processAction] Action type:', action.actionType);
-    console.log('[GAME-ENGINE processAction] Action metadata:', action.metadata);
-    console.log('[GAME-ENGINE processAction] ExecutiveId in metadata:', action.metadata?.executiveId);
+    debugLog('[GAME-ENGINE processAction] Processing action:', JSON.stringify(action, null, 2));
+    debugLog('[GAME-ENGINE processAction] Action type:', action.actionType);
+    debugLog('[GAME-ENGINE processAction] Action metadata:', action.metadata);
+    debugLog('[GAME-ENGINE processAction] ExecutiveId in metadata:', action.metadata?.executiveId);
 
     switch (action.actionType) {
       case 'role_meeting':
-        console.log('[GAME-ENGINE processAction] ✅ MATCHED role_meeting - calling processRoleMeeting');
+        debugLog('[GAME-ENGINE processAction] ✅ MATCHED role_meeting - calling processRoleMeeting');
         await this.processRoleMeeting(ctx, action, dbTransaction);
         break;
       case 'start_project':
@@ -359,17 +386,17 @@ export class ActionProcessor {
     const { summary } = ctx;
     if (!action.targetId) return;
 
-    console.log(`[GAME-ENGINE] processRoleMeeting called with action:`, action);
+    debugLog(`[GAME-ENGINE] processRoleMeeting called with action:`, action);
 
     // Extract the clean IDs from metadata
     const { roleId, actionId, choiceId } = action.metadata || {};
 
     if (!roleId || !actionId || !choiceId) {
-      console.log(`[GAME-ENGINE] Missing required IDs - roleId: ${roleId}, actionId: ${actionId}, choiceId: ${choiceId}`);
+      debugLog(`[GAME-ENGINE] Missing required IDs - roleId: ${roleId}, actionId: ${actionId}, choiceId: ${choiceId}`);
       return;
     }
 
-    console.log(`[GAME-ENGINE] Processing meeting - Role: ${roleId}, Action: ${actionId}, Choice: ${choiceId}`);
+    debugLog(`[GAME-ENGINE] Processing meeting - Role: ${roleId}, Action: ${actionId}, Choice: ${choiceId}`);
 
     // Get the role data for the name
     const role = await ctx.gameData.getRoleById(roleId);
@@ -390,7 +417,7 @@ export class ActionProcessor {
         effects_immediate: { money: -1000 },
         effects_delayed: {}
       };
-      console.log(`[GAME-ENGINE] Using fallback choice data`);
+      debugLog(`[GAME-ENGINE] Using fallback choice data`);
 
       // Apply fallback effects and return (use global targeting as safe default)
       if (fallbackChoice.effects_immediate) {
@@ -405,7 +432,7 @@ export class ActionProcessor {
       return;
     }
 
-    console.log(`[GAME-ENGINE] Loaded real choice data:`, {
+    debugLog(`[GAME-ENGINE] Loaded real choice data:`, {
       actionId,
       choiceId,
       immediateEffects: choice.effects_immediate,
@@ -420,7 +447,7 @@ export class ActionProcessor {
       const selectedArtist = await new ArtistStateProcessor().selectHighestPopularityArtist(ctx);
       if (selectedArtist) {
         targetArtistId = selectedArtist.id;
-        console.log(`[GAME-ENGINE] Predetermined targeting: Selected ${selectedArtist.name} (popularity: ${selectedArtist.popularity})`);
+        debugLog(`[GAME-ENGINE] Predetermined targeting: Selected ${selectedArtist.name} (popularity: ${selectedArtist.popularity})`);
       } else {
         console.warn(`[GAME-ENGINE] Predetermined targeting failed: No signed artists available`);
       }
@@ -432,7 +459,7 @@ export class ActionProcessor {
       if (targetArtistId) {
         // BUGFIX: Removed gameState.artists lookup (property doesn't exist)
         // Artist name will be logged in applyArtistChangesToDatabase()
-        console.log(`[GAME-ENGINE] User-selected targeting: Player selected artist ${targetArtistId}`);
+        debugLog(`[GAME-ENGINE] User-selected targeting: Player selected artist ${targetArtistId}`);
       } else {
         // BUGFIX: Throw error early instead of continuing with undefined artistId
         // This prevents the error from occurring later in applyEffects validation
@@ -440,7 +467,7 @@ export class ActionProcessor {
       }
     } else {
       // Global: No artistId (applies to all artists)
-      console.log(`[GAME-ENGINE] Global targeting: Effects will apply to all signed artists`);
+      debugLog(`[GAME-ENGINE] Global targeting: Effects will apply to all signed artists`);
     }
 
     // Exec-meetings-revival PR-9 (C6/D) — executive-mood meeting-outcome modifier.
@@ -462,7 +489,7 @@ export class ActionProcessor {
       const config = ctx.gameData.getExecMoodModifierConfigSync();
       moodModifiers = getMoodModifiers(executiveForMeeting.mood, config);
       if (!isNeutral(moodModifiers)) {
-        console.log(
+        debugLog(
           `[EXEC MOOD MODIFIER] ${executiveForMeeting.role} mood ${executiveForMeeting.mood} → ` +
           `band=${moodModifiers.band}, costMultiplier=${moodModifiers.costMultiplier}, ` +
           `effectMultiplier=${moodModifiers.effectMultiplier}`
@@ -763,17 +790,17 @@ export class ActionProcessor {
     // Skip CEO meetings - player IS the CEO, no executive to update
     const roleId = action.metadata?.roleId;
     if (roleId === 'ceo') {
-      console.log('[GAME-ENGINE] CEO meeting - player is the CEO, no executive to update');
+      debugLog('[GAME-ENGINE] CEO meeting - player is the CEO, no executive to update');
       return null;
     }
 
     const executiveId = action.metadata?.executiveId;
     if (!executiveId) {
-      console.log('[GAME-ENGINE] No executiveId in action metadata, skipping executive processing');
+      debugLog('[GAME-ENGINE] No executiveId in action metadata, skipping executive processing');
       return null;
     }
 
-    console.log('[GAME-ENGINE] Processing executive actions for executiveId:', executiveId);
+    debugLog('[GAME-ENGINE] Processing executive actions for executiveId:', executiveId);
 
     // Executive Delegation arc — playtest-revision (2026-07-12 round 3): only a
     // PLAYER-attended (manual OR AUTO-endorsed) meeting marks the exec "used" this
@@ -793,11 +820,11 @@ export class ActionProcessor {
     // Get executive from database (PR-9: reuse the caller's fetch when provided).
     const executive = prefetchedExecutive ?? await ctx.storage.getExecutive(executiveId, dbTransaction);
     if (!executive) {
-      console.log('[GAME-ENGINE] Executive not found:', executiveId);
+      debugLog('[GAME-ENGINE] Executive not found:', executiveId);
       return null;
     }
 
-    console.log('[GAME-ENGINE] Current executive state:', {
+    debugLog('[GAME-ENGINE] Current executive state:', {
       role: executive.role,
       mood: executive.mood,
       loyalty: executive.loyalty
@@ -818,16 +845,16 @@ export class ActionProcessor {
       // with the (now un-suppressed) passive drift, sustained neglect lets mood
       // erode toward 50 (§4.5).
       moodChange = delegationCfg.neglect_mood_gain;
-      console.log('[GAME-ENGINE] Autonomous (neglect) resolution — neglect_mood_gain:', moodChange);
+      debugLog('[GAME-ENGINE] Autonomous (neglect) resolution — neglect_mood_gain:', moodChange);
     } else if (choiceEffects?.effects_immediate?.executive_mood) {
       // Use executive-specific mood effect if available
       moodChange = choiceEffects.effects_immediate.executive_mood;
-      console.log('[GAME-ENGINE] Applied executive_mood effect:', moodChange);
+      debugLog('[GAME-ENGINE] Applied executive_mood effect:', moodChange);
     } else {
       // Default positive boost for interaction (mood_default_delta) — an exec the
       // player engaged (manual OR AUTO-endorsed) feels engaged (§4.4).
       moodChange = delegationCfg.mood_default_delta;
-      console.log('[GAME-ENGINE] Applied default executive interaction boost:', moodChange);
+      debugLog('[GAME-ENGINE] Applied default executive interaction boost:', moodChange);
     }
 
     const newMood = this.clampExecutiveMood(executive.mood + moodChange);
@@ -849,7 +876,7 @@ export class ActionProcessor {
     // rather than parking the exec's stats (§4.1/§4.5).
     const currentWeek = ctx.gameState.currentWeek || 1;
 
-    console.log('[GAME-ENGINE] Updating executive:', {
+    debugLog('[GAME-ENGINE] Updating executive:', {
       moodChange,
       newMood,
       newLoyalty,
@@ -870,7 +897,7 @@ export class ActionProcessor {
       dbTransaction
     );
 
-    console.log('[GAME-ENGINE] Executive updated successfully');
+    debugLog('[GAME-ENGINE] Executive updated successfully');
 
     // Playtest bug #1 fix: return the deltas for processRoleMeeting to fold into
     // the single 'meeting' change entry, instead of pushing a duplicate
@@ -973,7 +1000,7 @@ export class ActionProcessor {
       const newMood = await this.persistExecutiveMoodUpdate(ctx, executive, moodDelta, {}, dbTransaction);
       const appliedDelta = newMood - previousMood; // what actually landed after the clamp
 
-      console.log(
+      debugLog(
         `[EXEC MOOD TARGETING] ${executive.role}: mood ${previousMood} -> ${newMood} ` +
         `(authored ${moodDelta > 0 ? '+' : ''}${moodDelta}, applied ${appliedDelta > 0 ? '+' : ''}${appliedDelta})${suffix}`
       );
@@ -1046,6 +1073,24 @@ export class ActionProcessor {
         const queue: ScheduledEventEntry[] = Array.isArray(flags.scheduled_events)
           ? flags.scheduled_events
           : [];
+        // C105 dedupe: re-drawable meetings (no cooldown) can schedule the same
+        // event again in a later week — without this guard the same verdict
+        // crisis banks twice. Skip the enqueue if the eventId is already queued
+        // OR currently sitting in the pending_side_event slot (already promoted
+        // this or an earlier advance, not yet resolved). Single-draw path is
+        // untouched (no duplicate → no behavior change).
+        const pendingSideEventId = (flags.pending_side_event as any)?.eventId;
+        if (
+          queue.some((q) => q.eventId === rawValue.event_id) ||
+          pendingSideEventId === rawValue.event_id
+        ) {
+          // Intentionally ungated (C66): rare dedupe-skip note, pinned by
+          // tests/engine/schedule-event-dedupe.test.ts's console.log spy.
+          console.log(
+            `[EFFECT PROCESSING] schedule_event: "${rawValue.event_id}" already queued or pending — duplicate enqueue skipped (source: ${meetingName || 'unknown'})`
+          );
+          continue;
+        }
         const currentWeek = ctx.gameState.currentWeek || 0;
         const entry: ScheduledEventEntry = {
           eventId: rawValue.event_id,
@@ -1067,7 +1112,7 @@ export class ActionProcessor {
           amount: 0,
           appliedEffects: {}
         });
-        console.log(
+        debugLog(
           `[EFFECT PROCESSING] schedule_event: "${entry.eventId}" queued (lands week ${entry.landsOnWeek}, source: ${entry.source})`
         );
         continue;
@@ -1167,7 +1212,7 @@ export class ActionProcessor {
             if (choiceId) logParts.push(`choice: ${choiceId}`);
             const accumulated = ArtistChangeHelpers.getMood(summary.artistChanges, artistId);
             logParts.push(`accumulated: ${accumulated > 0 ? '+' : ''}${accumulated}`);
-            console.log(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (${logParts.join(', ')})`);
+            debugLog(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (${logParts.join(', ')})`);
 
             // Add to summary changes for UI display (will be enriched with artist name in applyArtistChangesToDatabase)
             summary.changes.push({
@@ -1189,7 +1234,7 @@ export class ActionProcessor {
             const signedArtists = await new ArtistStateProcessor().loadSignedArtists(ctx);
 
             if (signedArtists.length === 0) {
-              console.log(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (no signed artists, effect skipped)`);
+              debugLog(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (no signed artists, effect skipped)`);
               break;
             }
 
@@ -1203,7 +1248,7 @@ export class ActionProcessor {
             if (meetingName) logParts.push(`meeting: ${meetingName}`);
             if (choiceId) logParts.push(`choice: ${choiceId}`);
             logParts.push(`count: ${signedArtists.length}`);
-            console.log(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (${logParts.join(', ')})`);
+            debugLog(`[EFFECT PROCESSING] Artist mood effect: ${value > 0 ? '+' : ''}${value} (${logParts.join(', ')})`);
 
             // Add to summary changes for UI display (roster-wide)
             summary.changes.push({
@@ -1236,7 +1281,7 @@ export class ActionProcessor {
             // Per-artist targeting: Apply energy change to specific artist
             ArtistChangeHelpers.addEnergy(summary.artistChanges, artistId, value);
 
-            console.log(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} (target: ${artistId})`);
+            debugLog(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} (target: ${artistId})`);
 
             // Add to summary changes for UI display (using mood type with energyBoost field)
             // BUGFIX: Set moodChange for UI badge display (WeekSummary uses moodChange || 0)
@@ -1261,7 +1306,7 @@ export class ActionProcessor {
             const signedArtistsForEnergy = await new ArtistStateProcessor().loadSignedArtists(ctx);
 
             if (signedArtistsForEnergy.length === 0) {
-              console.log(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} (no signed artists, effect skipped)`);
+              debugLog(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} (no signed artists, effect skipped)`);
               break;
             }
 
@@ -1271,7 +1316,7 @@ export class ActionProcessor {
             });
 
             // Add comprehensive logging
-            console.log(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} applied to ${signedArtistsForEnergy.length} signed artists`);
+            debugLog(`[EFFECT PROCESSING] Artist energy effect: ${value > 0 ? '+' : ''}${value} applied to ${signedArtistsForEnergy.length} signed artists`);
 
             // Add to summary changes for UI display (using mood type with energyBoost field)
             // BUGFIX: Set moodChange for UI badge display (WeekSummary uses moodChange || 0)
@@ -1305,7 +1350,7 @@ export class ActionProcessor {
             // Per-artist targeting: Apply popularity change to specific artist
             ArtistChangeHelpers.addPopularity(summary.artistChanges, artistId, value);
 
-            console.log(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} (target: ${artistId})`);
+            debugLog(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} (target: ${artistId})`);
 
             // Add to summary changes for UI display
             summary.changes.push({
@@ -1327,7 +1372,7 @@ export class ActionProcessor {
             const signedArtistsForPopularity = await new ArtistStateProcessor().loadSignedArtists(ctx);
 
             if (signedArtistsForPopularity.length === 0) {
-              console.log(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} (no signed artists, effect skipped)`);
+              debugLog(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} (no signed artists, effect skipped)`);
               break;
             }
 
@@ -1337,7 +1382,7 @@ export class ActionProcessor {
             });
 
             // Add comprehensive logging
-            console.log(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} applied to ${signedArtistsForPopularity.length} signed artists`);
+            debugLog(`[EFFECT PROCESSING] Artist popularity effect: ${value > 0 ? '+' : ''}${value} applied to ${signedArtistsForPopularity.length} signed artists`);
 
             // Add to summary changes for UI display
             summary.changes.push({
@@ -1373,9 +1418,9 @@ export class ActionProcessor {
               amount: 0,
               appliedEffects: { press_story_flag: 1 }
             });
-            console.log('[EFFECT PROCESSING] press_story_flag set (flags.pressStoryFlag = true)');
+            debugLog('[EFFECT PROCESSING] press_story_flag set (flags.pressStoryFlag = true)');
           } else {
-            console.log(`[EFFECT PROCESSING] press_story_flag effect with non-positive value (${value}) ignored`);
+            debugLog(`[EFFECT PROCESSING] press_story_flag effect with non-positive value (${value}) ignored`);
           }
           break;
         }
@@ -1438,7 +1483,7 @@ export class ActionProcessor {
             amount: value,
             appliedEffects: { quality_bonus: value }
           });
-          console.log(`[EFFECT PROCESSING] quality_bonus effect: ${value > 0 ? '+' : ''}${value} (${artistScoped ? `artist ${artistId} pool` : 'label pool'} now ${poolTotal}, stamped week ${currentWeek})`);
+          debugLog(`[EFFECT PROCESSING] quality_bonus effect: ${value > 0 ? '+' : ''}${value} (${artistScoped ? `artist ${artistId} pool` : 'label pool'} now ${poolTotal}, stamped week ${currentWeek})`);
           break;
         }
 
@@ -1496,18 +1541,14 @@ export class ActionProcessor {
           }
           ctx.gameState.flags = flags;
 
-          summary.changes.push({
-            type: 'meeting',
-            description: `Buzz ${value > 0 ? 'building' : 'cooling'} for the next release (${value > 0 ? '+' : ''}${value})`,
-            amount: value,
-            appliedEffects: { awareness_boost: value }
-          });
           // Buzz-v2 slice 1: STRUCTURED banked-hype attribution entry (routine).
-          // Additive to the existing 'meeting' entry above (which carries the
-          // effect badge in the meetings card); this one drives the routine-stage
-          // Hype line + the core-status "N Hype banked" chip. Only emit for actual
-          // banks (value !== 0) so byte-stable no-op choices add nothing.
-          // Slice 2: the description now names WHERE the hype landed (artist pool vs
+          // C81: the generic 'meeting' entry that used to accompany this bank is
+          // FOLDED in — one banking event now emits exactly ONE entry. The
+          // appliedEffects payload the meeting entry uniquely carried (it drives
+          // the effect badge, filtered against LIVE_EFFECT_KEYS client-side) now
+          // rides the hype_banked entry itself. Only emit for actual banks
+          // (value !== 0) so byte-stable no-op choices add nothing.
+          // Slice 2: the description names WHERE the hype landed (artist pool vs
           // label pool); hypeTotal carries the pool total after this bank.
           if (value !== 0) {
             summary.changes.push({
@@ -1515,9 +1556,10 @@ export class ActionProcessor {
               description: `📦 Banked ${value > 0 ? '+' : ''}${value} Hype for ${scopeLabel}`,
               amount: value,
               hypeTotal: poolTotal,
+              appliedEffects: { awareness_boost: value },
             });
           }
-          console.log(`[EFFECT PROCESSING] awareness_boost effect: ${value > 0 ? '+' : ''}${value} banked to ${artistScoped ? `artist ${artistId}` : 'label'} pool (now ${poolTotal}, stamped week ${currentWeek})`);
+          debugLog(`[EFFECT PROCESSING] awareness_boost effect: ${value > 0 ? '+' : ''}${value} banked to ${artistScoped ? `artist ${artistId}` : 'label'} pool (now ${poolTotal}, stamped week ${currentWeek})`);
           break;
         }
 
@@ -1542,7 +1584,7 @@ export class ActionProcessor {
             amount: value,
             appliedEffects: { variance_up: value }
           });
-          console.log(`[EFFECT PROCESSING] variance_up effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pendingVariance}, stamped week ${flags.pendingVarianceWeek})`);
+          debugLog(`[EFFECT PROCESSING] variance_up effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pendingVariance}, stamped week ${flags.pendingVarianceWeek})`);
           break;
         }
 
@@ -1590,7 +1632,7 @@ export class ActionProcessor {
             amount: rolledValue,
             appliedEffects: { rep_swing: rolledValue }
           });
-          console.log(`[EFFECT PROCESSING] rep_swing effect: gambled ±${magnitude}, rolled ${rawRolledValue > 0 ? '+' : ''}${rawRolledValue} → applied ${rolledValue > 0 ? '+' : ''}${rolledValue} (seed: ${seed})`);
+          debugLog(`[EFFECT PROCESSING] rep_swing effect: gambled ±${magnitude}, rolled ${rawRolledValue > 0 ? '+' : ''}${rawRolledValue} → applied ${rolledValue > 0 ? '+' : ''}${rolledValue} (seed: ${seed})`);
           break;
         }
 
@@ -1614,7 +1656,7 @@ export class ActionProcessor {
             amount: value,
             appliedEffects: { award_chances: value }
           });
-          console.log(`[EFFECT PROCESSING] award_chances effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.awardChances})`);
+          debugLog(`[EFFECT PROCESSING] award_chances effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.awardChances})`);
           break;
         }
 
@@ -1633,7 +1675,7 @@ export class ActionProcessor {
             amount: value,
             appliedEffects: { press_momentum: value }
           });
-          console.log(`[EFFECT PROCESSING] press_momentum effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pressMomentum})`);
+          debugLog(`[EFFECT PROCESSING] press_momentum effect: ${value > 0 ? '+' : ''}${value} (pool now ${flags.pressMomentum})`);
           break;
         }
 
@@ -1671,7 +1713,7 @@ export class ActionProcessor {
             amount: 0,
             appliedEffects: { story_flag: 1 }
           });
-          console.log(`[EFFECT PROCESSING] story_flag effect: flags.story['${storyKey}'] = ${storyValue}`);
+          debugLog(`[EFFECT PROCESSING] story_flag effect: flags.story['${storyKey}'] = ${storyValue}`);
           break;
         }
 
@@ -1800,7 +1842,7 @@ export class ActionProcessor {
               amount: 0,
               appliedEffects: { spawn_prospect: 1 }
             });
-            console.log(`[EFFECT PROCESSING] spawn_prospect effect: added ${picked.name} (${picked.id}) to discovered pool (source: ${desc.source ?? 'story'}, seed: ${seedBase})`);
+            debugLog(`[EFFECT PROCESSING] spawn_prospect effect: added ${picked.name} (${picked.id}) to discovered pool (source: ${desc.source ?? 'story'}, seed: ${seedBase})`);
           } catch (spawnErr) {
             console.warn('[EFFECT PROCESSING] spawn_prospect failed (effect skipped, never fatal):', spawnErr);
           }
@@ -1841,7 +1883,7 @@ export class ActionProcessor {
             amount: 0,
             appliedEffects: { set_exec_absence: weeks }
           });
-          console.log(`[EFFECT PROCESSING] set_exec_absence effect: flags.execAbsence['${role}'] = ${execAbsence[role]} (back week ${execAbsence[role]}, ${weeks} week(s) from week ${currentWeek})`);
+          debugLog(`[EFFECT PROCESSING] set_exec_absence effect: flags.execAbsence['${role}'] = ${execAbsence[role]} (back week ${execAbsence[role]}, ${weeks} week(s) from week ${currentWeek})`);
           break;
         }
 
@@ -1888,7 +1930,7 @@ export class ActionProcessor {
             amount: 0,
             appliedEffects: { distribution_efficiency: raw.amount }
           });
-          console.log(`[EFFECT PROCESSING] distribution_efficiency effect: ${raw.amount > 0 ? '+' : ''}${raw.amount} for ${weeks} week(s) (pool now ${flags.distributionEfficiency.amount}, until week ${flags.distributionEfficiency.untilWeek})`);
+          debugLog(`[EFFECT PROCESSING] distribution_efficiency effect: ${raw.amount > 0 ? '+' : ''}${raw.amount} for ${weeks} week(s) (pool now ${flags.distributionEfficiency.amount}, until week ${flags.distributionEfficiency.untilWeek})`);
           break;
         }
 
@@ -1911,9 +1953,9 @@ export class ActionProcessor {
               amount: 0,
               appliedEffects: { press_scrutiny_flag: 1 }
             });
-            console.log('[EFFECT PROCESSING] press_scrutiny_flag set (flags.pressScrutinyFlag = true)');
+            debugLog('[EFFECT PROCESSING] press_scrutiny_flag set (flags.pressScrutinyFlag = true)');
           } else {
-            console.log(`[EFFECT PROCESSING] press_scrutiny_flag effect with non-positive value (${value}) ignored`);
+            debugLog(`[EFFECT PROCESSING] press_scrutiny_flag effect with non-positive value (${value}) ignored`);
           }
           break;
         }
@@ -2029,7 +2071,7 @@ export class ActionProcessor {
             type: 'song_granted',
             description: `New recording in the vault: "${title}" — ${grantArtist.name}`,
           });
-          console.log(`[EFFECT PROCESSING] grant_song: created "${title}" (quality ${quality}) for artist ${grantArtist.name} (seed: ${seed})`);
+          debugLog(`[EFFECT PROCESSING] grant_song: created "${title}" (quality ${quality}) for artist ${grantArtist.name} (seed: ${seed})`);
           break;
         }
 
@@ -2119,9 +2161,9 @@ export class ActionProcessor {
               type: 'single',
               releaseWeek,
               status: 'planned',
-              // HARDCODED assumption: the knobbed budget is NOT deducted from cash
-              // (default 0). If this knob is ever tuned above 0, add a money
-              // deduction here or the marketing push is a free lunch.
+              // C102: the knobbed budget IS deducted from cash (see the
+              // summary.expenses block after creation below). At the default
+              // knob value (0) the deduction is a no-op.
               marketingBudget: defaultBudget,
               metadata: {
                 spawnedBy: {
@@ -2142,11 +2184,32 @@ export class ActionProcessor {
             [releaseSong.id]
           );
 
+          // C102: deduct the knobbed marketing budget from cash, mirroring how
+          // every other money effect in this processor deducts — via
+          // summary.expenses (+ marketingCosts breakdown), which the
+          // consolidated weekly financial calculation subtracts from
+          // gameState.money. At knob default 0 this whole block is a no-op.
+          if (defaultBudget > 0) {
+            summary.expenses += defaultBudget;
+            if (!summary.expenseBreakdown) {
+              summary.expenseBreakdown = {
+                weeklyOperations: 0,
+                artistSalaries: 0,
+                executiveSalaries: 0,
+                signingBonuses: 0,
+                projectCosts: 0,
+                marketingCosts: 0,
+                roleMeetingCosts: 0
+              };
+            }
+            summary.expenseBreakdown.marketingCosts += defaultBudget;
+          }
+
           summary.changes.push({
             type: 'release_spawned',
             description: `Surprise release: "${releaseSong.title}" — ${releaseArtist?.name ?? 'your artist'} heads straight to the airwaves`,
           });
-          console.log(`[EFFECT PROCESSING] spawn_release: planned "${releaseSong.title}" (release ${newRelease?.id}) for week ${releaseWeek}`);
+          debugLog(`[EFFECT PROCESSING] spawn_release: planned "${releaseSong.title}" (release ${newRelease?.id}) for week ${releaseWeek}`);
           break;
         }
 
@@ -2160,7 +2223,7 @@ export class ActionProcessor {
           // touched, so the bump simply rides the existing weekly build/decay
           // cycle in ReleaseProcessor.processReleasedProjects. Zero RNG.
           if (!(value > 0)) {
-            console.log(`[EFFECT PROCESSING] promote_release with non-positive value (${value}) ignored`);
+            debugLog(`[EFFECT PROCESSING] promote_release with non-positive value (${value}) ignored`);
             break;
           }
           try {
@@ -2189,7 +2252,7 @@ export class ActionProcessor {
               amount: 0,
               appliedEffects: { promote_release: value },
             });
-            console.log(`[EFFECT PROCESSING] promote_release: +${bump} awareness (of authored ${value}, cap ${maxBump}) to "${target.title}" (${currentAwareness} -> ${newAwareness})`);
+            debugLog(`[EFFECT PROCESSING] promote_release: +${bump} awareness (of authored ${value}, cap ${maxBump}) to "${target.title}" (${currentAwareness} -> ${newAwareness})`);
           } catch (error) {
             console.error('[EFFECT PROCESSING] promote_release failed (effect skipped):', error);
           }
@@ -2204,7 +2267,7 @@ export class ActionProcessor {
           // song's ongoing streams too. peak_awareness is historical — never reduced.
           const severity = Math.abs(value); // authored as positive severity; tolerate a signed value
           if (!(severity > 0)) {
-            console.log(`[EFFECT PROCESSING] catalog_damage with zero severity ignored`);
+            debugLog(`[EFFECT PROCESSING] catalog_damage with zero severity ignored`);
             break;
           }
           try {
@@ -2230,7 +2293,7 @@ export class ActionProcessor {
               amount: 0,
               appliedEffects: { catalog_damage: value },
             });
-            console.log(`[EFFECT PROCESSING] catalog_damage: severity ${severity} → -${(lossFraction * 100).toFixed(0)}% awareness on "${target.title}" (${currentAwareness} -> ${newAwareness})`);
+            debugLog(`[EFFECT PROCESSING] catalog_damage: severity ${severity} → -${(lossFraction * 100).toFixed(0)}% awareness on "${target.title}" (${currentAwareness} -> ${newAwareness})`);
           } catch (error) {
             console.error('[EFFECT PROCESSING] catalog_damage failed (effect skipped):', error);
           }
@@ -2249,7 +2312,7 @@ export class ActionProcessor {
           // and remain releasable; only future song generation stops.
           // Restart/delay is explicitly deferred (fights the monotonic stage model).
           if (value === 0) {
-            console.log(`[EFFECT PROCESSING] cancel_project with zero value ignored`);
+            debugLog(`[EFFECT PROCESSING] cancel_project with zero value ignored`);
             break;
           }
           try {
@@ -2291,7 +2354,7 @@ export class ActionProcessor {
               artistId: target.artistId ?? undefined,
               appliedEffects: { cancel_project: value },
             });
-            console.log(`[EFFECT PROCESSING] cancel_project: soft-cancelled "${target.title}" (${target.id}, stage was ${target.stage}); ${target.songsCreated || 0}/${target.songCount || 0} songs already created are KEPT`);
+            debugLog(`[EFFECT PROCESSING] cancel_project: soft-cancelled "${target.title}" (${target.id}, stage was ${target.stage}); ${target.songsCreated || 0}/${target.songCount || 0} songs already created are KEPT`);
           } catch (error) {
             console.error('[EFFECT PROCESSING] cancel_project failed (effect skipped):', error);
           }
@@ -2308,7 +2371,7 @@ export class ActionProcessor {
           // (ReleaseProcessor.processReleasedProjects → flagsLedgers.processInventoryWeek).
           const requestedUnits = Math.round(value);
           if (!(requestedUnits > 0)) {
-            console.log(`[EFFECT PROCESSING] grant_inventory with non-positive units (${value}) ignored`);
+            debugLog(`[EFFECT PROCESSING] grant_inventory with non-positive units (${value}) ignored`);
             break;
           }
           try {
@@ -2371,7 +2434,7 @@ export class ActionProcessor {
               amount: 0,
               appliedEffects: { grant_inventory: value },
             });
-            console.log(`[EFFECT PROCESSING] grant_inventory: ${units} units (authored ${value}, cap ${invCfg.max_units_per_grant}) @ cost ${invCfg.unit_cost}/price ${invCfg.unit_price} against "${entry.releaseTitle}" (${release.id}); manufacturing $${manufacturingCost}`);
+            debugLog(`[EFFECT PROCESSING] grant_inventory: ${units} units (authored ${value}, cap ${invCfg.max_units_per_grant}) @ cost ${invCfg.unit_cost}/price ${invCfg.unit_price} against "${entry.releaseTitle}" (${release.id}); manufacturing $${manufacturingCost}`);
           } catch (error) {
             console.error('[EFFECT PROCESSING] grant_inventory failed (effect skipped):', error);
           }
@@ -2395,7 +2458,7 @@ export class ActionProcessor {
             };
             const fraction = normalizeTransferFraction(value, xferCfg);
             if (!(fraction > 0)) {
-              console.log(`[EFFECT PROCESSING] transfer_revenue_stream with non-positive fraction (${value}) ignored`);
+              debugLog(`[EFFECT PROCESSING] transfer_revenue_stream with non-positive fraction (${value}) ignored`);
               break;
             }
             const releases = (await ctx.storage?.getReleasesByGame?.(ctx.gameState.id, ctx.dbTransaction)) || [];
@@ -2423,7 +2486,7 @@ export class ActionProcessor {
               releaseId: release.id,
               appliedEffects: { transfer_revenue_stream: value },
             });
-            console.log(`[EFFECT PROCESSING] transfer_revenue_stream: fraction ${fraction} (authored ${value}) of "${entry.releaseTitle}" (${release.id}), weeks ${entry.startWeek}-${entry.endWeek}`);
+            debugLog(`[EFFECT PROCESSING] transfer_revenue_stream: fraction ${fraction} (authored ${value}) of "${entry.releaseTitle}" (${release.id}), weeks ${entry.startWeek}-${entry.endWeek}`);
           } catch (error) {
             console.error('[EFFECT PROCESSING] transfer_revenue_stream failed (effect skipped):', error);
           }
@@ -2477,7 +2540,7 @@ export class ActionProcessor {
           ? Math.max(0, flags.pressMomentum - 1)
           : Math.min(0, flags.pressMomentum + 1);
         if (decayed !== flags.pressMomentum) {
-          console.log(`[PRESS MOMENTUM] Weekly decay: ${flags.pressMomentum} -> ${decayed}`);
+          debugLog(`[PRESS MOMENTUM] Weekly decay: ${flags.pressMomentum} -> ${decayed}`);
         }
         flags.pressMomentum = decayed;
       }
@@ -2501,7 +2564,7 @@ export class ActionProcessor {
 
               // BUGFIX: Removed gameState.artists validation (property doesn't exist)
               // Artist existence will be validated in applyArtistChangesToDatabase()
-              console.log(`[DELAYED EFFECTS] Processing artist-targeted delayed effects for artist ${artistId}:`, effects);
+              debugLog(`[DELAYED EFFECTS] Processing artist-targeted delayed effects for artist ${artistId}:`, effects);
 
               // Use applyEffects() with artist targeting for delayed effects (Task 2.5)
               // Engine-verbs arc: structured-value keys (STRUCTURED_EFFECT_KEYS)
@@ -2572,7 +2635,7 @@ export class ActionProcessor {
         const expiryWeeks = ctx.gameData.getPressConfigSync().press_story_flag_expiry_weeks ?? 8;
         const currentWeek = ctx.gameState.currentWeek || 0;
         if (currentWeek - stampedWeek >= expiryWeeks) {
-          console.log(`[PRESS STORY] Expired unconsumed story flag after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+          debugLog(`[PRESS STORY] Expired unconsumed story flag after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
           flags.pressStoryFlag = false;
           delete flags.pressStoryFlagWeek;
         }
@@ -2588,7 +2651,7 @@ export class ActionProcessor {
         const expiryWeeks = ctx.gameData.getPressConfigSync().press_scrutiny_flag_expiry_weeks ?? 8;
         const currentWeek = ctx.gameState.currentWeek || 0;
         if (currentWeek - stampedWeek >= expiryWeeks) {
-          console.log(`[PRESS SCRUTINY] Expired unconsumed scrutiny flag after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+          debugLog(`[PRESS SCRUTINY] Expired unconsumed scrutiny flag after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
           flags.pressScrutinyFlag = false;
           delete flags.pressScrutinyFlagWeek;
           if (summary && Array.isArray(summary.changes)) {
@@ -2612,7 +2675,7 @@ export class ActionProcessor {
         const expiryWeeks = ctx.gameData.getQualityBonusConfigSync().pending_quality_bonus_expiry_weeks;
         const currentWeek = ctx.gameState.currentWeek || 0;
         if (currentWeek - stampedWeek >= expiryWeeks) {
-          console.log(`[QUALITY BONUS] Expired unconsumed bonus (${flags.pendingQualityBonus}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+          debugLog(`[QUALITY BONUS] Expired unconsumed bonus (${flags.pendingQualityBonus}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
           flags.pendingQualityBonus = 0;
           delete flags.pendingQualityBonusWeek;
         }
@@ -2633,7 +2696,7 @@ export class ActionProcessor {
           if (!pool || typeof pool.amount !== 'number' || pool.amount === 0) continue;
           const stampedWeek = typeof pool.week === 'number' ? pool.week : currentWeek;
           if (currentWeek - stampedWeek >= expiryWeeks) {
-            console.log(`[QUALITY BONUS] Expired unconsumed artist pool for ${poolArtistId} (${pool.amount}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+            debugLog(`[QUALITY BONUS] Expired unconsumed artist pool for ${poolArtistId} (${pool.amount}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
             delete pools[poolArtistId];
           }
         }
@@ -2654,7 +2717,7 @@ export class ActionProcessor {
         const currentWeek = ctx.gameState.currentWeek || 0;
         if (currentWeek - stampedWeek >= expiryWeeks) {
           const expiredAmount = flags.pendingAwarenessBoost;
-          console.log(`[AWARENESS BOOST] Expired unconsumed boost (${flags.pendingAwarenessBoost}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+          debugLog(`[AWARENESS BOOST] Expired unconsumed boost (${flags.pendingAwarenessBoost}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
           flags.pendingAwarenessBoost = 0;
           delete flags.pendingAwarenessBoostWeek;
           // Buzz-v2 slice 1: STRUCTURED expiry attribution (notable). Before this
@@ -2690,7 +2753,7 @@ export class ActionProcessor {
               const artist = await ctx.storage?.getArtist?.(poolArtistId, ctx.dbTransaction);
               if (artist?.name) artistName = artist.name;
             } catch { /* name is cosmetic — never block expiry */ }
-            console.log(`[AWARENESS BOOST] Expired unconsumed artist pool for ${poolArtistId} (${expiredAmount}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+            debugLog(`[AWARENESS BOOST] Expired unconsumed artist pool for ${poolArtistId} (${expiredAmount}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
             delete pools[poolArtistId];
             if (summary && Array.isArray(summary.changes)) {
               summary.changes.push({
@@ -2720,7 +2783,7 @@ export class ActionProcessor {
         const expiryWeeks = ctx.gameData.getVarianceConfigSync().pending_variance_expiry_weeks;
         const currentWeek = ctx.gameState.currentWeek || 0;
         if (currentWeek - stampedWeek >= expiryWeeks) {
-          console.log(`[VARIANCE] Expired unconsumed variance pool (${flags.pendingVariance}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
+          debugLog(`[VARIANCE] Expired unconsumed variance pool (${flags.pendingVariance}) after ${currentWeek - stampedWeek} weeks (limit ${expiryWeeks})`);
           flags.pendingVariance = 0;
           delete flags.pendingVarianceWeek;
         }
@@ -2737,7 +2800,7 @@ export class ActionProcessor {
         const currentWeek = ctx.gameState.currentWeek || 0;
         if (typeof dist.untilWeek !== 'number' || currentWeek >= dist.untilWeek) {
           const lapsedAmount = typeof dist.amount === 'number' ? dist.amount : 0;
-          console.log(`[DISTRIBUTION] Distribution-efficiency modifier (${lapsedAmount}) lapsed at week ${currentWeek} (untilWeek ${dist.untilWeek})`);
+          debugLog(`[DISTRIBUTION] Distribution-efficiency modifier (${lapsedAmount}) lapsed at week ${currentWeek} (untilWeek ${dist.untilWeek})`);
           delete flags.distributionEfficiency;
           if (summary && Array.isArray(summary.changes)) {
             summary.changes.push({
@@ -2863,11 +2926,11 @@ export class ActionProcessor {
     const { sceneId, choiceId } = action.metadata || {};
 
     if (!sceneId || !choiceId) {
-      console.log(`[GAME-ENGINE] Missing required IDs for dialogue - sceneId: ${sceneId}, choiceId: ${choiceId}`);
+      debugLog(`[GAME-ENGINE] Missing required IDs for dialogue - sceneId: ${sceneId}, choiceId: ${choiceId}`);
       return;
     }
 
-    console.log(`[GAME-ENGINE] Processing artist dialogue - Artist: ${artistId}, Scene: ${sceneId}, Choice: ${choiceId}`);
+    debugLog(`[GAME-ENGINE] Processing artist dialogue - Artist: ${artistId}, Scene: ${sceneId}, Choice: ${choiceId}`);
 
     // Load the actual dialogue choice from dialogue.json
     const choice = await ctx.gameData.getDialogueChoiceById(sceneId, choiceId);
@@ -2879,7 +2942,7 @@ export class ActionProcessor {
         effects_immediate: { artist_mood: -1 },
         effects_delayed: {}
       };
-      console.log(`[GAME-ENGINE] Using fallback dialogue choice data`);
+      debugLog(`[GAME-ENGINE] Using fallback dialogue choice data`);
 
       // Apply fallback effects and return
       if (fallbackChoice.effects_immediate) {
@@ -2894,7 +2957,7 @@ export class ActionProcessor {
       return;
     }
 
-    console.log(`[GAME-ENGINE] Loaded dialogue choice data:`, {
+    debugLog(`[GAME-ENGINE] Loaded dialogue choice data:`, {
       sceneId,
       choiceId,
       immediateEffects: choice.effects_immediate,

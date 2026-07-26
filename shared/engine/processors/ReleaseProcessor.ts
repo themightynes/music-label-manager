@@ -876,12 +876,22 @@ export class ReleaseProcessor {
                       const breakthroughEffects = awarenessConfig.breakthrough_effects || {};
                       const awarenessMultiplier = breakthroughEffects.awareness_multiplier || 2.5;
 
+                      // C80: capture the pre-multiplier value so the entry can carry
+                      // the REAL awareness delta the breakthrough itself produced.
+                      const preBreakthroughAwareness = newAwareness;
                       newAwareness = Math.round(Math.min(newAwareness * awarenessMultiplier, 100));
 
+                      // C80: structured fields (songId/artistId/songTitle/awarenessChange)
+                      // alongside the description — mirrors the structured mood entry
+                      // below. `amount` stays 0 (renderers key off it being absent/zero).
                       summary.changes.push({
                         type: 'breakthrough',
                         description: `🔥 "${song.title}" BREAKTHROUGH ACHIEVED! Awareness exploded to ${newAwareness}/100`,
-                        amount: 0
+                        amount: 0,
+                        songId: song.id,
+                        artistId: song.artistId,
+                        songTitle: song.title,
+                        awarenessChange: newAwareness - preBreakthroughAwareness
                       });
 
                       // Volatility-economy slice 2: a breakthrough lifts the song
@@ -923,10 +933,17 @@ export class ReleaseProcessor {
                 };
 
                 if (awarenessGain > 0) {
+                  // C80: structured fields alongside the description. awarenessChange
+                  // is the APPLIED delta (post − pre, clamp/round-aware) — the raw
+                  // float gain in the description can overstate it at the 100 cap.
                   summary.changes.push({
                     type: 'awareness_gain',
                     description: `🎯 "${song.title}" awareness gained +${awarenessGain.toFixed(1)} (${newAwareness}/100)`,
-                    amount: 0
+                    amount: 0,
+                    songId: song.id,
+                    artistId: song.artistId,
+                    songTitle: song.title,
+                    awarenessChange: newAwareness - currentAwareness
                   });
                 }
               }
@@ -958,10 +975,16 @@ export class ReleaseProcessor {
                 };
 
                 if (Math.abs(newAwareness - currentAwareness) > 0.1) {
+                  // C80: structured fields alongside the description; awarenessChange
+                  // is the signed applied delta (negative on decay).
                   summary.changes.push({
                     type: 'awareness_decay',
                     description: `📉 "${song.title}" awareness decay ${newAwareness}/100 (-${currentAwareness - newAwareness})`,
-                    amount: 0
+                    amount: 0,
+                    songId: song.id,
+                    artistId: song.artistId,
+                    songTitle: song.title,
+                    awarenessChange: newAwareness - currentAwareness
                   });
                 }
               }
@@ -1582,17 +1605,13 @@ export class ReleaseProcessor {
             ctx.gameState.flags = flags;
           }
 
-          summary.changes.push({
-            type: 'meeting',
-            description: releaseHype > 0
-              ? `Buzz paid off: +${releaseHype * awarenessPointsPerUnit} awareness seeded into "${release.title}"`
-              : `Suppressed discovery: ${releaseHype * awarenessPointsPerUnit} awareness on "${release.title}"`,
-            amount: releaseHype
-          });
-          // Buzz-v2 slice 1: STRUCTURED payoff attribution (notable). Additive to
-          // the 'meeting' entry above; this one drives the notable-stage Hype line
-          // so the player sees WHICH release the hype seeded. `amount` is the
-          // seeded Buzz points (signed); hypeUnits is the raw pool consumed.
+          // Buzz-v2 slice 1: STRUCTURED payoff attribution (notable). C81: the
+          // generic 'meeting' entry that used to accompany it is FOLDED in — one
+          // consumption event now emits exactly ONE entry (the old meeting entry
+          // carried nothing unique: no appliedEffects, and its `amount` equalled
+          // hypeUnits). This entry drives the notable-stage Hype line so the
+          // player sees WHICH release the hype seeded. `amount` is the seeded
+          // Buzz points (signed); hypeUnits is the raw pool consumed.
           summary.changes.push({
             type: 'hype_applied',
             description: releaseHype > 0

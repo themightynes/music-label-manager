@@ -21,3 +21,6 @@ nul
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Admin content editor write-target artifact (server/routes/admin.ts) — never read, do not track
+data/actions.json.backup

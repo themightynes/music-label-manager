@@ -654,6 +654,11 @@ export class GameEngine {
       console.log('[EMAIL GENERATION] Successfully persisted', emails.length, 'emails to database');
     } catch (error) {
       console.error('[EMAIL GENERATION] Failed to generate or persist emails:', error);
+      // C55 observability slice: the swallow semantics stay (rethrow-vs-log is a
+      // pending designer ruling) — but the week summary now carries a structured
+      // signal so UI/telemetry can surface that the week committed without its
+      // emails. Only set on failure (snapshot-safe).
+      summary.emailGenerationFailed = true;
     }
   }
 

@@ -6,7 +6,9 @@
  * unused after N weeks. Before this slice all three moments were console-log
  * only (bank/consume also pushed a generic 'meeting' entry, description-only).
  * This slice adds STRUCTURED lifecycle entries (C80 lesson — structured from
- * day one) at all three moments:
+ * day one) at all three moments — and C81 later FOLDED the generic 'meeting'
+ * duplicates into them (hype_banked now carries the appliedEffects badge
+ * payload; one lifecycle event emits exactly one entry):
  *   - hype_banked   (ActionProcessor.applyEffects)          — routine
  *   - hype_applied  (ReleaseProcessor.processPlannedReleases) — notable
  *   - hype_expired  (ActionProcessor.processDelayedEffects)  — notable
@@ -71,6 +73,21 @@ describe('Buzz-v2 slice 1 — hype_banked (ActionProcessor.applyEffects)', () =>
     expect(entry.hypeTotal).toBe(3); // pool after this bank
     expect(entry.description.startsWith('📦')).toBe(true);
     expect(entry.description).toContain('Hype');
+    // C81: the folded meeting entry's appliedEffects payload rides hype_banked
+    // now — it drives the effect badge (filtered against LIVE_EFFECT_KEYS).
+    expect(entry.appliedEffects).toEqual({ awareness_boost: 3 });
+  });
+
+  // C81: one banking event → ONE entry. The generic 'meeting' entry that used to
+  // double-list every bank is folded into hype_banked.
+  it('pushes NO duplicate meeting entry alongside hype_banked', async () => {
+    const processor = new ActionProcessor();
+    const ctx = buildContext();
+
+    await processor.applyEffects(ctx, { awareness_boost: 3 }, undefined, 'global');
+
+    expect((ctx.summary.changes as any[]).filter((c) => c.type === 'meeting')).toHaveLength(0);
+    expect((ctx.summary.changes as any[]).filter((c) => c.type === 'hype_banked')).toHaveLength(1);
   });
 
   it('reports the running pool total after stacking two banks', async () => {
@@ -248,6 +265,22 @@ describe('Buzz-v2 slice 1 — hype_applied (ReleaseProcessor.processPlannedRelea
     expect(entry.description.startsWith('🚀')).toBe(true);
     expect(entry.description).toContain('Neon Nights');
     expect(entry.description).toContain('starting Buzz');
+  });
+
+  // C81: one consumption event → ONE entry. The generic 'meeting' entry ("Buzz
+  // paid off: …") that used to double-list every payoff is folded into
+  // hype_applied (it carried nothing unique — no appliedEffects, amount === hypeUnits).
+  it('pushes NO duplicate meeting entry alongside hype_applied', async () => {
+    const proc = new ReleaseProcessor();
+    stubOutcome(proc);
+    const { ctx } = buildReleaseCtx({
+      flags: { pendingAwarenessBoost: 3, pendingAwarenessBoostWeek: 4 },
+    });
+
+    await proc.processPlannedReleases(ctx, ctx.summary, undefined);
+
+    expect((ctx.summary.changes as any[]).filter((c) => c.type === 'meeting')).toHaveLength(0);
+    expect((ctx.summary.changes as any[]).filter((c) => c.type === 'hype_applied')).toHaveLength(1);
   });
 
   it('pushes NO hype_applied entry when no pool is banked (byte-stable)', async () => {

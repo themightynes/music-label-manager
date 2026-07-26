@@ -29,24 +29,27 @@ export function calculateChartMovement(
 /**
  * Returns CSS color class for chart position badges
  */
+// v2 note (Design System v2 §6): returns tinted-chip recipes (hue bg at low alpha +
+// matching border + matching text) built from v2 tokens only, so badges read correctly
+// on the dark glass surfaces. Pure string returns — this file stays server-safe.
 export function getChartPositionColor(position: number | null): string {
   if (position === null) {
-    return 'bg-gray-700 text-gray-300'; // Non-charting
+    return 'bg-surface-inner text-text-muted border border-white/[0.08]'; // Non-charting — subdued ghost chip
   }
 
   if (position >= 1 && position <= 10) {
-    return 'bg-yellow-500 text-yellow-900'; // Gold tier (#1-10)
+    return 'bg-brand-gold/15 text-brand-gold border border-brand-gold/40'; // Gold tier (#1-10) — gold highlight
   }
 
   if (position >= 11 && position <= 40) {
-    return 'bg-slate-600 text-white'; // Silver tier (#11-40)
+    return 'bg-white/10 text-text-primary border border-white/20'; // Silver tier (#11-40) — elevated neutral
   }
 
   if (position >= 41 && position <= 100) {
-    return 'bg-slate-600 text-white'; // Bronze tier (#41-100)
+    return 'bg-surface-inner text-text-body border border-white/10'; // Bronze tier (#41-100) — subdued
   }
 
-  return 'bg-gray-700 text-gray-300'; // Outside chart
+  return 'bg-surface-inner text-text-muted border border-white/[0.08]'; // Outside chart
 }
 
 /**
@@ -136,14 +139,14 @@ export function isSignificantMovement(movement: number): boolean {
  */
 export function getMovementColor(movement: number): string {
   if (movement > 0) {
-    return 'text-green-600'; // Positive movement (up)
+    return 'text-positive'; // Positive movement (up) — v2 mint
   }
 
   if (movement < 0) {
-    return 'text-red-600'; // Negative movement (down)
+    return 'text-negative'; // Negative movement (down) — v2 pink
   }
 
-  return 'text-gray-500'; // No movement
+  return 'text-text-muted'; // No movement
 }
 
 /**
@@ -241,10 +244,10 @@ export function getChartExitRisk(movement: number, weeksOnChart: number): 'low' 
  */
 export function getChartExitRiskColor(risk: 'low' | 'medium' | 'high'): string {
   switch (risk) {
-    case 'high': return 'text-red-600';
-    case 'medium': return 'text-amber-600';
-    case 'low': return 'text-green-600';
-    default: return 'text-gray-500';
+    case 'high': return 'text-negative';
+    case 'medium': return 'text-warning';
+    case 'low': return 'text-positive';
+    default: return 'text-text-muted';
   }
 }
 
@@ -253,10 +256,10 @@ export function getChartExitRiskColor(risk: 'low' | 'medium' | 'high'): string {
  */
 export function getChartExitRiskBgColor(risk: 'low' | 'medium' | 'high'): string {
   switch (risk) {
-    case 'high': return 'bg-red-500';
-    case 'medium': return 'bg-amber-500';
-    case 'low': return 'bg-green-500';
-    default: return 'bg-gray-500';
+    case 'high': return 'bg-negative';
+    case 'medium': return 'bg-warning';
+    case 'low': return 'bg-positive';
+    default: return 'bg-white/30';
   }
 }
 

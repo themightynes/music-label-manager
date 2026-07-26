@@ -68,7 +68,7 @@ function OverviewTabComponent({
   onNavigate,
 }: OverviewTabProps) {
   const mood = artist.mood || 50;
-  const energy = artist.energy ?? (artist as any).loyalty ?? 50;
+  const energy = artist.energy ?? 50;
   const talent = artist.talent || 50;
   const workEthic = artist.workEthic || 50;
 
@@ -86,7 +86,7 @@ function OverviewTabComponent({
             <ArtistCard
               artist={artist}
               insights={insights}
-              relationship={getRelationshipStatus(artist.mood || 50, artist.energy ?? (artist as any).loyalty ?? 50)}
+              relationship={getRelationshipStatus(artist.mood || 50, artist.energy ?? 50)}
               archetype={getArtistCardArchetypeInfo(artist.archetype)}
               isExpanded={expandedArtist}
               onToggleExpand={onToggleExpand}

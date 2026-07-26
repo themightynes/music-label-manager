@@ -246,7 +246,7 @@ export const V3_CEO_POOL_MEETINGS: PoolReviewEntry[] = [
     "finalized": false,
     "contentPending": false,
     "tier": "crisis",
-    "gating": "requires release_out + tour_active, week >= 40, reputation >= 60 · role ceo",
+    "gating": "requires release_out + tour_active, week >= 40, reputation >= 60 (0-100-era value; rescale to 0-700 pending designer ruling) · role ceo",
     "prompt": "The letter is four paragraphs long and the number in the second one is life-changing. An acquirer wants the label — catalog, roster, name — and they've attached earnest money just for opening the books. Diligence means strangers in the masters vault and the roster finding out from a spreadsheet. The letter expires at the end of the month; offers like this don't get re-sent, they get made to someone else.",
     "description": "An acquirer offers life-changing money for the whole label. Open the books, leak the letter for leverage, or shred it — and the letter expires either way.",
     "choices": [

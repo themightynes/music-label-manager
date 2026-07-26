@@ -1,5 +1,4 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { useGameState } from '@/hooks/useGameState';
 import { useReleases } from '@/hooks/useReleases';
 import { useSongs } from '@/hooks/useSongs';
@@ -114,30 +113,6 @@ export function ActiveReleases() {
   const getArtistName = (artistId: string) => {
     const artist = artists.find(a => a.id === artistId);
     return artist?.name || 'Unknown Artist';
-  };
-
-  const getReleaseTypeBadge = (type: string) => {
-    const typeConfig = {
-      single: { label: 'Single', color: 'bg-neon-purple/15 text-text-accent border border-neon-purple/30' },
-      ep: { label: 'EP', color: 'bg-neon-purple/15 text-text-accent border border-neon-purple/30' },
-      album: { label: 'Album', color: 'bg-positive/15 text-positive border border-positive/30' },
-      compilation: { label: 'Compilation', color: 'bg-neon-amber/15 text-neon-amber border border-neon-amber/30' }
-    };
-
-    const config = typeConfig[type as keyof typeof typeConfig] || typeConfig.single;
-    return <Badge className={`rounded-chip ${config.color}`}>{config.label}</Badge>;
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      planned: { label: 'Planned', color: 'bg-warning/15 text-warning border border-warning/30' },
-      released: { label: 'Released', color: 'bg-positive/15 text-positive border border-positive/30' },
-      catalog: { label: 'Catalog', color: 'bg-white/[0.04] text-text-muted border border-white/[0.08]' }
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] ||
-                   { label: status, color: 'bg-white/[0.04] text-text-muted border border-white/[0.08]' };
-    return <Badge className={`rounded-chip ${config.color}`}>{config.label}</Badge>;
   };
 
   const getReleaseSongCount = (releaseId: string) => {

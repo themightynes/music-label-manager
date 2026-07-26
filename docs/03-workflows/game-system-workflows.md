@@ -305,18 +305,21 @@ characters    300ms delay           immediately       API failure
 ### **Tier Advancement Process**
 
 ```
-Reputation Changes → Tier Threshold Check → Unlock Notification → Benefit Application
-       ↓                    ↓                     ↓                   ↓
-Player actions          System checks         UI notification      Enhanced project
-affect reputation       if new tiers          of progression       success rates
-(projects, dialogue)    are unlocked                              and multipliers
+Reputation Changes → Tier Threshold Check → Direction-Aware Notification → Benefit Application
+       ↓                    ↓                     ↓                          ↓
+Player actions          Tiers recomputed      "Upgraded" on gain;         Enhanced project
+affect reputation       from CURRENT rep      "Downgraded"/"Access        success rates
+(projects, dialogue)    every week — they     Lost" on a drop             and multipliers
+                        move BOTH ways        (C61, July 25, 2026)
 ```
 
-**Access Tier System Flow**:
+Tiers are recomputed weekly from current reputation (`ProgressionProcessor.updateAccessTiers`), so a reputation drop reassigns a lower tier. Since July 25, 2026 (C61, `debt/cleanup-2026-07-25` `195f0da`) notifications are direction-aware: upgrades keep the legacy "… Access Upgraded" strings, downgrades announce "… Access Downgraded", and a drop to `none` announces "… Access Lost" (emitted as `type: 'reputation'` changes, gated on `tierUnlockHistory` so only previously-announced gains announce their loss).
+
+**Access Tier System Flow** (0-700 reputation scale since PR #174; thresholds from `data/balance/progression.json` `access_tier_system`):
 ```
-Playlist Access: None → Niche (15 rep) → Mid (30 rep) → Flagship (60 rep)
-Press Access:    None → Blogs (20 rep) → Mid-Tier (35 rep) → National (50 rep)
-Venue Access:    None → Clubs (25 rep) → Theaters (40 rep) → Arenas (65 rep)
+Playlist Access: None → Niche (40 rep) → Mid (180 rep) → Flagship (510 rep)
+Press Access:    None → Blogs (35 rep) → Mid-Tier (150 rep) → National (440 rep)
+Venue Access:    None → Clubs (25 rep) → Theaters (110 rep) → Arenas (380 rep)
 ```
 
 Each tier provides:

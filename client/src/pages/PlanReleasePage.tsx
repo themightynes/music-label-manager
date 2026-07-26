@@ -37,6 +37,7 @@ import {
   calculateTotalMarketingCost,
   calculateChannelSynergies,
   calculateChannelEffectiveness,
+  getChannelIconName,
   type MarketingChannel,
   type ReleaseType
 } from '@shared/utils/marketingUtils';
@@ -123,16 +124,19 @@ const getAdjustedBudget = (budgets: Record<string, number>, week: number, balanc
 const getSeasonalAdjustment = (budgets: Record<string, number>, week: number, balanceData: any): number =>
   getTotalChannelBudget(budgets) * (getSeasonalMultiplierValue(week, balanceData) - 1);
 
-// v2 restyle: map the FA icon class strings coming from shared/marketingUtils to lucide icons
-// (spec §10 icon mapping table). MarketingChannel.icon stays a FA string in the shared util —
-// we translate it here rather than touching files outside this page's ownership.
-const CHANNEL_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+// Icon resolution (C52b): shared/utils/marketingUtils owns the canonical channel/release-type
+// → icon NAME maps (framework-agnostic strings); this page only maps lucide icon name → component.
+const LUCIDE_BY_NAME: Record<string, React.ComponentType<{ className?: string }>> = {
   radio: Radio,
-  digital: Megaphone,
-  pr: Newspaper,
-  influencer: Users
+  megaphone: Megaphone,
+  newspaper: Newspaper,
+  users: Users,
+  music: Music,
+  award: Award,
+  star: Star
 };
-const getChannelIcon = (channelId: string) => CHANNEL_ICONS[channelId] || Megaphone;
+const getChannelIcon = (channelId: string) => LUCIDE_BY_NAME[getChannelIconName(channelId)] || Megaphone;
+const getReleaseTypeIcon = (iconName: string | undefined) => LUCIDE_BY_NAME[iconName ?? ''] || Music;
 
 // v2 chip recipe (spec §6): mono 11-12px, rounded-pill, hue-tinted bg/border/text
 const CHIP_BASE = 'inline-flex items-center rounded-pill font-mono text-[11px] px-2.5 py-1 border';
@@ -722,7 +726,9 @@ export default function PlanReleasePage() {
 
   return (
     <GameLayout>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+      {/* C53c: GameLayout already provides the max-w-[1600px] container + horizontal
+          gutters — no inner max-w-7xl/px-* re-constraint; keep vertical rhythm only. */}
+      <main className="pt-8 pb-24">
         {/* Page header — eyebrow mono label + display title + shimmer underline (spec §4.4) */}
         <div className="mb-8">
           <div className="text-[10px] font-mono uppercase tracking-[0.24em] text-[rgba(180,170,220,0.5)] mb-2">
@@ -1275,7 +1281,7 @@ export default function PlanReleasePage() {
               <section className="glass-panel chromatic-hairline p-5">
                 <div className="flex items-center gap-2 mb-4">
                   {(() => {
-                    const IconComponent = releaseTypes.find(rt => rt.id === releaseType)?.icon || Music;
+                    const IconComponent = getReleaseTypeIcon(releaseTypes.find(rt => rt.id === releaseType)?.icon);
                     return <IconComponent className="w-4 h-4 text-neon-lilac" />;
                   })()}
                   <h2 className="text-[15px] font-semibold text-foreground">{releaseTypes.find(rt => rt.id === releaseType)?.name} Release</h2>

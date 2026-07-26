@@ -806,6 +806,18 @@ export interface GameChange {
   // carries the signed awareness points added this week; `weeksToLaunch` is how many
   // weeks remain until the release ships. Structured from day one (C80 lesson).
   weeksToLaunch?: number;
+  // C80: structured fields on the awareness lifecycle entries ('breakthrough' /
+  // 'awareness_gain' / 'awareness_decay'), which previously shipped
+  // description-only with amount: 0 (renderers had to string-parse titles/deltas
+  // out of the description). All optional/additive — old snapshots without them
+  // remain valid; `amount` stays 0 on these entries so existing renderers are
+  // untouched. `artistId` (declared above) is reused for the song's artist.
+  songId?: string;
+  songTitle?: string;
+  // Signed applied awareness delta for THIS entry: gain = post − pre (clamp-aware),
+  // decay = negative drop, breakthrough = the explosion on top of the week's
+  // ordinary gain (post-multiplier − pre-multiplier awareness).
+  awarenessChange?: number;
 }
 
 export interface EventOccurrence {
@@ -987,4 +999,8 @@ export interface WeekSummary {
     sourcingType?: 'active' | 'passive' | 'specialized' | null;
     discoveredArtistId?: string | null;
   };
+  // C55 observability: true when weekly email generation/persistence threw and
+  // was swallowed (the week committed WITHOUT its emails). Optional/additive —
+  // only ever set on failure, so successful weeks are byte-identical.
+  emailGenerationFailed?: boolean;
 }

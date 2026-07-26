@@ -333,6 +333,55 @@ describe('spawn_release (M1b)', () => {
     expect(warnSpy.mock.calls.some((call) => String(call[0]).includes('spawn_release'))).toBe(true);
   });
 
+  it('C102: a nonzero default_marketing_budget knob is deducted via summary.expenses (+ marketingCosts breakdown)', async () => {
+    const tunedBalance = {
+      ...BALANCE,
+      market_formulas: {
+        spawned_release: { default_marketing_budget: 5000, release_offset_weeks: 1 },
+      },
+    };
+    const { ctx, captures } = buildContext({
+      balance: tunedBalance,
+      artistSongs: [
+        { id: 's-1', artistId: ARTIST.id, title: 'Paid Push', isRecorded: true, isReleased: false, releaseId: null, createdWeek: 5 },
+      ],
+    });
+    const expensesBefore = ctx.summary.expenses;
+    await new ActionProcessor().applyEffects(
+      ctx,
+      { spawn_release: { songs: 'latest_recorded', type: 'single' } },
+      ARTIST.id,
+      'user_selected',
+      'meeting_x',
+      'choice_y'
+    );
+    expect(captures.createdReleases[0].release.marketingBudget).toBe(5000);
+    // Deducted from cash via the consolidated weekly financial calculation
+    // (finalMoney = start + revenue - summary.expenses).
+    expect(ctx.summary.expenses).toBe(expensesBefore + 5000);
+    expect(ctx.summary.expenseBreakdown?.marketingCosts).toBe(5000);
+  });
+
+  it('C102: at the default knob (0) no expense is recorded (snapshot-safe no-op)', async () => {
+    const { ctx } = buildContext({
+      artistSongs: [
+        { id: 's-1', artistId: ARTIST.id, title: 'Free Drop', isRecorded: true, isReleased: false, releaseId: null, createdWeek: 5 },
+      ],
+    });
+    const expensesBefore = ctx.summary.expenses;
+    const breakdownBefore = JSON.stringify(ctx.summary.expenseBreakdown ?? null);
+    await new ActionProcessor().applyEffects(
+      ctx,
+      { spawn_release: { songs: 'latest_recorded', type: 'single' } },
+      ARTIST.id,
+      'user_selected',
+      'meeting_x',
+      'choice_y'
+    );
+    expect(ctx.summary.expenses).toBe(expensesBefore);
+    expect(JSON.stringify(ctx.summary.expenseBreakdown ?? null)).toBe(breakdownBefore);
+  });
+
   it('the granted song does NOT leak across separate applyEffects calls', async () => {
     const { ctx, captures } = buildContext();
     const processor = new ActionProcessor();

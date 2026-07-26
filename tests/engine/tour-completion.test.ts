@@ -16,7 +16,10 @@
  * mock storage.updateProject.
  */
 import { describe, it, expect } from 'vitest';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ProjectStageProcessor } from '@shared/engine/processors/ProjectStageProcessor';
+import { FinancialSystem } from '@shared/engine/FinancialSystem';
 import { generateEmails } from '@shared/engine/EmailGenerator';
 import type { WeekContext } from '@shared/engine/processors/types';
 import type { WeekSummary, GameChange } from '@shared/types/gameTypes';
@@ -198,6 +201,105 @@ describe('ProjectStageProcessor — tour completion net profit (#12)', () => {
     const completion = summary.changes.find((c: GameChange) => c.type === 'project_complete');
     expect(completion!.netProfit).toBe(-3000); // 5000 − 8000
     expect(completion!.description).toContain('net loss');
+  });
+});
+
+describe('ProjectStageProcessor — same-pass completion cadence (weeksInProduction === citiesPlanned)', () => {
+  /**
+   * C77: the fixtures above enter completion via the legacy fall-through
+   * (weeksInProduction > citiesPlanned, tourStats pre-seeded in metadata). The
+   * CURRENT cadence — final city processed and tour completed in the SAME pass,
+   * weeksInProduction === citiesPlanned — needs a real FinancialSystem + tour
+   * balance config so processUnifiedTourRevenue actually runs (pattern-matched
+   * from tests/engine/tour-tier1-slice1.test.ts).
+   */
+  const TEST_ARTIST = { id: 'artist-1', name: 'Touring Act', popularity: 60 };
+  const progression = JSON.parse(
+    fs.readFileSync(path.join(process.cwd(), 'data', 'balance', 'progression.json'), 'utf-8'),
+  );
+
+  function makeRealCtx(currentWeek: number) {
+    const savedProjects: any[] = [];
+    const summary = { changes: [] } as unknown as WeekSummary;
+    const getRandom = (min: number, max: number) => (min + max) / 2;
+    const gameData = {
+      getArtistById: async (id: string) => (id === TEST_ARTIST.id ? TEST_ARTIST : null),
+      getTourConfigSync: () => ({
+        sell_through_base: 0.7,
+        reputation_modifier: 1.0,
+        local_popularity_weight: 1.0,
+        ticket_price_base: 20,
+        ticket_price_per_capacity: 0.01,
+        merch_percentage: 0.25,
+        revenue_per_fan: 25,
+        base_attendance: 100,
+        sell_through_range: 0.3,
+        costs: { small: 5000, medium: 15000, large: 40000 },
+      }),
+      getAccessTiersSync: () => progression.access_tier_system,
+    } as any;
+    const storage = {
+      updateProject: async (id: string, data: any) => { savedProjects.push({ id, ...data }); },
+      getArtist: async (id: string) => (id === TEST_ARTIST.id ? TEST_ARTIST : null),
+    };
+    const financialSystem = new FinancialSystem(gameData, getRandom as any, storage as any);
+    const ctx: WeekContext = {
+      gameState: { id: 'game-1', currentWeek, reputation: 10 } as any,
+      summary,
+      gameData,
+      storage: storage as any,
+      financialSystem,
+      getRandom,
+    } as any;
+    return { ctx, summary, savedProjects };
+  }
+
+  it('completes at the === cadence with a tour milestone label and coherent net-profit figures', async () => {
+    // 1-city tour in production, startWeek 1, currentWeek 3 → weeksElapsed=2 →
+    // weeksInProduction=1 === citiesPlanned(1): the final city's revenue is
+    // processed AND the tour completes in this same pass (no metadata tourStats
+    // pre-seeded — the processor must build them itself this pass).
+    const project = {
+      id: 'tour-1',
+      gameId: 'game-1',
+      artistId: TEST_ARTIST.id,
+      title: 'Quantum Leap Showcase',
+      type: 'Mini-Tour',
+      stage: 'production',
+      startWeek: 1,
+      totalCost: 30000,
+      quality: 50,
+      songCount: 1,
+      songsCreated: 0,
+      metadata: { cities: 1, venueAccess: 'clubs', venueCapacity: 500 },
+    };
+    const { ctx, summary, savedProjects } = makeRealCtx(3);
+    const { tx } = makeTx([project]);
+
+    await proc.advanceProjectStages(ctx, summary, tx);
+
+    // Same-pass: city revenue AND completion in one advance.
+    const perf = summary.changes.find((c: GameChange) => (c as any).source === 'tour_performance');
+    expect(perf).toBeDefined();
+    const completion = summary.changes.find((c: GameChange) => c.type === 'project_complete');
+    expect(completion).toBeDefined();
+
+    // #9 / C68 concern at THIS cadence: tour milestone label, no recording-stage leak.
+    const milestone = summary.changes.find(
+      (c: GameChange) => c.type === 'unlock' && c.description.includes('Quantum Leap Showcase'),
+    );
+    expect(milestone).toBeDefined();
+    expect(milestone!.description).toContain('Tour Completed');
+    expect(milestone!.description.toLowerCase()).not.toContain('recorded stage');
+
+    // #12 concern at THIS cadence: totals computed from the JUST-processed city.
+    expect(completion!.grossRevenue).toBeGreaterThan(0);
+    expect(completion!.totalCosts).toBeGreaterThan(0);
+    expect(completion!.netProfit).toBe(completion!.grossRevenue! - completion!.totalCosts!);
+    expect(completion!.description).toMatch(/net (profit|loss)/);
+
+    // Persisted as completed this pass.
+    expect(savedProjects.some((p) => p.completionStatus === 'completed')).toBe(true);
   });
 });
 
