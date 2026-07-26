@@ -155,7 +155,7 @@ export const NODES: SystemNode[] = [
     domain: 'resources',
     col: 0,
     row: 1,
-    description: `0-100, starts at ${reputationSystem.starting_reputation} (progression.json reputation_system.starting_reputation), master gate for access tiers, producer tiers, and the 4th focus slot. Meeting choices can also apply a seeded rep_swing (ActionProcessor.ts:1049) and reputation itself never decays in code (see non-edges) despite a configured decay_rate. GLOBAL GAIN DAMPER (volatility-economy slice 3): every POSITIVE reputation gain is multiplied by reputation_gain_scaling (${reputationSystem.reputation_gain_scaling}) and rounded — applied per-source (no single chokepoint) at chart milestones (e-chart-reputation), release press coverage, PR-push/digital-ads marketing, and meeting immediate/delayed effects, via shared/utils/reputationScaling.scaleReputationGain. LOSSES ARE NOT SCALED (the flop penalty e-flop-reputation and negative meeting/rep-swing outcomes bite at full magnitude). C65 FIXED: the release press-coverage path — formerly the ONLY reputation write that skipped the 0-100 clamp — is now clamped to max_reputation (${reputationSystem.max_reputation}) like every other path.`,
+    description: `0-700, starts at ${reputationSystem.starting_reputation} (progression.json reputation_system.starting_reputation), master gate for access tiers, producer tiers, and the 4th focus slot. Meeting choices can also apply a seeded rep_swing (ActionProcessor.ts:1049) and reputation itself never decays in code (see non-edges) despite a configured decay_rate. GLOBAL GAIN DAMPER (volatility-economy slice 3): every POSITIVE reputation gain is multiplied by reputation_gain_scaling (${reputationSystem.reputation_gain_scaling}) and rounded — applied per-source (no single chokepoint) at chart milestones (e-chart-reputation), release press coverage, PR-push/digital-ads marketing, and meeting immediate/delayed effects, via shared/utils/reputationScaling.scaleReputationGain. LOSSES ARE NOT SCALED (the flop penalty e-flop-reputation and negative meeting/rep-swing outcomes bite at full magnitude). C65 FIXED: the release press-coverage path — formerly the ONLY reputation write that skipped the reputation clamp — is now clamped to max_reputation (${reputationSystem.max_reputation}) like every other path.`,
   },
   {
     id: 'creative_capital',
@@ -706,7 +706,7 @@ export const EDGES: SystemEdge[] = [
     from: 'reputation',
     to: 'tour_revenue',
     mechanism: 'Sell-through — reputation modifier',
-    formula: 'sellThrough += (reputation/100) × reputation_modifier',
+    formula: 'sellThrough += (reputation/700) × reputation_modifier (÷ MAX_REPUTATION — reputation is 0-700 since PR #174)',
     values: [
       { label: 'reputation_modifier', value: tourRevenue.reputation_modifier, source: 'live', configPath: 'markets.market_formulas.tour_revenue.reputation_modifier', ref: 'FinancialSystem.ts:817' },
     ],

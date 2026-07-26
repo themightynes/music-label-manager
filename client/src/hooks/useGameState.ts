@@ -54,9 +54,11 @@
  * See docs/01-planning/implementation-specs/[READY] phase-3.5-gamestate-tanstack-plan.md
  * (§1 "synchronized copy first, wholesale flip second", §3 PR-5, §0.6).
  */
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback } from 'react';
+import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-selector';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import logger from '@/lib/logger';
 import { useGameStore } from '@/store/gameStore';
 import type { GameState } from '@shared/types/gameTypes';
 
@@ -91,18 +93,46 @@ export function gameStateQueryKey(gameId: string): readonly [string, string] {
  * spine exactly as the store does (`{ ...data.gameState, musicLabel }`).
  */
 async function fetchGameStateRecord(gameId: string): Promise<GameState> {
-  const response = await apiRequest('GET', `/api/game/${gameId}`);
-  const data = await response.json();
-  return {
-    ...data.gameState,
-    musicLabel: data.musicLabel ?? null,
-  } as GameState;
+  try {
+    const response = await apiRequest('GET', `/api/game/${gameId}`);
+    const data = await response.json();
+    return {
+      ...data.gameState,
+      musicLabel: data.musicLabel ?? null,
+    } as GameState;
+  } catch (error) {
+    // C57 hardening: this fallback FUNNEL ASSUMPTION is that the store
+    // bootstrap (loadGame/createNewGame) has validated gameId before any
+    // consumer mounts with it. If a consumer ever mounts with an id for a game
+    // that doesn't exist (stale localStorage pointer, deleted save), the fetch
+    // 404s and useQuery swallows the rejection silently — callers just see
+    // `null` forever with no signal. Surface that in dev so the broken funnel
+    // is diagnosable instead of a mystery blank state.
+    if (import.meta.env.DEV && (error as { status?: number } | null)?.status === 404) {
+      logger.warn(
+        `[useGameState] Cold-cache fallback GET /api/game/${gameId} returned 404 — ` +
+          'no such game exists. The Zustand gameId pointer is stale (deleted save / ' +
+          'bad bootstrap); useGameState() will return null for this id. ' +
+          'Expected funnel: commitGameState pre-seeds the cache on load/create, so ' +
+          'this fetch should never fire for a live game.',
+      );
+    }
+    throw error;
+  }
 }
 
+/** Stable identity selector for the no-selector overload — module-level so the
+ *  with-selector memoization isn't rebuilt on every render. */
+const identitySelector = (gameState: GameState | null): GameState | null => gameState;
+
 export function useGameState(): GameState | null;
-export function useGameState<T>(selector: (gameState: GameState | null) => T): T;
+export function useGameState<T>(
+  selector: (gameState: GameState | null) => T,
+  isEqual?: (a: T, b: T) => boolean,
+): T;
 export function useGameState<T>(
   selector?: (gameState: GameState | null) => T,
+  isEqual?: (a: T, b: T) => boolean,
 ): GameState | null | T {
   // gameId bootstrap: still a Zustand-owned session pointer. The RECORD comes
   // from the cache; only the "which game am I on" handle stays in the store.
@@ -121,6 +151,10 @@ export function useGameState<T>(
   useQuery<GameState>({
     queryKey: gameId ? gameStateQueryKey(gameId) : [GAME_STATE_SCOPE, '__none__'],
     queryFn: () => fetchGameStateRecord(gameId as string),
+    // C57 guard: never fire the fallback fetch before a game id exists — a
+    // consumer mounting pre-game (no pointer yet) must NOT hit the network.
+    // With an id present but no cache entry, the queryFn may still 404 for a
+    // stale/deleted game; fetchGameStateRecord logs that case in dev.
     enabled: !!gameId,
     staleTime: Infinity,
     gcTime: Infinity,
@@ -146,9 +180,24 @@ export function useGameState<T>(
     return client.getQueryData<GameState>(gameStateQueryKey(gameId)) ?? null;
   }, [client, gameId]);
 
-  const gameState = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  // C56: value-level bail-out. The bare `useSyncExternalStore(...)` +
+  // apply-selector-after pattern re-rendered EVERY subscriber on EVERY snapshot
+  // replacement (each `commitGameState` swaps the whole record object), even
+  // when the caller's selected slice (`gs?.money`, `gs?.currentWeek`, …) was
+  // unchanged. `useSyncExternalStoreWithSelector` runs the selector inside the
+  // subscription and bails out of the re-render when the selected value is
+  // equal — `Object.is` by default, or the caller-supplied `isEqual` for
+  // derived objects/arrays. Same-tick timing is preserved: it is the same
+  // synchronous QueryCache subscription, only the equality check moved inside.
+  const selection = useSyncExternalStoreWithSelector(
+    subscribe,
+    getSnapshot,
+    getSnapshot,
+    (selector ?? identitySelector) as (gameState: GameState | null) => GameState | null | T,
+    isEqual as ((a: GameState | null | T, b: GameState | null | T) => boolean) | undefined,
+  );
 
-  return selector ? selector(gameState) : gameState;
+  return selection;
 }
 
 /**
