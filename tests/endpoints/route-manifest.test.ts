@@ -72,13 +72,22 @@ async function buildManifest(): Promise<RouteEntry[]> {
   return manifest.sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
 }
 
+// Every test here calls buildManifest(), whose first invocation does a COLD
+// `await import('../../server/routes')` — pulling in the entire server graph
+// (server/db, the pg Pool, dotenv). On the /mnt/c WSL9P filesystem that one
+// cold import routinely exceeds vitest's default 5000ms testTimeout, which
+// intermittently fails the first (snapshot) test and, worse, corrupts snapshot
+// bookkeeping when it dies mid-toMatchSnapshot. This is a known environment
+// flake (slow WSL/mounted-Windows FS), not a slow test: give the whole suite a
+// generous 30s budget so a legitimately-slow cold import can never trip it,
+// while a real hang still fails in bounded time.
 describe('registerRoutes route manifest', () => {
-  it('registers the exact set of routes and named middleware (characterization)', async () => {
+  it('registers the exact set of routes and named middleware (characterization)', { timeout: 30_000 }, async () => {
     const manifest = await buildManifest();
     expect(manifest).toMatchSnapshot();
   });
 
-  it('keeps requireAdmin on every /api/admin route', async () => {
+  it('keeps requireAdmin on every /api/admin route', { timeout: 30_000 }, async () => {
     const manifest = await buildManifest();
     const adminRoutes = manifest.filter((r) => r.path.startsWith('/api/admin'));
     expect(adminRoutes.length).toBeGreaterThan(0);
@@ -88,7 +97,7 @@ describe('registerRoutes route manifest', () => {
     }
   });
 
-  it('keeps requireClerkUser on the game-mutating core loop', async () => {
+  it('keeps requireClerkUser on the game-mutating core loop', { timeout: 30_000 }, async () => {
     const manifest = await buildManifest();
     const mustBeAuthed = [
       ['POST', '/api/advance-week'],
