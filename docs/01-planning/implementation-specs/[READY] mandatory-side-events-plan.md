@@ -1,5 +1,7 @@
 # [READY] Mandatory Side Events — "Crisis on the Desk"
 
+> **STATUS BANNER (updated 2026-07-26):** **SHIPPED / COMPLETE** — merged July 5, 2026 (PR #139) as part of the Tier 2 reactive-meetings & side-events arc. This plan is fully executed; treat it as an as-built reference, not open work. The `[READY]` filename tag is retained only for inbound-link stability (many docs link this path); it does not reflect current build state. Authoritative status lives in `DEVELOPMENT_STATUS.md`.
+
 **Status:** READY · **Branch:** `feat/mandatory-side-events` · **Author:** engine/gameplay
 **Config kill-switch:** `data/balance/events.json → mandatory_side_events.enabled` (default `true`)
 

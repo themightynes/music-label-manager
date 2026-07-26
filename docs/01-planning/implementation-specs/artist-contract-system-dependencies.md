@@ -1,5 +1,7 @@
 # Artist Contract System - Complete Dependency Analysis
 
+> ⚠️ STALE (annotated July 26, 2026) — this is a **January 17, 2025** point-in-time dependency analysis written to support an artist-contract-negotiation refactor that was never scheduled or built. Its code references (file paths, line numbers, function names) reflect the codebase as of early 2025 and must be re-verified against current code before use.
+
 **Document Version:** 1.0
 **Created:** 2025-01-17
 **Purpose:** Comprehensive dependency mapping for Artist scouting, discovery, signing, and cost systems

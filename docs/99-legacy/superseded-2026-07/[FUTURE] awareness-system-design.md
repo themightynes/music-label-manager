@@ -1,3 +1,5 @@
+> ⚠️ ARCHIVED July 26, 2026 — described the awareness economy as a future/unbuilt system; it shipped and is live player-facing (C42 resolved July 6, 2026). Superseded by: `docs/01-planning/implementation-specs/COMPLETED/[COMPLETE] awareness-surfacing-plan.md`. Kept for historical reference.
+
 # Song Awareness System Design
 
 **Strategic music industry simulation enhancement for sustained streaming**

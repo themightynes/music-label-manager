@@ -1,9 +1,10 @@
 # [FUTURE] Executive Meeting — Effect Legibility
 
+> **STATUS BANNER (updated 2026-07-26):** **PARTIALLY EXECUTED** — Solution direction A (badge tooltips / effect legibility, Slice A) **shipped in PR #120**; directions B/C remain future. The `[FUTURE]` filename tag is retained only for inbound-link stability (docs link this path); it does not reflect current build state. Authoritative status lives in `DEVELOPMENT_STATUS.md`.
 > **Status:** FUTURE / seed planning doc — problem framing + directions, NOT a chosen design or build plan. Needs a planning pass (and some product decisions) before it becomes an implementation plan.
 > **Created:** 2026-07-04 (elevated from the design-discussion section of `docs/99-legacy/superseded-2026-07/PLAYTEST_NOTES_EXEC_MEETINGS_2026-07-04.md`)
 > **Origin:** exec-meetings-revival playtest walkthrough (Nes + Claude), post-PR #119.
-> **Related:** [REFERENCE] executive-meetings-system-complete-reference.md (canonical as-built), COMPLETED/[COMPLETE] executive-meetings-revival-plan.md (the arc that made these effects real), [FUTURE] awareness-system-design.md (the "Buzz" channel), docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md (awareness is live-but-invisible).
+> **Related:** [REFERENCE] executive-meetings-system-complete-reference.md (canonical as-built), COMPLETED/[COMPLETE] executive-meetings-revival-plan.md (the arc that made these effects real), docs/99-legacy/superseded-2026-07/[FUTURE] awareness-system-design.md (the "Buzz" channel; archived), docs/98-research/INTERACTIVITY_GAP_ANALYSIS_2026-07-03.md (awareness is live-but-invisible).
 
 ---
 
