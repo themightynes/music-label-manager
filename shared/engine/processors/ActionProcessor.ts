@@ -1046,6 +1046,22 @@ export class ActionProcessor {
         const queue: ScheduledEventEntry[] = Array.isArray(flags.scheduled_events)
           ? flags.scheduled_events
           : [];
+        // C105 dedupe: re-drawable meetings (no cooldown) can schedule the same
+        // event again in a later week — without this guard the same verdict
+        // crisis banks twice. Skip the enqueue if the eventId is already queued
+        // OR currently sitting in the pending_side_event slot (already promoted
+        // this or an earlier advance, not yet resolved). Single-draw path is
+        // untouched (no duplicate → no behavior change).
+        const pendingSideEventId = (flags.pending_side_event as any)?.eventId;
+        if (
+          queue.some((q) => q.eventId === rawValue.event_id) ||
+          pendingSideEventId === rawValue.event_id
+        ) {
+          console.log(
+            `[EFFECT PROCESSING] schedule_event: "${rawValue.event_id}" already queued or pending — duplicate enqueue skipped (source: ${meetingName || 'unknown'})`
+          );
+          continue;
+        }
         const currentWeek = ctx.gameState.currentWeek || 0;
         const entry: ScheduledEventEntry = {
           eventId: rawValue.event_id,
@@ -2119,9 +2135,9 @@ export class ActionProcessor {
               type: 'single',
               releaseWeek,
               status: 'planned',
-              // HARDCODED assumption: the knobbed budget is NOT deducted from cash
-              // (default 0). If this knob is ever tuned above 0, add a money
-              // deduction here or the marketing push is a free lunch.
+              // C102: the knobbed budget IS deducted from cash (see the
+              // summary.expenses block after creation below). At the default
+              // knob value (0) the deduction is a no-op.
               marketingBudget: defaultBudget,
               metadata: {
                 spawnedBy: {
@@ -2141,6 +2157,27 @@ export class ActionProcessor {
             },
             [releaseSong.id]
           );
+
+          // C102: deduct the knobbed marketing budget from cash, mirroring how
+          // every other money effect in this processor deducts — via
+          // summary.expenses (+ marketingCosts breakdown), which the
+          // consolidated weekly financial calculation subtracts from
+          // gameState.money. At knob default 0 this whole block is a no-op.
+          if (defaultBudget > 0) {
+            summary.expenses += defaultBudget;
+            if (!summary.expenseBreakdown) {
+              summary.expenseBreakdown = {
+                weeklyOperations: 0,
+                artistSalaries: 0,
+                executiveSalaries: 0,
+                signingBonuses: 0,
+                projectCosts: 0,
+                marketingCosts: 0,
+                roleMeetingCosts: 0
+              };
+            }
+            summary.expenseBreakdown.marketingCosts += defaultBudget;
+          }
 
           summary.changes.push({
             type: 'release_spawned',

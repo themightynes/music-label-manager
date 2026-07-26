@@ -9,6 +9,11 @@
  * `this.gameData` → `ctx.gameData`). `AchievementsEngine` is still imported
  * statically, exactly as the pre-extraction engine used it.
  *
+ * Post-extraction change (C61): `updateAccessTiers` notifications are now
+ * direction-aware — upgrades keep the verbatim legacy strings, but downgrades
+ * and drops to 'none' emit honest "Downgraded"/"Lost" copy instead of the old
+ * unconditional "Upgraded" (or silence, for drops to 'none').
+ *
  * The processor is stateless — all state flows through the `WeekContext`.
  * See ./types.ts for the RNG-order invariant this move preserves (these methods
  * draw no RNG, so order is unaffected).
@@ -83,58 +88,135 @@ export class ProgressionProcessor {
       }
     }
 
-    // Generate notifications for tier upgrades
-    if (previousPlaylist !== ctx.gameState.playlistAccess && ctx.gameState.playlistAccess !== 'none') {
-      const tierDisplay = ctx.gameState.playlistAccess === 'niche' ? 'Niche' :
-                         ctx.gameState.playlistAccess === 'mid' ? 'Mid-Tier' :
-                         ctx.gameState.playlistAccess === 'flagship' ? 'Flagship' : ctx.gameState.playlistAccess;
-      tierChanges.push({
-        type: 'unlock',
-        description: `🎵 Playlist Access Upgraded: ${tierDisplay} playlists unlocked! Your releases can now reach wider audiences.`,
-        amount: 0
-      });
+    // C61: direction-aware tier-change notifications. The tier lists above are
+    // sorted by threshold DESCENDING, so a lower index = a higher tier. Rank of
+    // an unknown/unset tier value is list.length (below every real tier), which
+    // preserves the legacy "fresh state → first real tier fires an upgrade"
+    // behavior and keeps a fresh-game undefined→'none' assignment silent.
+    // Upgrades keep the exact legacy "… Access Upgraded" strings (golden master
+    // pins them); downgrades no longer lie ("… Access Downgraded"), and a drop
+    // all the way to 'none' now announces itself ("… Access Lost").
+    //
+    // Downgrade/lost notifications are GATED on the previous tier being stamped
+    // in tierUnlockHistory: we only announce losing access we previously
+    // announced as gained. Real games start every tier at 'none' (schema
+    // default) and can only climb through the upgrade branch below, which
+    // stamps history — so every legitimate downgrade notifies. Raw-seeded
+    // states (test fixtures, e.g. the golden master's venueAccess:'clubs' at
+    // reputation 10) carry no stamp and stay silent, exactly like legacy.
+    // Known cost: tiers earned before tierUnlockHistory existed (old saves)
+    // also downgrade silently — no worse than the pre-fix behavior.
+    // TODO: notification copy for downgrade/lost is first-pass factual — a
+    // designer will polish it later.
+    const tierRank = (list: Array<[string, any]>, tier: string | null | undefined): number => {
+      const idx = list.findIndex(([name]) => name === tier);
+      return idx === -1 ? list.length : idx;
+    };
+    const wasEarned = (category: 'playlist' | 'press' | 'venue', tier: string | null | undefined): boolean =>
+      !!(tier && gs.tierUnlockHistory?.[category]?.[tier]);
 
-      // Task 2.3: Track unlock week in tierUnlockHistory for playlist
-      if (!gs.tierUnlockHistory.playlist) gs.tierUnlockHistory.playlist = {};
-      const tierKey = ctx.gameState.playlistAccess;
-      if (tierKey && !gs.tierUnlockHistory.playlist[tierKey]) {
-        gs.tierUnlockHistory.playlist[tierKey] = ctx.gameState.currentWeek || 0;
+    if (previousPlaylist !== ctx.gameState.playlistAccess) {
+      const current = ctx.gameState.playlistAccess;
+      const currRank = tierRank(playlistTiers, current);
+      const prevRank = tierRank(playlistTiers, previousPlaylist);
+      const tierDisplay = current === 'niche' ? 'Niche' :
+                         current === 'mid' ? 'Mid-Tier' :
+                         current === 'flagship' ? 'Flagship' : current;
+      if (current !== 'none' && currRank < prevRank) {
+        tierChanges.push({
+          type: 'unlock',
+          description: `🎵 Playlist Access Upgraded: ${tierDisplay} playlists unlocked! Your releases can now reach wider audiences.`,
+          amount: 0
+        });
+
+        // Task 2.3: Track unlock week in tierUnlockHistory for playlist
+        if (!gs.tierUnlockHistory.playlist) gs.tierUnlockHistory.playlist = {};
+        const tierKey = current;
+        if (tierKey && !gs.tierUnlockHistory.playlist[tierKey]) {
+          gs.tierUnlockHistory.playlist[tierKey] = ctx.gameState.currentWeek || 0;
+        }
+      } else if (wasEarned('playlist', previousPlaylist) && current === 'none') {
+        tierChanges.push({
+          type: 'reputation',
+          description: `🎵 Playlist Access Lost: your reputation dropped below the playlist threshold — releases no longer get playlist placement.`,
+          amount: 0
+        });
+      } else if (wasEarned('playlist', previousPlaylist) && currRank > prevRank) {
+        tierChanges.push({
+          type: 'reputation',
+          description: `🎵 Playlist Access Downgraded: reduced to ${tierDisplay} playlists — reputation fell below the higher tier's threshold.`,
+          amount: 0
+        });
       }
     }
 
-    if (previousPress !== ctx.gameState.pressAccess && ctx.gameState.pressAccess !== 'none') {
-      const tierDisplay = ctx.gameState.pressAccess === 'blogs' ? 'Music Blogs' :
-                         ctx.gameState.pressAccess === 'mid_tier' ? 'Mid-Tier Press' :
-                         ctx.gameState.pressAccess === 'national' ? 'National Media' : ctx.gameState.pressAccess;
-      tierChanges.push({
-        type: 'unlock',
-        description: `📰 Press Access Upgraded: ${tierDisplay} coverage unlocked! Your projects will get better media attention.`,
-        amount: 0
-      });
+    if (previousPress !== ctx.gameState.pressAccess) {
+      const current = ctx.gameState.pressAccess;
+      const currRank = tierRank(pressTiers, current);
+      const prevRank = tierRank(pressTiers, previousPress);
+      const tierDisplay = current === 'blogs' ? 'Music Blogs' :
+                         current === 'mid_tier' ? 'Mid-Tier Press' :
+                         current === 'national' ? 'National Media' : current;
+      if (current !== 'none' && currRank < prevRank) {
+        tierChanges.push({
+          type: 'unlock',
+          description: `📰 Press Access Upgraded: ${tierDisplay} coverage unlocked! Your projects will get better media attention.`,
+          amount: 0
+        });
 
-      // Task 2.4: Track unlock week in tierUnlockHistory for press
-      if (!gs.tierUnlockHistory.press) gs.tierUnlockHistory.press = {};
-      const tierKey = ctx.gameState.pressAccess;
-      if (tierKey && !gs.tierUnlockHistory.press[tierKey]) {
-        gs.tierUnlockHistory.press[tierKey] = ctx.gameState.currentWeek || 0;
+        // Task 2.4: Track unlock week in tierUnlockHistory for press
+        if (!gs.tierUnlockHistory.press) gs.tierUnlockHistory.press = {};
+        const tierKey = current;
+        if (tierKey && !gs.tierUnlockHistory.press[tierKey]) {
+          gs.tierUnlockHistory.press[tierKey] = ctx.gameState.currentWeek || 0;
+        }
+      } else if (wasEarned('press', previousPress) && current === 'none') {
+        tierChanges.push({
+          type: 'reputation',
+          description: `📰 Press Access Lost: your reputation dropped below the press threshold — outlets are no longer covering your projects.`,
+          amount: 0
+        });
+      } else if (wasEarned('press', previousPress) && currRank > prevRank) {
+        tierChanges.push({
+          type: 'reputation',
+          description: `📰 Press Access Downgraded: reduced to ${tierDisplay} coverage — reputation fell below the higher tier's threshold.`,
+          amount: 0
+        });
       }
     }
 
-    if (previousVenue !== ctx.gameState.venueAccess && ctx.gameState.venueAccess !== 'none') {
-      const tierDisplay = ctx.gameState.venueAccess === 'clubs' ? 'Club Venues' :
-                         ctx.gameState.venueAccess === 'theaters' ? 'Theater Venues' :
-                         ctx.gameState.venueAccess === 'arenas' ? 'Arena Venues' : ctx.gameState.venueAccess;
-      tierChanges.push({
-        type: 'unlock',
-        description: `🎭 Venue Access Upgraded: ${tierDisplay} unlocked! Your artists can now perform at larger venues.`,
-        amount: 0
-      });
+    if (previousVenue !== ctx.gameState.venueAccess) {
+      const current = ctx.gameState.venueAccess;
+      const currRank = tierRank(venueTiers, current);
+      const prevRank = tierRank(venueTiers, previousVenue);
+      const tierDisplay = current === 'clubs' ? 'Club Venues' :
+                         current === 'theaters' ? 'Theater Venues' :
+                         current === 'arenas' ? 'Arena Venues' : current;
+      if (current !== 'none' && currRank < prevRank) {
+        tierChanges.push({
+          type: 'unlock',
+          description: `🎭 Venue Access Upgraded: ${tierDisplay} unlocked! Your artists can now perform at larger venues.`,
+          amount: 0
+        });
 
-      // Task 2.6: Track unlock week in tierUnlockHistory for venue
-      if (!gs.tierUnlockHistory.venue) gs.tierUnlockHistory.venue = {};
-      const tierKey = ctx.gameState.venueAccess;
-      if (tierKey && !gs.tierUnlockHistory.venue[tierKey]) {
-        gs.tierUnlockHistory.venue[tierKey] = ctx.gameState.currentWeek || 0;
+        // Task 2.6: Track unlock week in tierUnlockHistory for venue
+        if (!gs.tierUnlockHistory.venue) gs.tierUnlockHistory.venue = {};
+        const tierKey = current;
+        if (tierKey && !gs.tierUnlockHistory.venue[tierKey]) {
+          gs.tierUnlockHistory.venue[tierKey] = ctx.gameState.currentWeek || 0;
+        }
+      } else if (wasEarned('venue', previousVenue) && current === 'none') {
+        tierChanges.push({
+          type: 'reputation',
+          description: `🎭 Venue Access Lost: your reputation dropped below the venue threshold — artists are back to unbooked rooms.`,
+          amount: 0
+        });
+      } else if (wasEarned('venue', previousVenue) && currRank > prevRank) {
+        tierChanges.push({
+          type: 'reputation',
+          description: `🎭 Venue Access Downgraded: reduced to ${tierDisplay} — reputation fell below the higher tier's threshold.`,
+          amount: 0
+        });
       }
     }
 

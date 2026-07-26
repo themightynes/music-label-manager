@@ -987,4 +987,8 @@ export interface WeekSummary {
     sourcingType?: 'active' | 'passive' | 'specialized' | null;
     discoveredArtistId?: string | null;
   };
+  // C55 observability: true when weekly email generation/persistence threw and
+  // was swallowed (the week committed WITHOUT its emails). Optional/additive —
+  // only ever set on failure, so successful weeks are byte-identical.
+  emailGenerationFailed?: boolean;
 }
