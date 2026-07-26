@@ -44,8 +44,10 @@ import { PoolReviewForm } from '@/admin/MacPoolReviewPage';
 const EXPECTED_COUNTS: Record<string, number> = {
   [MAC_POOL_REVIEW_FORM_ID]: 15,
   [SAM_POOL_REVIEW_FORM_ID]: 14,
-  [DANTE_POOL_REVIEW_FORM_ID]: 15,
-  [PAT_POOL_REVIEW_FORM_ID]: 14,
+  // Dante/Pat −1 each on 2026-07-25: the_loudness_heresy + physical_media_bet removed
+  // with the physical-inventory deferral ([FUTURE] physical-inventory-system.md)
+  [DANTE_POOL_REVIEW_FORM_ID]: 14,
+  [PAT_POOL_REVIEW_FORM_ID]: 13,
   [CEO_POOL_REVIEW_FORM_ID]: 12,
   [EVENTS_POOL_REVIEW_FORM_ID]: 28,
   [ESCALATIONS_POOL_REVIEW_FORM_ID]: 8,

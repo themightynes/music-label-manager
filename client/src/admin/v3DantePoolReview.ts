@@ -702,60 +702,6 @@ export const V3_DANTE_POOL_MEETINGS: PoolReviewEntry[] = [
     "sourceFile": "v3-dante-authored-reactive.md"
   },
   {
-    "id": "the_loudness_heresy",
-    "title": "The Loudness Heresy",
-    "status": "major · reactive release_out · role cco (INVENTED)",
-    "finalized": false,
-    "contentPending": false,
-    "tier": "major",
-    "gating": "reactive_trigger: release_out (URGENT — Dante-lane neglect feeds escalation_cco_artist_walkout)",
-    "prompt": "{songTitle} is in the world exactly as I mixed it — no limiter crushing its lungs, dynamics intact. The believers hear a record that breathes. Everyone else is listening on telephone speakers and calling depth 'mud.' The reviews are a referendum on my ears, and someone in this building is already drafting an apology for the mix. Decide now what we are.",
-    "description": "The mix Dante fought for is out, and reception has split down doctrinal lines — audiophiles in rapture, casual listeners asking why it's so quiet. His wavelength is on trial.",
-    "choices": [
-      {
-        "id": "press_the_audiophile_edition",
-        "label": "Double down — press the audiophile edition",
-        "gist": "A statement pressing, liner-note manifesto, doctrine vindicated at full price.",
-        "immediate": "money −6000, executive_mood +6, grant_inventory 250",
-        "delayed": "quality_bonus +4, variance_up +1, press_story_flag 1",
-        "outcomeSummary": "Dante answered the mix debate with an audiophile edition and a liner-note manifesto — the label's money spent defending his cut of {songTitle}."
-      },
-      {
-        "id": "quiet_streaming_remaster",
-        "label": "Commission a quiet streaming remaster",
-        "gist": "Fix the phone-speaker complaint without a press release. Nobody has to lose.",
-        "immediate": "money −5000, reputation +2, artist_mood +3, executive_mood −4",
-        "delayed": "",
-        "outcomeSummary": "A louder streaming master of {songTitle} was quietly swapped in — casual ears satisfied, Dante's original preserved for the believers."
-      },
-      {
-        "id": "let_the_argument_run",
-        "label": "Let the argument be the marketing",
-        "gist": "No remaster, no edition — hand the controversy to press and let it burn.",
-        "immediate": "reputation +1, press_momentum +1",
-        "delayed": "press_story_flag 1, awareness_boost +2",
-        "outcomeSummary": "The mud-versus-depth debate over {songTitle} was left to rage — and fed to the press as the story of a label that doesn't flinch."
-      }
-    ],
-    "bandPredictions": {
-      "heading": "Bands (target)",
-      "lines": [
-        "loyal = quiet remaster (rep + artist mood, gamble-free — the artist just wants people to hear their song); committed = let the argument run (2·rep + awareness at zero spend edges the remaster's 2·rep-minus-cost) ⚑ thin margin between remaster and argument on BOTH the loyal and committed scorers — verify offline; if it collapses, raise the remaster's artist_mood or drop its cost to −$4k; disloyal Dante = the edition, still dominant post-upgrade (money term shrank to −6000 but the effect now ALSO auto-charges units×unit_cost via grant_inventory, so re-run the exact total before treating the margin as final — directionally still clear). Three distinct picks targeted."
-      ]
-    },
-    "designNotes": [],
-    "notes": [
-      "EV check: the edition banks the biggest quality promise for the next session (doctrine emboldened) plus a press story — expensive but genuinely the richest bundle.",
-      "P9 neglect linkage: disloyal digest line has Dante spending label money to defend his cut of the artist's song — the walkout escalation reads as the artist concluding whose record this ever was. Softer than the Salvage chain but compatible with the same event prose.",
-      "External parties (reviewers, audiophile press) route through executive_mood and press keys, not invented mechanics; artist reacts where plausible (remaster relieves them; the manifesto is conspicuously not about them).",
-      "Money split (post-upgrade): −6000 is authored as the manifesto/liner-notes/press-campaign spend only; the physical pressing cost is now charged automatically by `grant_inventory` (units × unit_cost knob, `data/balance/markets.json market_formulas.physical_inventory`). 250 units is a first-pass \"limited pressing\" estimate — verify the auto-charged total lands near the original −18000 all-in cost (and stays under the `max_units_per_grant` knob) before this goes into data/events.json."
-    ],
-    "upgradeSpecs": [
-      "UPGRADE SPEC ADOPTED (2026-07-13): the audiophile edition now creates a REAL limited-pressing SKU via `grant_inventory` (§1.12) — a genuine flags-ledger inventory entry with weekly sell-through (`flagsLedgers.processInventoryWeek`), not just spend + banked flags. This is the exact \"small delayed revenue stream, sellout-or-dead-stock variance\" the original spec asked for, and shares the mechanism family with Mac's \"From the Vault\" spec. Residual: the money split above needs a knob-informed balance pass before shipping to JSON (flagged in notes)."
-    ],
-    "sourceFile": "v3-dante-authored-reactive.md"
-  },
-  {
     "id": "the_two_inch_truth",
     "title": "The Two-Inch Truth",
     "status": "routine · regular · role cco (INVENTED, catalog gap: recording medium/workflow fork — not the ritual surcharge, not the purge, not gear-as-excuse)",
@@ -832,5 +778,6 @@ export const V3_DANTE_POOL_LEVEL_NOTES: string[] = [
   "- [x] P9 neglect→escalation linkage authored for all three reactives (Salvage is the canonical beat-one of escalation_cco_artist_walkout)",
   "- [x] Fiction-vs-mechanics gaps logged as UPGRADE SPECs (cancel_project; spawns_release/catalog SKU)",
   "- [x] CC untouched (no grants needed here; the cco CC tap lives in the Protégé/audit meetings)",
-  "- [x] Engine Verbs Tier 1+2 sweep (2026-07-13): both reactive UPGRADE SPECs ADOPTED — Salvage's bury_the_tape now carries a real cancel_project (formal soft-cancel of the collapsed project); Loudness Heresy's audiophile edition now carries a real grant_inventory (limited-pressing SKU with weekly sell-through). The Dead Room and The Two-Inch Truth were reviewed and left unchanged — their effects already cash their fiction with pre-existing keys, no upgradeSpec was ever open on either."
+  "- [x] Engine Verbs Tier 1+2 sweep (2026-07-13): both reactive UPGRADE SPECs ADOPTED — Salvage's bury_the_tape now carries a real cancel_project (formal soft-cancel of the collapsed project); Loudness Heresy's audiophile edition now carries a real grant_inventory (limited-pressing SKU with weekly sell-through). The Dead Room and The Two-Inch Truth were reviewed and left unchanged — their effects already cash their fiction with pre-existing keys, no upgradeSpec was ever open on either.",
+  "- [x] PHYSICAL INVENTORY DEFERRED (2026-07-25, designer ruling): \"The Loudness Heresy\" (id the_loudness_heresy, whose audiophile-edition choice carried the pool's only grant_inventory) was REMOVED from this pool and from DANTE_POOL_REVIEW_MEETING_IDS; the scenario is preserved verbatim in docs/01-planning/implementation-specs/[FUTURE] physical-inventory-system.md, which also notes the reactivation alternative of re-authoring only that one choice without the pressing. Historical notes above describing the 2026-07-13 sweep are left as-written."
 ];

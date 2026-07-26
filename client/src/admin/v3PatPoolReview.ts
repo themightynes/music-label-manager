@@ -354,62 +354,6 @@ export const V3_PAT_POOL_MEETINGS: PoolReviewEntry[] = [
     "sourceFile": "v3-pat-authored-major.md"
   },
   {
-    "id": "physical_media_bet",
-    "title": "Physical Media Bet",
-    "status": "DRAFT (pitch 5)",
-    "finalized": false,
-    "contentPending": false,
-    "tier": "major",
-    "gating": "requires release_planned · role head_distribution · category distribution",
-    "prompt": "Pressing-plant slots opened up — a cancellation upstream, and we're next on the list. I priced three scenarios. Full pressing: real margin if it sells through, a storage unit full of regret if it doesn't — the confidence interval on vinyl is wider than I like to put my name on. Small collector run: costs little, sells out by design, looks good on everyone. Or we pass, and the slots go to whoever's behind us. For the record: the model prefers the option where we don't own ten thousand units of anything.",
-    "description": "Vinyl pressing slots just opened up ahead of your release — a real margin if it sells, dead stock if it doesn't.",
-    "choices": [
-      {
-        "id": "full_pressing",
-        "label": "Order the full pressing",
-        "gist": "Go long on vinyl: either the label becomes a physical-media story or a cautionary one.",
-        "immediate": "grant_inventory 4000 (real stock, real weekly sell-through — replaces the money −20000 flat cost; unit cost charged immediately per brief §1.12), rep_swing 2",
-        "delayed": "awareness_boost +5, press_story_flag 1",
-        "outcomeSummary": "Pat placed the full vinyl order — a serious bet that the release becomes a physical-media story rather than a storage invoice."
-      },
-      {
-        "id": "small_collector_run",
-        "label": "Press a small collector run",
-        "gist": "Scarcity by design: sells out, flatters the artist, catalogs beautifully.",
-        "immediate": "grant_inventory 500 (small guaranteed-sellout run — replaces the flat money −6000 cost), reputation +2, artist_mood +3, award_chances +1",
-        "delayed": "awareness_boost +1",
-        "outcomeSummary": "Pat ordered a limited collector pressing — small, certain to sell out, and {artistName} reportedly asked to sign the first fifty."
-      },
-      {
-        "id": "pass_on_the_slots",
-        "label": "Pass on the slots",
-        "gist": "Let the slots go; the safest inventory is none.",
-        "immediate": "executive_mood +2",
-        "delayed": "",
-        "outcomeSummary": "Pat passed on the pressing slots — no stock, no storage, no exposure. The forecast remains exactly as it was."
-      }
-    ],
-    "bandPredictions": {
-      "heading": "Bands (verified arithmetic)",
-      "lines": [
-        "Loyal: full pressing = −100 (rep_swing); small run = −5(money) +2(rep) +3(mood) +1(award) +1(aw) = +2; pass = 0 ⚑ thin margin (2 vs 0). → loyal = small run.",
-        "Committed: small run = 4(rep) +1(A) +1(award) −1.5(spend) = +4.5; full pressing = 5(A) −5(spend) = 0; pass = 0. → committed = small run.",
-        "Disloyal Pat: pass = 0; small run = −6 +1 = −5; full pressing = −1000. → disloyal = pass. No hint needed.",
-        "Two distinct picks — loyal = committed = small run, per the bible's authoring note for this pitch (\"accept loyal=committed here and let disloyal diverge\"). Disloyal ≠ loyal ✓ (minimum satisfied, stated explicitly)."
-      ]
-    },
-    "designNotes": [],
-    "notes": [
-      "The vice here is caution itself: disloyal Pat lets the moment pass and keeps the forecast clean — the pure zero. The full pressing is the player-only temptation, and it's EV-loaded per P2 (the biggest awareness bank in this pool + a press story + rep upside on the swing) so declining it visibly costs something.",
-      "Mechanics-cashing fix vs. the bible sketch: §3.4 authored variance_up 2 on the pressing, but variance_up cashes at the NEXT RECORDING SESSION — a vinyl bet cannot honestly widen a recording outcome. Replaced with rep_swing 2: the pressing either lands as indie-cred story or embarrasses the label — that's a label-reputation gamble and the key cashes it exactly.",
-      "ENGINE VERBS TIER 1+2 UPDATE (2026-07-13): the physical_inventory mechanism this scenario's upgradeSpec was waiting for now exists (grant_inventory, brief §1.12) — full_pressing and small_collector_run now grant REAL stock (flags.inventory[] ledger) with weekly sell-through revenue against demand instead of a flat sunk money cost. This is a genuine mechanical upgrade: full_pressing's \"storage unit full of regret if it doesn't sell\" is now literally true (unsold units write off as carrying cost) rather than metaphor. rep_swing 2 stays on full_pressing (the public physical-media bet, independent of whether the stock itself sells). ⚑ Unit counts (4000 / 500) and pricing are a first-pass guess at matching the original $20k/$6k budget feel via the unit_cost knob (data/balance/markets.json market_formulas.physical_inventory) — grant_inventory also silently caps at max_units_per_grant, so Nes must verify these against the live knob defaults before JSON commit; the money −20000/−6000 literals were removed since grant_inventory charges its own expense at the deduction site (brief §1.12) and double-charging would be the exact free-lunch/double-charge class of bug the brief warns about."
-    ],
-    "upgradeSpecs": [
-      "UPGRADE SPEC — IMPLEMENTED (2026-07-13, this sweep): full_pressing and small_collector_run now use the real grant_inventory verb (flags.inventory[] ledger, weekly sell-through, unit-cost expense) instead of a flat money cost + rep_swing/awareness proxy. See notes for the unit-count caveat Nes must verify. No longer a wishlist item."
-    ],
-    "sourceFile": "v3-pat-authored-major.md"
-  },
-  {
     "id": "the_chargeback_discrepancy",
     "title": "The Chargeback Discrepancy",
     "status": "DRAFT (pitch 6)",
@@ -835,5 +779,6 @@ export const V3_PAT_POOL_LEVEL_NOTES: string[] = [
   "3. ⚑ thin margins to verify offline before JSON commit: M1 committed (4.5 vs 3.5), M2 committed (−5 vs −6), M4 loyal (5 vs 4.5) and M4 disloyal (3 vs 2). All pass the 10% bar on paper but sit close enough that any tuning pass must re-run the scorers.",
   "4. UPGRADE SPEC (new escalation event): author escalation_dist_anomaly_lockin as Pat's second escalation (per-role escalation routing currently sends everything to deal_collapsed, whose prose only continues M1). Sketch in M3's neglect-timeline note. Log as a C-item at session wrap alongside the mechanism wishlist.",
   "5. Key-discipline note: the bible's §3.4 sketch for Supply Chain Hostage used variance_up on the vendor switch; this authoring replaced it with rep_swing because variance_up cashes only at the next RECORDING session and a fulfillment-vendor fiction can't cash that. Same substitution logic applied to M3's auction. No fiction here promises anything its keys don't deliver.",
-  "[ENGINE VERBS TIER 1+2 UPGRADE PASS, 2026-07-13] Pool-wide summary: 9 of 14 scenarios upgraded to real verbs (47-Slide Deck → distribution_efficiency ×3; Predict the Quarter → schedule_event + story_flag chain; Physical Media Bet → grant_inventory ×2; Territory Arbitrage → transfer_revenue_stream + distribution_efficiency; Spontaneity Block → promote_release ×2; The Algorithm Change → promote_release; Supply Chain Hostage → distribution_efficiency; The Anomaly Premium → schedule_event chain; The Long Tail Audit → transfer_revenue_stream). 5 scenarios reviewed and left honest/unchanged, each with an explicit disposition note in-scenario (The Guaranteed Placement, Tour Routing Optimization, The Chargeback Discrepancy — deliberately fiction-only by design intent, The Data Broker, The Exclusive Window Auction — all gate on release_planned/ungated states where the target-requiring verbs would no-op). Two verdict events introduced by this sweep need downstream authoring into data/events.json: scheduled_pat_forecast_graded (off Predict the Quarter's publish_the_forecast) and scheduled_pat_anomaly_lockin (off The Anomaly Premium's take_the_carry_deal) — see each scenario's \"VERDICT EVENT NEEDED\" note. Several upgraded scenarios carry a ⚑ band-arithmetic caveat: the designer bandPredictions text above was computed against the OLD proxy keys (awareness_boost, flat money) and was left as-authored rather than hand-recomputed against the new verbs' real mechanics (% duration-weighted modifiers, ledger-based inventory, encumbered revenue fractions) — Nes must re-verify loyal/committed/disloyal ordering for 47-Slide Deck, Territory Arbitrage, Physical Media Bet, Supply Chain Hostage, and Long Tail Audit before JSON commit. The Anomaly Premium's escalation-routing gap (originally wanting a second Pat escalation event) was only PARTIALLY resolved: a schedule_event chain is now live from within this module's scope, but registering a genuine second escalation pool entry requires editing shared/utils/executiveDelegation.ts, which is outside this review module and left as an explicit follow-up for Nes."
+  "[ENGINE VERBS TIER 1+2 UPGRADE PASS, 2026-07-13] Pool-wide summary: 9 of 14 scenarios upgraded to real verbs (47-Slide Deck → distribution_efficiency ×3; Predict the Quarter → schedule_event + story_flag chain; Physical Media Bet → grant_inventory ×2; Territory Arbitrage → transfer_revenue_stream + distribution_efficiency; Spontaneity Block → promote_release ×2; The Algorithm Change → promote_release; Supply Chain Hostage → distribution_efficiency; The Anomaly Premium → schedule_event chain; The Long Tail Audit → transfer_revenue_stream). 5 scenarios reviewed and left honest/unchanged, each with an explicit disposition note in-scenario (The Guaranteed Placement, Tour Routing Optimization, The Chargeback Discrepancy — deliberately fiction-only by design intent, The Data Broker, The Exclusive Window Auction — all gate on release_planned/ungated states where the target-requiring verbs would no-op). Two verdict events introduced by this sweep need downstream authoring into data/events.json: scheduled_pat_forecast_graded (off Predict the Quarter's publish_the_forecast) and scheduled_pat_anomaly_lockin (off The Anomaly Premium's take_the_carry_deal) — see each scenario's \"VERDICT EVENT NEEDED\" note. Several upgraded scenarios carry a ⚑ band-arithmetic caveat: the designer bandPredictions text above was computed against the OLD proxy keys (awareness_boost, flat money) and was left as-authored rather than hand-recomputed against the new verbs' real mechanics (% duration-weighted modifiers, ledger-based inventory, encumbered revenue fractions) — Nes must re-verify loyal/committed/disloyal ordering for 47-Slide Deck, Territory Arbitrage, Physical Media Bet, Supply Chain Hostage, and Long Tail Audit before JSON commit. The Anomaly Premium's escalation-routing gap (originally wanting a second Pat escalation event) was only PARTIALLY resolved: a schedule_event chain is now live from within this module's scope, but registering a genuine second escalation pool entry requires editing shared/utils/executiveDelegation.ts, which is outside this review module and left as an explicit follow-up for Nes.",
+  "[PHYSICAL INVENTORY DEFERRED, 2026-07-25] Designer ruling: physical sales are not entering the game for now. \"Physical Media Bet\" (id physical_media_bet, the pool's grant_inventory ×2 consumer) was REMOVED from this pool and from PAT_POOL_REVIEW_MEETING_IDS; the scenario is preserved verbatim — with the C104 money-printer analysis and a reactivation checklist — in docs/01-planning/implementation-specs/[FUTURE] physical-inventory-system.md. References to it in the historical notes above (band table row 2, the 9-of-14 upgrade tally, the ⚑ re-verify list) are left as-written: they describe the pool as it stood on 2026-07-13."
 ];

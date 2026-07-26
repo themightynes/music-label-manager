@@ -1,6 +1,6 @@
 # Pending Decisions — Nes's Queue
 
-*One entry per open product/strategy decision. Updated in place (resolved entries are deleted, not struck). Last updated: July 25, 2026 (debt-cleanup session appended entries #10–#20 — the designer queue distilled from the full 33-item backlog triage; every safe mechanical slice already shipped on `debt/cleanup-2026-07-25`. Previously remaining open: C32 email cap, desktop GUI, C62 sub-item semantics — all still open).*
+*One entry per open product/strategy decision. Updated in place (resolved entries are deleted, not struck). Last updated: July 25, 2026, evening (#10 resolved — physical inventory deferred entirely to `implementation-specs/[FUTURE] physical-inventory-system.md`, content-wave blocker cleared. Earlier same day: debt-cleanup session appended entries #10–#20 — the designer queue distilled from the full 33-item backlog triage; every safe mechanical slice already shipped on `debt/cleanup-2026-07-25`. Previously remaining open: C32 email cap, desktop GUI, C62 sub-item semantics — all still open).*
 
 ---
 
@@ -32,8 +32,7 @@
 
 ## Debt-cleanup session queue (added July 25, 2026 — full triage in that session's backlog updates; every safe slice already shipped on `debt/cleanup-2026-07-25`)
 
-## 10. C104 — `physical_inventory` retune ⚠️ HARD BLOCKER for the content wave
-**Q:** How to defang the dormant money printer before any scenario wires `grant_inventory`? Current knobs (`markets.json` `market_formulas.physical_inventory`): 0.12/wk × 12wk shelf = 144% guaranteed sell-through at +$8/unit (3× return, zero risk). Options: drop `base_weekly_sell_rate` below 1/shelf_life (<0.083), narrow the $4→$12 cost/price spread, and/or move the upside into awareness scaling. **Shipped meanwhile:** a soft lint pins the content-dead verb list so `grant_inventory` content can't slip in unnoticed. **Defer cost:** zero until the v3 wave touches inventory — then it's a mandatory gate.
+*(Former entry 10 — C104 `physical_inventory` retune — resolved and removed July 25, 2026, evening: Nes ruled to **defer physical sales entirely** rather than retune ("not sure I want to half load in physical inventory"), mooting the formula question and clearing the content-wave HARD BLOCKER. Executed same session: the two `grant_inventory` scenarios removed from the v3 pools (`physical_media_bet` from Pat, `the_loudness_heresy` from Dante, incl. their `POOL_REVIEW_MEETING_IDS` entries + pinned pool counts); both preserved verbatim — with the money-printer analysis, candidate retune math, and a reactivation checklist — in `implementation-specs/[FUTURE] physical-inventory-system.md`. The engine mechanism stays live-but-dormant; the content-dead-verb soft lint remains the guard. C104 moved to Deferred-by-decision.)*
 
 ## 11. C55 — email-generation failure: rethrow or log-and-continue?
 **Q:** When weekly email generation/persist throws, should the week ABORT (all-or-nothing, moves golden master + re-arms D6 failure-injection tests) or keep committing without emails? **Shipped meanwhile:** `summary.emailGenerationFailed` flag so the failure is at least visible. **Defer cost:** low — failures remain observable but non-blocking.

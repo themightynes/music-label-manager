@@ -36,6 +36,7 @@
 **`[FUTURE]`-tagged specs** (deferred designs, not yet scheduled):
 - [Awareness System Design](<./01-planning/implementation-specs/[FUTURE] awareness-system-design.md>) - Sustained-streaming awareness mechanic
 - [Email Narrative Storytelling Guide](<./01-planning/implementation-specs/[FUTURE] Email Narrative Storytelling Guide.md>) - Voice/personality guide for exec email content
+- [Physical Inventory System](<./01-planning/implementation-specs/[FUTURE] physical-inventory-system.md>) - Deferred July 25, 2026; preserves the two removed `grant_inventory` scenarios + C104 economics analysis + reactivation checklist
 - [Release Experience Improvement Plan](<./01-planning/implementation-specs/[FUTURE] release-experience-improvement-plan.md>) - Deferred behind Phase 1 service extractions; companion to the tour plan below
 - [Tour Experience Improvement Plan](<./01-planning/implementation-specs/[FUTURE] tour-experience-improvement-plan.md>) - Deferred behind the server-routes refactor
 - [XState Modal Orchestrator Plan](<./01-planning/implementation-specs/[FUTURE] xstate-modal-orchestrator-plan.md>) - Fixes stacked-modal race (Campaign Results vs. Week Summary)

@@ -1063,7 +1063,6 @@ export const DANTE_POOL_REVIEW_MEETING_IDS = [
   'score_offer',
   'salvage_job',
   'the_dead_room',
-  'the_loudness_heresy',
   'the_two_inch_truth',
 ] as const;
 
@@ -1074,7 +1073,6 @@ export const PAT_POOL_REVIEW_MEETING_IDS = [
   'tour_routing_optimization',
   'predict_the_quarter',
   'territory_arbitrage',
-  'physical_media_bet',
   'the_chargeback_discrepancy',
   'the_data_broker',
   'the_exclusive_window_auction',
