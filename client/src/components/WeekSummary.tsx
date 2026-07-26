@@ -1006,14 +1006,34 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
         {categorizedChanges.hypeNotable.length > 0 && (
           <RevealGroup revealed={currentStage >= STAGE_NOTABLE} instant={instant}>
             <div className="space-y-2">
-              {categorizedChanges.hypeNotable.map((change: GameChange, index: number) => (
-                <div
-                  key={`hype-notable-${index}`}
-                  className="p-3 rounded-[12px] border border-neon-purple/20 bg-neon-purple/10"
-                >
-                  <span className="text-sm font-medium text-neon-lilac">{change.description}</span>
-                </div>
-              ))}
+              {categorizedChanges.hypeNotable.map((change: GameChange, index: number) => {
+                // C81: hype_* entries absorbed the folded 'meeting' entry's
+                // appliedEffects — render the same LIVE_EFFECT_KEYS-filtered
+                // badges here so no effect attribution is lost by the fold.
+                const appliedLines = formatAppliedEffects(change.appliedEffects);
+                return (
+                  <div
+                    key={`hype-notable-${index}`}
+                    className="p-3 rounded-[12px] border border-neon-purple/20 bg-neon-purple/10"
+                  >
+                    <span className="text-sm font-medium text-neon-lilac">{change.description}</span>
+                    {appliedLines.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {appliedLines.map(({ key, line }, lineIdx) => (
+                          <EffectBadgeTooltip key={lineIdx} effectKey={key}>
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-mono rounded-pill text-neon-cyan border-neon-cyan/40"
+                            >
+                              {line}
+                            </Badge>
+                          </EffectBadgeTooltip>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </RevealGroup>
         )}
@@ -1233,7 +1253,11 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
 
         {/* Banked Hype (stage 4, routine) — buzz-v2 slice 1. A meeting choice
             topped up the label hype pool; simple routine line (never routed to
-            the never-rendered `other` bucket). */}
+            the never-rendered `other` bucket). C81: the engine folded the old
+            duplicate 'meeting' entry into hype_banked, which now carries the
+            appliedEffects payload — the awareness_boost effect badge renders
+            HERE (same formatAppliedEffects/LIVE_EFFECT_KEYS plumbing as the
+            meetings card) so the badge survives the fold. */}
         {categorizedChanges.hypeRoutine.length > 0 && (
           <RevealGroup revealed={currentStage >= STAGE_ROUTINE} instant={instant}>
             <div className="space-y-2">
@@ -1241,18 +1265,34 @@ export function WeekSummary({ weeklyStats, onAdvanceWeek, isAdvancing, isWeekRes
                   structured momentum readout (AnticipationLine — qualitative
                   band + direction arrow, never the raw gain number); other
                   hype-routine entries (hype_banked) keep the plain line. */}
-              {categorizedChanges.hypeRoutine.map((change: GameChange, index: number) =>
-                change.type === 'pre_campaign' ? (
-                  <AnticipationLine key={`hype-routine-${index}`} change={change} />
-                ) : (
+              {categorizedChanges.hypeRoutine.map((change: GameChange, index: number) => {
+                if (change.type === 'pre_campaign') {
+                  return <AnticipationLine key={`hype-routine-${index}`} change={change} />;
+                }
+                const appliedLines = formatAppliedEffects(change.appliedEffects);
+                return (
                   <div
                     key={`hype-routine-${index}`}
                     className="p-3 rounded-[12px] border border-white/10 bg-surface-inner/40"
                   >
                     <span className="text-sm font-medium text-white/80">{change.description}</span>
+                    {appliedLines.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {appliedLines.map(({ key, line }, lineIdx) => (
+                          <EffectBadgeTooltip key={lineIdx} effectKey={key}>
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-mono rounded-pill text-neon-cyan border-neon-cyan/40"
+                            >
+                              {line}
+                            </Badge>
+                          </EffectBadgeTooltip>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )
-              )}
+                );
+              })}
             </div>
           </RevealGroup>
         )}

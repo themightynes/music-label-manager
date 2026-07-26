@@ -1541,18 +1541,14 @@ export class ActionProcessor {
           }
           ctx.gameState.flags = flags;
 
-          summary.changes.push({
-            type: 'meeting',
-            description: `Buzz ${value > 0 ? 'building' : 'cooling'} for the next release (${value > 0 ? '+' : ''}${value})`,
-            amount: value,
-            appliedEffects: { awareness_boost: value }
-          });
           // Buzz-v2 slice 1: STRUCTURED banked-hype attribution entry (routine).
-          // Additive to the existing 'meeting' entry above (which carries the
-          // effect badge in the meetings card); this one drives the routine-stage
-          // Hype line + the core-status "N Hype banked" chip. Only emit for actual
-          // banks (value !== 0) so byte-stable no-op choices add nothing.
-          // Slice 2: the description now names WHERE the hype landed (artist pool vs
+          // C81: the generic 'meeting' entry that used to accompany this bank is
+          // FOLDED in — one banking event now emits exactly ONE entry. The
+          // appliedEffects payload the meeting entry uniquely carried (it drives
+          // the effect badge, filtered against LIVE_EFFECT_KEYS client-side) now
+          // rides the hype_banked entry itself. Only emit for actual banks
+          // (value !== 0) so byte-stable no-op choices add nothing.
+          // Slice 2: the description names WHERE the hype landed (artist pool vs
           // label pool); hypeTotal carries the pool total after this bank.
           if (value !== 0) {
             summary.changes.push({
@@ -1560,6 +1556,7 @@ export class ActionProcessor {
               description: `📦 Banked ${value > 0 ? '+' : ''}${value} Hype for ${scopeLabel}`,
               amount: value,
               hypeTotal: poolTotal,
+              appliedEffects: { awareness_boost: value },
             });
           }
           debugLog(`[EFFECT PROCESSING] awareness_boost effect: ${value > 0 ? '+' : ''}${value} banked to ${artistScoped ? `artist ${artistId}` : 'label'} pool (now ${poolTotal}, stamped week ${currentWeek})`);

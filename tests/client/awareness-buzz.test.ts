@@ -12,7 +12,7 @@
  * (~lines 671-783).
  */
 import { describe, it, expect } from 'vitest';
-import { categorizeWeekChanges } from '@/components/week-summary/categorizeChanges';
+import { categorizeWeekChanges, getAwarenessDetails } from '@/components/week-summary/categorizeChanges';
 import type { GameChange } from '@shared/types/gameTypes';
 
 // Exact engine shapes (ReleaseProcessor pushes description-only, amount: 0).
@@ -58,5 +58,59 @@ describe('categorizeWeekChanges (awareness routing)', () => {
     expect(categories.awareness).toHaveLength(1);
     expect(categories.breakthroughs).toHaveLength(1);
     expect(categories.other).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C80 — getAwarenessDetails: PREFER the structured fields (songTitle /
+// awarenessChange, emitted by ReleaseProcessor since C80), regex-fallback on
+// the description for entries persisted in old snapshots.
+// ---------------------------------------------------------------------------
+describe('getAwarenessDetails (C80 structured-preferred, regex fallback)', () => {
+  it('prefers structured songTitle/awarenessChange when present', () => {
+    const entry: GameChange = {
+      type: 'awareness_gain',
+      // description deliberately DISAGREES with the structured fields to prove
+      // precedence (real entries agree; old parsers used the string).
+      description: '🎯 "Wrong Title" awareness gained +9.9 (30/100)',
+      amount: 0,
+      songId: 's1',
+      artistId: 'a1',
+      songTitle: 'Right Title',
+      awarenessChange: 4,
+    };
+    expect(getAwarenessDetails(entry)).toEqual({ songTitle: 'Right Title', awarenessChange: 4 });
+  });
+
+  it('falls back to regex-parsing an old-snapshot awareness_gain description', () => {
+    expect(getAwarenessDetails(gain('Song A', '4.2', 30))).toEqual({
+      songTitle: 'Song A',
+      awarenessChange: 4.2,
+    });
+  });
+
+  it('falls back to regex-parsing an old-snapshot awareness_decay description (negative)', () => {
+    expect(getAwarenessDetails(decay('Song B', 38, 2))).toEqual({
+      songTitle: 'Song B',
+      awarenessChange: -2,
+    });
+  });
+
+  it('recovers the title (but no delta) from an old-snapshot breakthrough description', () => {
+    expect(getAwarenessDetails(BREAKTHROUGH)).toEqual({
+      songTitle: 'Neon Nights',
+      awarenessChange: null,
+    });
+  });
+
+  it('reads the structured delta on a C80 breakthrough entry', () => {
+    const entry: GameChange = {
+      ...BREAKTHROUGH,
+      songId: 's3',
+      artistId: 'a3',
+      songTitle: 'Neon Nights',
+      awarenessChange: 48,
+    };
+    expect(getAwarenessDetails(entry)).toEqual({ songTitle: 'Neon Nights', awarenessChange: 48 });
   });
 });

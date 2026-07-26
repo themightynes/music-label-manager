@@ -220,7 +220,10 @@ describe('WeekSummary meetings card', () => {
     expect(screen.getByText('+2 Buzz')).toBeInTheDocument();
   });
 
-  it('renders the banked-awareness consumption line pushed by ReleaseProcessor', () => {
+  // C81: the engine no longer emits this meeting-type entry (it was folded into
+  // hype_applied) — kept as an OLD-SNAPSHOT compatibility guard: a persisted
+  // pre-C81 weeklyOutcome must still render its consumption line.
+  it('still renders a legacy (pre-C81) banked-awareness consumption meeting entry', () => {
     renderSummary([
       {
         type: 'meeting',
@@ -230,6 +233,41 @@ describe('WeekSummary meetings card', () => {
     ]);
 
     expect(screen.getByText(/Buzz paid off: \+24 awareness seeded into "Planned Single"/)).toBeInTheDocument();
+  });
+
+  // C81: the folded hype_banked entry carries the appliedEffects payload — the
+  // Buzz effect badge must survive the fold, now rendered on the routine-stage
+  // hype line (same formatAppliedEffects/LIVE_EFFECT_KEYS plumbing).
+  it('renders the effect badge on a folded hype_banked entry (C81)', () => {
+    renderSummary([
+      {
+        type: 'hype_banked',
+        description: "📦 Banked +3 Hype for your label's next planned release",
+        amount: 3,
+        hypeTotal: 3,
+        appliedEffects: { awareness_boost: 3 },
+      } as GameChange,
+    ]);
+
+    expect(screen.getByText(/Banked \+3 Hype/)).toBeInTheDocument();
+    expect(screen.getByText('+3 Buzz')).toBeInTheDocument();
+  });
+
+  it('renders a hype_applied entry as the single consumption line (C81)', () => {
+    renderSummary([
+      {
+        type: 'hype_applied',
+        description: '🚀 Banked Hype seeded "Neon Nights" with +24 starting Buzz',
+        amount: 24,
+        hypeUnits: 3,
+        releaseId: 'r1',
+        releaseName: 'Neon Nights',
+      } as GameChange,
+    ]);
+
+    expect(screen.getByText(/Banked Hype seeded "Neon Nights" with \+24 starting Buzz/)).toBeInTheDocument();
+    // No meetings card — the hype line is the only surface for this event now.
+    expect(screen.queryByText('Meetings')).not.toBeInTheDocument();
   });
 
   it('renders a variance_up applied-effect line as ±N Volatility (exec-meetings-revival PR-6)', () => {

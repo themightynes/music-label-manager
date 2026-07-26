@@ -18,6 +18,9 @@ const banked: GameChange = {
   description: '📦 Banked +3 Hype for your next release',
   amount: 3,
   hypeTotal: 3,
+  // C81: the folded meeting entry's badge payload rides hype_banked now — it
+  // must NOT change the routing (still hypeRoutine, never meetings).
+  appliedEffects: { awareness_boost: 3 },
 };
 const applied: GameChange = {
   type: 'hype_applied',

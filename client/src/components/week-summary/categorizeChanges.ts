@@ -166,6 +166,47 @@ export function categorizeWeekChanges(changes: GameChange[]): WeekChangeCategori
  * city's tour_performance entry. Used to append the "Tour complete" footer
  * to that city's card.
  */
+/** C80: extracted awareness-entry details for renderers. */
+export interface AwarenessEntryDetails {
+  songTitle: string | null;
+  /** Signed applied awareness delta for this entry (null when unrecoverable). */
+  awarenessChange: number | null;
+}
+
+// Legacy description formats (pre-C80 snapshots shipped description-only,
+// amount: 0 — these regexes recover what the structured fields now carry):
+//   breakthrough:    🔥 "Title" BREAKTHROUGH ACHIEVED! Awareness exploded to 88/100
+//   awareness_gain:  🎯 "Title" awareness gained +4.2 (30/100)
+//   awareness_decay: 📉 "Title" awareness decay 40/100 (-2)
+const AWARENESS_TITLE_RE = /"(.+?)"/;
+const AWARENESS_GAIN_RE = /awareness gained \+([\d.]+)/;
+const AWARENESS_DECAY_RE = /\((-\d+(?:\.\d+)?)\)\s*$/;
+
+/**
+ * C80: read a breakthrough/awareness_gain/awareness_decay entry's song title and
+ * awareness delta — PREFERRING the structured fields (songTitle/awarenessChange,
+ * emitted by ReleaseProcessor since C80) and falling back to regex-parsing the
+ * description for entries from old snapshots. Breakthrough entries never carried
+ * a delta in the description, so old-snapshot breakthroughs return null there.
+ */
+export function getAwarenessDetails(change: GameChange): AwarenessEntryDetails {
+  const songTitle =
+    change.songTitle ?? change.description.match(AWARENESS_TITLE_RE)?.[1] ?? null;
+
+  let awarenessChange: number | null = null;
+  if (typeof change.awarenessChange === 'number') {
+    awarenessChange = change.awarenessChange;
+  } else if (change.type === 'awareness_gain') {
+    const m = change.description.match(AWARENESS_GAIN_RE);
+    awarenessChange = m ? parseFloat(m[1]) : null;
+  } else if (change.type === 'awareness_decay') {
+    const m = change.description.match(AWARENESS_DECAY_RE);
+    awarenessChange = m ? parseFloat(m[1]) : null;
+  }
+
+  return { songTitle, awarenessChange };
+}
+
 export function findTourCompletion(
   changes: GameChange[],
   projectId: string | undefined
