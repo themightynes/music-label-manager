@@ -1,8 +1,31 @@
 # Music Label Manager - Development Status
 **Single Source of Truth for Current Progress**
-*Updated: July 25, 2026 (late evening)*
+*Updated: July 27, 2026*
 
 ---
+
+## 📅 Session Log — July 26–27, 2026 (multi-thread cleanup + Group-D design execution → PR #182 OPEN, not merged; PENDING-DECISIONS queue cleared to 0)
+
+**⚠️ TOP NEXT-SESSION ACTION — RUN THE DB MIGRATION.** PR #182 includes `migrations/0022_drop_dead_artist_mood_columns.sql`, which DROPs 5 dead artist columns (`stress`, `creativity`, `mood_history`, `last_mood_event`, `mood_trend`; `mass_appeal` kept). When #182 merges, **the migration must actually be applied to the Railway production DB** (`npm run db:push` against prod, or `psql $DATABASE_URL < migrations/0022_...sql`) — merging the file alone does NOT alter the DB. Until it runs, prod keeps the orphaned columns (harmless at runtime — Drizzle ignores keys absent from `schema.ts`, and restore was verified safe with NO `SNAPSHOT_VERSION` bump — but the DB drifts from `schema.ts`). This is the single most important follow-up.
+
+**Workflow note (branch/PR discipline):** #182 is DONE — its path is review → merge → run migration, not more commits (only push review-feedback fixes to its branch, `debt/docs-hygiene-and-correctness-cluster-2026-07-26`). **NEW work next session = a FRESH branch off updated `main`, AFTER #182 merges** — do not extend #182. (This session-log update lives on a separate `docs/session-2026-07-27` branch off main so #182 stays focused.)
+
+**Arc (all in PR #182, ~14 commits):**
+- **Documentation hygiene** — `ai_instructions.md` reconciled (redirect-first; Neon/Replit → Railway `pg`); 4 drifted plan docs status-bannered (no rename); `[FUTURE] awareness-system-design.md` archived to `99-legacy/superseded-2026-07/`; staleness banners on CORE_FEATURES + artist-contract; `database-design.md` artists table synced to the C63 drop.
+- **Correctness-debt cluster** — **C107** (cancel-release no longer zeroes a shipped lead single's awareness), **C108** (chartGenerationFailed flag + milestone grants now RECOVERABLE next advance), **C109** (rngSeed persisted on first use), **C110** (113 `dbTransaction?: any` → derived `DbOrTx` type, `shared/types/db.ts`).
+- **Group-D decisions executed** — **#11 (C55+C108)** ruled log-and-continue, gameplay-first (email failure surfaces a WeekSummary notice; charts recover). **C62** — "successful artist" = `popularity >= 70` (5 pts, scored, `campaign_scoring` knobs in `progression.json`); `projectsCompleted` ruled NON-scoring, removed from the score and replaced by a non-scoring **"By the Numbers"** career-stats readout (singles/EPs/albums released; single shows = 1-city Mini-Tours; tours = multi-city; recording sessions excluded). **C63** — 5 dead artist columns DROPPED (migration 0022), `mass_appeal` retained to wire later.
+- **Decision queue cleared** — `PENDING-DECISIONS.md` is now **0 open**; C88 + massAppeal promoted to new `[FUTURE]` docs (`implementation-specs/[FUTURE] marketing-attribution.md`, `[FUTURE] massappeal-artist-reach.md`); GUI (#6) banner-tagged `[FUTURE]` in its existing strategy doc; C90/C100 demoted to backlog-only (content-gated). Full history kept as archive breadcrumbs (designer's "keep the record" call).
+- **Test-infra** — fixed the long-standing `route-manifest.test.ts` `/mnt/c` WSL timeout flake (30s per-test timeout).
+
+**Verification:** tsc clean; golden master byte-identical throughout except the intentional C63 dead-column removal (diff = only the 5 keys); full suite **2439 passed** (the only failures are the documented `projects-create` WSL flake; route-manifest is now fixed). Backlog ledger: **96 completed + 4 deferred + 10 pending = 110**.
+
+**Open threads / next steps (in priority order):**
+1. **Run migration 0022 on prod when #182 merges** (see top).
+2. **Doc-sync tail (logged staleness, governance-compliant):** the campaign-score change (C62) left descriptive docs still describing `projectsCompleted` as a score component — `docs/02-architecture/system-architecture.md`, `docs/03-workflows/game-system-workflows.md`, `docs/03-workflows/user-interaction-flows.md` — and `docs/02-architecture/content-data-schemas.md` has a stray `creativity?` artist-field line. Fix in a small follow-up (the achievements `[REFERENCE]` doc + `database-design.md` were already synced this session).
+3. **massAppeal wire** (`[FUTURE] massappeal-artist-reach.md`) and **C88 marketing attribution** (`[FUTURE] marketing-attribution.md`) — both paused with full research captured; C88 needs the fork-E "no numbers in loss-leader copy" policy call before any build.
+4. Known `projects-create.characterization.test.ts` `/mnt/c` WSL flake persists (2 failures, pre-existing, unrelated).
+5. Housekeeping: `.claude/launch.json` still untracked (machine-local, intentionally excluded).
+
 
 ## 📅 Session Log — July 25, 2026, late evening (DESIGNER-QUEUE WALK-THROUGH — Nes ruled 6 of the 11 debt-cleanup queue items live: #10 physical inventory DEFERRED ENTIRELY (content-wave blocker cleared), Group-A #12/#13/#20 + Group-B #15/#16 all resolved, C96 amplify-in-place UI shipped + visually approved; achievements reference docs synced; everything committed DIRECTLY TO MAIN and pushed — ledger 110 = 90 + 4 + 16, PENDING-DECISIONS down to 8 entries)
 
