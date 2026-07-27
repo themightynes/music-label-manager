@@ -1,40 +1,12 @@
 # Pending Decisions — Nes's Queue
 
-*One entry per open product/strategy decision. **Structure (reorganized July 26, 2026): all OPEN/pending items live at the top, directly under this header; all resolved history lives in the `## Resolved / Former entries (archive)` section at the bottom** — so a reader sees only what's still pending up top and can dig into history below. Open items keep their original `## N.` numbering; resolved entries become `*(Former entry N — …)*` breadcrumbs (deleted from the open list, not struck) and move to the archive. Last updated: July 26, 2026 (docs-hygiene-and-correctness cluster session, branch `debt/docs-hygiene-and-correctness-cluster-2026-07-26`). Three of the open items changed character this session while the count held at **6 open**: #18 (C88 marketing attribution) stays open but is now PAUSED with a full RESEARCH note (revenue chain, three attribution models, the fork-E no-numbers blocker); #19 (formerly C63 dead-columns) had its drop question DECIDED and PARTIALLY EXECUTED — 5 dead columns dropped via migration — and is REFRAMED to the open, paused "wire `massAppeal`" decision; the C62 stopped mid-session item is REDUCED to `projectsCompleted` only now that `artistsSuccessful` was defined + wired (successful = `popularity >= 70`). **6 decisions now open**: #6 desktop GUI, #14 C90, #17 C100, #18 C88 [paused], #19 massAppeal-wire [reframed, paused], and the C62 stopped mid-session item [now projects-only].*
+*One entry per open product/strategy decision. **Structure: all OPEN/pending items live at the top, directly under this header; all resolved history lives in the `## Resolved / Former entries (archive)` section at the bottom** — so a reader sees only what's still pending up top and can dig into history below. Open items keep their original `## N.` numbering; resolved entries become `*(Former entry N — …)*` breadcrumbs (deleted from the open list, not struck) and move to the archive. Last updated: July 27, 2026. **0 decisions now open** — the designer cleared the queue on July 27, 2026. The six formerly-open items were dispositioned as: RESOLVED (the C62 `projectsCompleted` stopped-item), PROMOTED to `[FUTURE]` docs (#18 C88 marketing attribution → `[FUTURE] marketing-attribution.md`; #19 massAppeal wire → `[FUTURE] massappeal-artist-reach.md`; #6 desktop GUI → `[FUTURE]`-tagged `desktop-gui-migration-strategy.md`), or DEMOTED to backlog-only content-gated tracking (#14 C90, #17 C100). All six are now breadcrumbs in the archive below.*
 
 ---
 
 ## Open / pending decisions
 
-## 6. Desktop GUI migration — option A/B/C
-**Q:** Cloud-dependent (A, ~60% effort) vs local-first hybrid (B, ~120%) vs full offline (C, ~250%) — gated on 5 framing questions (offline? multiplayer? mobile? timeline? monetization?). **Unblocks:** all of `desktop-gui-migration-strategy.md`. **Defer cost:** none while web-first development continues.
-
-## 14. C90 — side-event `requires` vocabulary
-**Q:** The mechanism (generic `requires` on `data/events.json` events, reusing the proven M16 grammar, replacing the ad-hoc `hasSignedArtist` filter for `crisis_fired_dancers`) is agent-buildable without content. What's the canonical precondition vocabulary — is "≥1 signed artist" the first tag, and which future events need gates? **Defer cost:** low until more predetermined-target events ship; the ad-hoc filter holds today.
-
-## 17. C100 — cash-gate mid-advance drift window
-**Q:** When v3 authors `{stat:'cash'}` requires-gates: accept + document the PHASE-1 money read (option a), or snapshot fetch-time money into the offered-meeting payload (option b)? Dormant — zero cash-gated content exists today. **Defer cost:** zero until such content ships.
-
-## 18. C88 — what does "marketing-attributed" mean?
-**Q:** Definition of the attribution model (which streams/revenue count as marketing-driven) before the structured-data surfacing is built (engine-additive + GM re-bless + UI). **Defer cost:** loss-leader view stays qualitative.
-
-**RESEARCH (2026-07-26, paused):** Design-case findings so a future session starts warm.
-- **The revenue chain.** WEEK-1 marketing is a clean ADDITIVE term (`sqrt(adSpend/1000)*12.5` of baseStreams in `FinancialSystem.calculateStreamingOutcome`, ~L795-868) → trivially attributable. The TAIL (weeks 2+) is ENTANGLED: marketing → awareness (`calculateAwarenessGain`; no spend = no awareness) → gates the breakthrough roll → multiplies decay streams; there is NO additive marketing slice to read off in the tail.
-- **Three attribution models.** (a) MARGINAL LIFT — revenue vs a $0-marketing counterfactual; true causal but needs a seeded SHADOW RE-SIMULATION (big/invasive). (b) PROPORTIONAL SHARE — easy for week-1, ill-defined in the tail. (c) CHANNEL-TAGGED — capture the existing tail multipliers `weeklyStreams×(marketingFactor−1)` and `×(awarenessModifier−1)` as an emitted field; additive, no engine-math change, teaches the channel-mix lever. **Junior-dev recommendation:** ship (c) as v1, marginal-lift as possible phase 2.
-- **KEY BLOCKER the designer must resolve first.** C88 CONFLICTS with the standing "fork-E rule" that the loss-leader copy shows NO numbers/formulas/percentages — C88's whole point is to surface a dollar attribution number. Decide whether C88 overrides that rule BEFORE any build.
-- **Pointers.** `shared/engine/FinancialSystem.ts:795-1300`, `data/balance/markets.json` (streaming_calculation/awareness_system/ongoing_marketing_factor), `server/services/AnalyticsService.ts:54-110` (current ROI), the qualitative loss-leader view in `client/src/lib/releaseBuzz.ts:459-471` + `PerformanceMetrics.tsx` + `PlanReleasePage.tsx:1148-1159`.
-
-## 19. C63 follow-on — wire `massAppeal`?
-**Q:** How to wire `massAppeal` into a live system. **DECIDED + PARTIALLY EXECUTED (2026-07-26):** the original C63 drop question is settled and executing this session — 5 columns (`stress`, `creativity`, `moodHistory`, `lastMoodEvent`, `moodTrend`) are DROPPED via migration (fully dead; the mood trio is redundant with the live `mood_events` table). `massAppeal` is RETAINED to be wired later, so this item now reads as the OPEN, PAUSED "wire massAppeal" decision. (The phantom `artist.loyalty` client fallbacks were already removed.) **Defer cost:** the retained column stays a no-op until wired.
-
-**RESEARCH (2026-07-26, paused):** Design-case head-start.
-- **What massAppeal is.** A per-artist "commercial reach" lever, distinct from `popularity` (earned) and `talent` (quality) — lets artists feel "niche-brilliant vs broadly-appealing."
-- **Recommended v1 hook.** A streaming-reach multiplier in `FinancialSystem.calculateStreamingOutcome` beside the existing star-power multiplier (~:831-834), MUTED curve `1 + (massAppeal-50)/100*K` with a small config-driven K (~0.2-0.3, ±10-15% swing) in `streaming_calculation` config; surface it as a 0-100 "Mass Appeal" stat on ArtistCard + one WeekSummary breakdown line so cause→effect is legible.
-- **Caveat.** `data/artists.json` has NO massAppeal field today (all default to 50 → multiplier is a no-op until designers author per-artist values). Wire ONE outcome only (streaming reach); resist also wiring tour-draw/popularity-growth. ~1-2 day slice.
-- **Execution note.** The 5 dead-column drops executed on branch `debt/docs-hygiene-and-correctness-cluster-2026-07-26`.
-
-## Stopped mid-session (gated territory hit)
-- **C62 sub-item 1 — `projectsCompleted` campaign score component** (stopped inside the C62 slice, commit `f1b1315`): **`artistsSuccessful` is now RESOLVED** — Nes ruled a successful artist = `popularity >= 70`, worth 5 pts each into finalScore (constants in `progression.json`); DEFINED + WIRED this session. The REMAINING open sub-question is `projectsCompleted` — still hardcoded 0, needs its own semantics decision. Junior-dev recommendation on hand: "completed" = `stage === 'released' || completionStatus === 'completed'`, ~2 pts each. Call-site plumbing runs through `ProgressionProcessor.checkCampaignCompletion` → `AchievementsEngine.calculateCampaignResults` (which needs project data, not just the `gameState` row). Sub-items 2–3 (Media Mogul tiers, 52-week copy) shipped earlier.
+*No open decisions — the queue was cleared July 27, 2026; deferred design moved to `[FUTURE]` docs, content-gated items tracked in the backlog. See the archive below for history.*
 
 ---
 
@@ -54,6 +26,8 @@
 
 *(Former entry 5 — Artist Mood Phases 6–10 — resolved and removed July 5, 2026, evening session: Nes folded it into the §1 Tier 2 design call and decided fork E per recommendation — Phase 7 subsumed into the shared event model as mood happenings; Phase 6 spun off as an independent small dialogue slice; Phase 9 anticipated as future tuning only; Phases 8 + 10 stay deferred pending player feedback. Recorded in the [DRAFT] Tier 2 spec §4.)*
 
+*(Former entry 6 — Desktop GUI migration — removed from the active queue July 27, 2026: deferred to a FUTURE decision, gated on the 5 framing questions (offline/multiplayer/mobile/timeline/monetization). Full strategy + the deferral banner live in `desktop-gui-migration-strategy.md` (now `[FUTURE]`-tagged). No active work while web-first development continues.)*
+
 *(Former entry 7 — C74, GameHeader AUTO review-gate bypass — resolved and removed July 5, 2026: Nes chose to route the header AUTO button through the same Option A review panel (the old direct-commit path was removed); the same slice also fixed AUTO proposing the A&R exec while the A&R office slot was in use. See backlog C74.)*
 
 *(Earlier former entry 7 — PR #119/#120 merge timing — resolved and removed July 5, 2026: both merged, plus the docs pass, as `bbcacef`/`e6b4723`/`d3ddc2f`.)*
@@ -70,14 +44,24 @@
 
 *(Former entry 13 — C89 AUTO-endorse loyalty — resolved and removed July 25, 2026, evening: Nes ruled **same loyalty by design** — AUTO-endorse and personal picks both grant 5 (`auto_endorse_loyalty_gain` stays == `loyalty_on_use`) intentionally, since AUTO already pays its own costs (CC budget, review gate) and shouldn't be taxed twice. The knob stays in `progression.json` as a reserved future tuning lever; the `autoEndorsed`-marker plumbing stays unbuilt unless a future ruling picks a differing value (re-open as a NEW C-item if so). Backlog C89 marked resolved-by-design; no code changed.)*
 
+*(Former entry 14 — C90 side-event `requires` vocabulary — removed from the active queue July 27, 2026: it's content-gated (resolves when more predetermined-target events ship) and remains tracked in the backlog as C90. The ad-hoc `hasSignedArtist` filter holds today.)*
+
 *(Former entry 15 — C95 Buzz bar at zero awareness — resolved and removed July 25, 2026, evening: Nes ruled to KEEP the zero-awareness Buzz section hidden — intended behavior, the always-render "building" fix does not ship; `releaseBuzz.ts` scaffolding stays dormant. The round-2/round-3 carried-forward playtest confusion closes as accepted. Backlog C95 resolved-by-design; no code changed.)*
 
 *(Former entry 16 — C96 reactive-meeting "why now" visibility — resolved and removed July 25, 2026, evening: Nes ruled **"Amplify in place"** — the urgency dot and why-now line stay exactly where they are but get visually louder; no layout moves, no new copy, the pre-open card still reveals zero trigger text. Executed same session: urgency dot 10px→14px with an animate-ping halo + stronger glow (both ExecutiveCard sites), reactive strip glow alpha 0.16→0.32, why-now pill 11.5px→13.5px with doubled border/bg opacity and whole-pill pulse, and the AutoSelectReviewPanel's hand-duplicated pill consolidated onto the shared WhyNowLine (compact variant). Noticed-ness confirmation rides the next playtest. Backlog C96 marked resolved.)*
 
+*(Former entry 17 — C100 cash-gate mid-advance drift window — removed from the active queue July 27, 2026: content-gated (dormant until cash-gated content ships), remains tracked in the backlog as C100.)*
+
+*(Former entry 18 — C88 marketing attribution — promoted July 27, 2026 to a FUTURE doc `implementation-specs/[FUTURE] marketing-attribution.md` (captures the revenue-chain analysis, the 3 attribution models with a channel-tagged v1 recommendation, and the fork-E no-numbers policy blocker the designer must resolve first). Still tracked as backlog C88.)*
+
+*(Former entry 19 — massAppeal wire — the C63 dead-column DROP executed July 27, 2026 (5 columns dropped via migration 0022); the massAppeal WIRE decision is promoted to a FUTURE doc `implementation-specs/[FUTURE] massappeal-artist-reach.md`. Still tracked as backlog C63.)*
+
 *(Former entry 20 — v3 CEO pool "The Buyout Letter" reputation gate rescale — resolved and removed July 25, 2026, evening: Nes rescaled the gate `reputation >= 60` → **`>= 440`** on the 0-700 scale (national-press-tier anchor; the week-40 gate remains the real limiter). Annotation updated in `client/src/admin/v3CeoPoolReview.ts`. Closes the C106 remaining designer note.)*
+
+*(Former entry — C62 stopped-item (`projectsCompleted`) — RESOLVED July 27, 2026: the designer ruled `projectsCompleted` should NOT score; it was removed from the campaign score entirely and replaced by a NON-SCORING "By the Numbers" career-stats readout on the results screen (# singles / EPs / albums released, # single shows, # tours; recording sessions excluded). With `artistsSuccessful` already wired (popularity>=70, scored) this fully resolves the C62 stopped-item.)*
 
 ---
 
 ### Context: Debt-cleanup session queue (added July 25, 2026)
 
-*Full triage in that session's backlog updates; every safe slice already shipped on `debt/cleanup-2026-07-25`. This queue appended entries #10–#20 — the designer queue distilled from the full 33-item backlog triage. Its resolved items (#10, #12, #13, #15, #16, #20) are archived above; its still-open items (#14, #17, #18, #19) are in the Open section at the top. #11 (C55) resolved July 26, 2026.*
+*Full triage in that session's backlog updates; every safe slice already shipped on `debt/cleanup-2026-07-25`. This queue appended entries #10–#20 — the designer queue distilled from the full 33-item backlog triage. Its resolved items (#10, #12, #13, #15, #16, #20) are archived above; #11 (C55) resolved July 26, 2026. On July 27, 2026 the queue was fully cleared — its remaining items are now archived above too: #18 (C88) and #19 (massAppeal) promoted to `[FUTURE]` docs, and #14 (C90) and #17 (C100) demoted to backlog-only content-gated tracking.*

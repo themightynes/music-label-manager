@@ -114,7 +114,7 @@ summary.changes.push({
 ```
 
 ### 7. Campaign Completion
-**Source:** `shared/engine/processors/ProgressionProcessor.ts` — `checkCampaignCompletion()` (`:269-298`; push at `:292`). Score computed by `AchievementsEngine.calculateCampaignResults` (`shared/engine/AchievementsEngine.ts:76-95`): money /1000, reputation /30 (0-700 scale), access tier bonus, award bonus. The `artistsSuccessful` and `projectsCompleted` score components are hardcoded to 0 — their semantics ("successful artist", "completed project") are undefined by design and design-gated; see backlog C62 and the TODO at `shared/engine/AchievementsEngine.ts:79-87`. Do not treat them as implemented scoring inputs.
+**Source:** `shared/engine/processors/ProgressionProcessor.ts` — `checkCampaignCompletion()` (`:269-298`; push at `:292`). Score computed by `AchievementsEngine.calculateCampaignResults` (`shared/engine/AchievementsEngine.ts:76-95`): money /1000, reputation /30 (0-700 scale), access tier bonus, award bonus, plus `artistsSuccessful` (a *successful artist* = `popularity >= 70`, **5 pts each** into `finalScore`, both knobs in `progression.json` `campaign_scoring`; wired July 26, 2026 — the scorer takes an optional `artists[]` loaded by `ProgressionProcessor.checkCampaignCompletion` via `ctx.storage.getArtistsByGame`). `projectsCompleted` is NOT a score component — per a July 27, 2026 designer ruling it was REMOVED from the scorer entirely and replaced by a NON-SCORING "By the Numbers" career-stats readout on the results screen (# singles / EPs / albums released; # single shows = 1-city Mini-Tours; # tours = multi-city; recording sessions excluded). Do not treat `projectsCompleted` as a scoring input. See backlog C62 (fully RESOLVED July 27, 2026).
 ```typescript
 summary.changes.push({
   type: 'unlock',
@@ -199,4 +199,4 @@ financial metrics    → WeeklyFinancesProcessor.generateEconomicInsights() → 
 ### 🚀 **Meta Achievements** (Campaign Complete)
 - Campaign-level milestones
 - Game completion tracking
-- Final scoring (see C62 note in section 7: `artistsSuccessful`/`projectsCompleted` remain zeroed, semantics undefined by design)
+- Final scoring (see C62 note in section 7, fully RESOLVED July 27, 2026: `artistsSuccessful` is scored (`popularity >= 70`, 5 pts each); `projectsCompleted` is NON-scoring — removed from the scorer, surfaced only as a "By the Numbers" career-stats readout)
