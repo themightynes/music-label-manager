@@ -107,9 +107,7 @@ CREATE TABLE artists (
   popularity INTEGER DEFAULT 0,
   talent INTEGER DEFAULT 50,
   work_ethic INTEGER DEFAULT 50,
-  stress INTEGER DEFAULT 0,
-  creativity INTEGER DEFAULT 50,
-  mass_appeal INTEGER DEFAULT 50,
+  mass_appeal INTEGER DEFAULT 50,   -- retained but currently UNWIRED (zero readers); see [FUTURE] massappeal-artist-reach.md
   temperament INTEGER,
   experience INTEGER DEFAULT 0,
 
@@ -118,12 +116,11 @@ CREATE TABLE artists (
   weekly_cost INTEGER DEFAULT 1200,
   signed_week INTEGER,
   signed BOOLEAN DEFAULT FALSE,
-  last_attention_week INTEGER DEFAULT 1,
-
-  -- Mood tracking
-  mood_history JSONB DEFAULT '[]',
-  last_mood_event TEXT,
-  mood_trend INTEGER DEFAULT 0      -- -1 declining, 0 stable, 1 improving
+  last_attention_week INTEGER DEFAULT 1
+  -- NOTE (migration 0022, 2026-07-27): stress, creativity, mood_history,
+  -- last_mood_event, and mood_trend were DROPPED as fully-dead columns
+  -- (zero readers/writers). Artist mood history lives in the separate
+  -- mood_events table, not on the artist row.
 );
 
 CREATE INDEX idx_artists_game_id ON artists(game_id);
@@ -473,7 +470,7 @@ songs (1) ──── (n) chart_entries             [player songs; competitor e
 - **Cascading Deletes**: Game deletion removes all associated data
 - **Set Null**: Song's `project_id`/`release_id` survive project/release deletion
 - **Foreign Key Integrity**: All relationships enforced at database level
-- **Check Constraints**: Artist stats 0-100 — migration `0020_add_artist_attribute_constraints.sql` covers mood, energy, talent, work_ethic, stress, creativity, mass_appeal (temperament is constrained only in the Drizzle schema, not in 0020). `drizzle-kit push` does not create these raw-SQL constraints, so test databases must apply `migrations/*.sql` (at least `0020`)
+- **Check Constraints**: Artist stats 0-100 — migration `0020_add_artist_attribute_constraints.sql` covers mood, energy, talent, work_ethic, mass_appeal (temperament is constrained only in the Drizzle schema, not in 0020; the `stress`/`creativity` constraints from 0020 were dropped with their columns in `0022`, 2026-07-27). `drizzle-kit push` does not create these raw-SQL constraints, so test databases must apply `migrations/*.sql` (at least `0020`)
 - **Generated Columns**: `songs.total_investment`, `songs.roi_percentage`, `projects.roi_percentage`, `chart_entries.is_charting` are computed by PostgreSQL
 
 ---
