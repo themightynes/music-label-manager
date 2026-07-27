@@ -2346,10 +2346,21 @@ export interface CampaignResults {
     money: number;
     reputation: number;
     artistsSuccessful: number;
-    projectsCompleted: number;
+    // projectsCompleted removed from scoring (2026-07). Optional for older payloads.
+    projectsCompleted?: number;
     accessTierBonus: number;
     // Exec-meetings-revival PR-7 (C5) — campaign-end award-roll bonus (0 if none).
     awardBonus: number;
+  };
+  // Non-scoring end-game "By the Numbers" career readout (sibling of scoreBreakdown,
+  // never folded into finalScore). Optional so the campaign-already-completed replay
+  // path (which omits it) still satisfies the type.
+  careerStats?: {
+    singlesReleased: number;
+    epsReleased: number;
+    albumsReleased: number;
+    singleShows: number;
+    tours: number;
   };
   victoryType: 'Commercial Success' | 'Critical Acclaim' | 'Balanced Growth' | 'Survival' | 'Failure';
   summary: string;

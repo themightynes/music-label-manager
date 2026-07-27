@@ -290,7 +290,19 @@ export class ProgressionProcessor {
     // elsewhere (game-engine.ts:810-815); knobs from progression.json campaign_scoring.
     const artists = await ctx.storage.getArtistsByGame(ctx.gameState.id, ctx.dbTransaction);
     const scoringConfig = ctx.gameData.getCampaignScoringConfigSync();
-    const campaignResults = AchievementsEngine.calculateCampaignResults(ctx.gameState, awardConfig, artists, scoringConfig);
+    // Non-scoring "By the Numbers" career readout — thread the released catalog and
+    // Mini-Tour projects in so AchievementsEngine can count singles/EPs/albums and
+    // single shows/tours. Same storage accessors used elsewhere; neither affects finalScore.
+    const releases = await ctx.storage.getReleasesByGame(ctx.gameState.id, ctx.dbTransaction);
+    const projects = await ctx.storage.getProjectsByGame(ctx.gameState.id, ctx.dbTransaction);
+    const campaignResults = AchievementsEngine.calculateCampaignResults(
+      ctx.gameState,
+      awardConfig,
+      artists,
+      scoringConfig,
+      releases,
+      projects
+    );
 
     // Add campaign completion to summary
     summary.changes.push({

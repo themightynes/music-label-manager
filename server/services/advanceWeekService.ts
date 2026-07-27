@@ -251,7 +251,6 @@ export class AdvanceWeekService {
             money: Math.max(0, Math.floor((gameState.money || 0) / 1000)),
             reputation: Math.max(0, Math.floor((gameState.reputation || 0) / 5)),
             artistsSuccessful: 0,
-            projectsCompleted: 0,
             accessTierBonus: 0
           },
           victoryType: gameState.money && gameState.money > 0 ? 'Survival' : 'Failure',

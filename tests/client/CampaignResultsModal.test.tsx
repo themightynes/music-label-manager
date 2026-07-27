@@ -29,8 +29,14 @@ const RESULTS = {
     money: 1200,
     reputation: 340,
     artistsSuccessful: 3,
-    projectsCompleted: 7,
     accessTierBonus: 55,
+  },
+  careerStats: {
+    singlesReleased: 12,
+    epsReleased: 4,
+    albumsReleased: 2,
+    singleShows: 9,
+    tours: 6,
   },
   victoryType: 'Commercial Success' as const,
   summary: 'You built a thriving label from nothing.',
@@ -58,10 +64,22 @@ const expectAllFactsPresent = () => {
   expect(screen.getByText('Reputation')).toBeInTheDocument();
   expect(screen.getByText(String(RESULTS.scoreBreakdown.artistsSuccessful))).toBeInTheDocument();
   expect(screen.getByText('Artist Success')).toBeInTheDocument();
-  expect(screen.getByText(String(RESULTS.scoreBreakdown.projectsCompleted))).toBeInTheDocument();
-  expect(screen.getByText('Projects')).toBeInTheDocument();
   expect(screen.getByText(String(RESULTS.scoreBreakdown.accessTierBonus))).toBeInTheDocument();
   expect(screen.getByText('Access Bonus')).toBeInTheDocument();
+  // "Projects" scoring cell was removed (2026-07) — must no longer render.
+  expect(screen.queryByText('Projects')).not.toBeInTheDocument();
+  // By the Numbers — non-scoring career readout
+  expect(screen.getByText('By the Numbers')).toBeInTheDocument();
+  expect(screen.getByText(String(RESULTS.careerStats.singlesReleased))).toBeInTheDocument();
+  expect(screen.getByText('Singles')).toBeInTheDocument();
+  expect(screen.getByText(String(RESULTS.careerStats.epsReleased))).toBeInTheDocument();
+  expect(screen.getByText('EPs')).toBeInTheDocument();
+  expect(screen.getByText(String(RESULTS.careerStats.albumsReleased))).toBeInTheDocument();
+  expect(screen.getByText('Albums')).toBeInTheDocument();
+  expect(screen.getByText(String(RESULTS.careerStats.singleShows))).toBeInTheDocument();
+  expect(screen.getByText('Single Shows')).toBeInTheDocument();
+  expect(screen.getByText(String(RESULTS.careerStats.tours))).toBeInTheDocument();
+  expect(screen.getByText('Tours')).toBeInTheDocument();
   // Achievements
   RESULTS.achievements.forEach((a) => {
     expect(screen.getByText(a)).toBeInTheDocument();

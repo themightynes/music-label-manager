@@ -4,14 +4,13 @@
  * Handles all campaign completion scoring, achievements, and results
  */
 
-import type { GameState, Artist } from '../schema';
+import type { GameState, Artist, Release, Project } from '../schema';
 import { seededRandom } from '../utils/seededRandom';
 
 interface ScoreBreakdown {
   money: number;
   reputation: number;
   artistsSuccessful: number;
-  projectsCompleted: number;
   accessTierBonus: number;
   // Exec-meetings-revival PR-7 (C5) — campaign-end award-roll bonus. 0 when no
   // award was won (near-miss/no pool), award_score_bonus (balance knob,
@@ -59,10 +58,27 @@ const DEFAULT_CAMPAIGN_SCORING_CONFIG: CampaignScoringConfig = {
   points_per_successful_artist: 5
 };
 
+/**
+ * Non-scoring end-game "By the Numbers" career readout. These counts describe
+ * what the player produced over the campaign; they NEVER enter finalScore (a
+ * sibling of scoreBreakdown, deliberately excluded from the Object.values reduce).
+ * Recording sessions (project type Single/EP) are naturally excluded — only
+ * released Releases and Mini-Tour projects are counted here.
+ */
+interface CareerStats {
+  singlesReleased: number;
+  epsReleased: number;
+  albumsReleased: number;
+  singleShows: number;
+  tours: number;
+}
+
 interface CampaignResults {
   campaignCompleted: boolean;
   finalScore: number;
   scoreBreakdown: ScoreBreakdown;
+  // Non-scoring career readout — sibling of scoreBreakdown, NOT folded into finalScore.
+  careerStats: CareerStats;
   victoryType: 'Commercial Success' | 'Critical Acclaim' | 'Balanced Growth' | 'Survival' | 'Failure';
   summary: string;
   achievements: string[];
@@ -80,7 +96,12 @@ export class AchievementsEngine {
     // C62: optional (default []) so existing direct unit tests that call this
     // with only gameState[/awardConfig] still pass and yield artistsSuccessful=0.
     artists: Artist[] = [],
-    scoringConfig: CampaignScoringConfig = DEFAULT_CAMPAIGN_SCORING_CONFIG
+    scoringConfig: CampaignScoringConfig = DEFAULT_CAMPAIGN_SCORING_CONFIG,
+    // Non-scoring "By the Numbers" inputs — optional/defaulted for the SAME
+    // backward-compat reason as artists above: existing direct callers that omit
+    // them get an all-zeros careerStats and an unchanged finalScore.
+    releases: Release[] = [],
+    projects: Project[] = []
   ): CampaignResults {
     // Exec-meetings-revival PR-7 (C5) — campaign-end award roll. Consumes
     // flags.awardChances (an accumulating, never-expiring pool — see
@@ -113,15 +134,28 @@ export class AchievementsEngine {
       money: Math.max(0, Math.floor((gameState.money || 0) / 1000)), // 1 point per $1k
       reputation: Math.max(0, Math.floor((gameState.reputation || 0) / 30)), // 1 point per 30 reputation (round-4: 0-700 scale; keeps max contribution ~23, in line with the old /5 on 0-100)
       artistsSuccessful: successfulArtists * scoringConfig.points_per_successful_artist,
-      // TODO (C62): projectsCompleted still hardcoded 0 — separate pending
-      // decision (no defined semantics for "completed project" scoring yet, and
-      // no projects[] threaded in). Left as-is per C62 scope for this component.
-      projectsCompleted: 0,
       accessTierBonus: this.calculateAccessTierBonus(gameState),
       awardBonus
     };
 
     const finalScore = Object.values(scoreBreakdown).reduce((total, score) => total + score, 0);
+
+    // Non-scoring "By the Numbers" career readout. Computed entirely separately
+    // from scoreBreakdown so it can NEVER affect finalScore. Releases count when
+    // actually released (status !== 'planned'); the 'compilation' type is ignored.
+    // Mini-Tour projects that weren't cancelled split into single shows (1 city)
+    // vs tours (>1 city). Recording sessions (project type Single/EP) never match.
+    const careerStats: CareerStats = {
+      singlesReleased: releases.filter(r => r.type === 'single' && r.status !== 'planned').length,
+      epsReleased: releases.filter(r => r.type === 'ep' && r.status !== 'planned').length,
+      albumsReleased: releases.filter(r => r.type === 'album' && r.status !== 'planned').length,
+      singleShows: projects.filter(
+        p => p.type === 'Mini-Tour' && p.stage !== 'cancelled' && ((p.metadata as any)?.cities ?? 1) === 1
+      ).length,
+      tours: projects.filter(
+        p => p.type === 'Mini-Tour' && p.stage !== 'cancelled' && ((p.metadata as any)?.cities ?? 1) > 1
+      ).length,
+    };
     const victoryType = this.determineVictoryType(finalScore, scoreBreakdown, gameState);
     const achievements = this.calculateAchievements(scoreBreakdown, gameState);
     // Exec-meetings-revival PR-7 (C5): award/near-miss achievement entries. A win
@@ -139,6 +173,7 @@ export class AchievementsEngine {
       campaignCompleted: true,
       finalScore,
       scoreBreakdown,
+      careerStats,
       victoryType,
       summary,
       achievements,
