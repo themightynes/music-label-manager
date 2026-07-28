@@ -335,6 +335,9 @@ export class GameDataLoader {
       
       // Difficulty modifiers
       difficulty_modifiers: progression.difficulty_modifiers,
+
+      // C62 — campaign-end "successful artist" score knobs
+      campaign_scoring: progression.campaign_scoring,
       
       // Content generation
       song_generation: content.song_generation,

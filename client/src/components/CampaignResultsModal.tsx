@@ -15,11 +15,22 @@ interface CampaignResults {
     money: number;
     reputation: number;
     artistsSuccessful: number;
-    projectsCompleted: number;
+    // Removed from scoring (2026-07): projectsCompleted was always 0. Kept optional
+    // so older persisted campaignResults payloads that still carry it don't break typing.
+    projectsCompleted?: number;
     accessTierBonus: number;
     // Exec-meetings-revival PR-7 (C5): campaign-end award-roll bonus. Optional so
     // older persisted campaignResults payloads (pre-PR-7) still render.
     awardBonus?: number;
+  };
+  // Non-scoring end-game "By the Numbers" readout. Optional so pre-feature persisted
+  // payloads (which lack it) simply omit the card.
+  careerStats?: {
+    singlesReleased: number;
+    epsReleased: number;
+    albumsReleased: number;
+    singleShows: number;
+    tours: number;
   };
   victoryType: 'Commercial Success' | 'Critical Acclaim' | 'Balanced Growth' | 'Survival' | 'Failure';
   summary: string;
@@ -34,13 +45,15 @@ interface CampaignResultsModalProps {
 }
 
 // --- Staged reveal timeline (Phase 4 PR-5) ---------------------------------
-// The five score-breakdown cells stagger in one at a time after the header.
-// Stage 0 is the header/score beat; stages 1..5 reveal the breakdown cells in
-// order. Total mandatory sequence = sum of STAGE_DELAYS = 1050ms, well under
+// The four score-breakdown cells stagger in one at a time after the header.
+// Stage 0 is the header/score beat; stages 1..4 reveal the breakdown cells in
+// order. Total mandatory sequence = sum of STAGE_DELAYS = 850ms, well under
 // the ~3s budget. Reduced motion / a click jump straight to fully revealed.
-const BREAKDOWN_COUNT = 5;
-const STAGE_COUNT = BREAKDOWN_COUNT + 1; // header + 5 cells
-const STAGE_DELAYS = [0, 250, 200, 200, 200, 200];
+// (2026-07: dropped from 5 to 4 cells when the always-0 "Projects" cell was
+// removed. An optional 6th→5th "Award Bonus" cell still rides the last stage.)
+const BREAKDOWN_COUNT = 4;
+const STAGE_COUNT = BREAKDOWN_COUNT + 1; // header + 4 cells
+const STAGE_DELAYS = [0, 250, 200, 200, 200];
 
 // A staged reveal cell: fades/slides in once `revealed` flips true. Under
 // reduced motion (`instant`) it renders as a plain div, visible immediately.
@@ -143,7 +156,6 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
     { value: campaignResults.scoreBreakdown.money, label: 'Money', color: 'text-money' },
     { value: campaignResults.scoreBreakdown.reputation, label: 'Reputation', color: 'text-neon-lilac' },
     { value: campaignResults.scoreBreakdown.artistsSuccessful, label: 'Artist Success', color: 'text-positive' },
-    { value: campaignResults.scoreBreakdown.projectsCompleted, label: 'Projects', color: 'text-neon-amber' },
     { value: campaignResults.scoreBreakdown.accessTierBonus, label: 'Access Bonus', color: 'text-neon-cyan' },
     // Exec-meetings-revival PR-7 (C5): only shown when an award was actually won
     // (awardBonus > 0) — a 0 bonus is a routine campaign, not worth a cell, and
@@ -235,6 +247,37 @@ export function CampaignResultsModal({ campaignResults, onClose, onNewGame }: Ca
               </div>
             </CardContent>
           </Card>
+
+          {/* By the Numbers — non-scoring career readout. Plain render (no
+              AnimatedNumber / staged reveal) so it reads as informational, not
+              a score component. Rendered even when all counts are zero. */}
+          {campaignResults.careerStats && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold text-white">
+                  By the Numbers
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                  {[
+                    { value: campaignResults.careerStats.singlesReleased, label: 'Singles', color: 'text-neon-magenta' },
+                    { value: campaignResults.careerStats.epsReleased, label: 'EPs', color: 'text-neon-purple' },
+                    { value: campaignResults.careerStats.albumsReleased, label: 'Albums', color: 'text-neon-lilac' },
+                    { value: campaignResults.careerStats.singleShows, label: 'Single Shows', color: 'text-neon-cyan' },
+                    { value: campaignResults.careerStats.tours, label: 'Tours', color: 'text-positive' },
+                  ].map((stat) => (
+                    <div key={stat.label} className="text-center">
+                      <div className={`font-mono text-xl font-semibold leading-none ${stat.color}`}>
+                        {stat.value}
+                      </div>
+                      <div className="mt-1.5 text-[11.5px] text-white/50">{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Achievements */}
           {campaignResults.achievements.length > 0 && (

@@ -465,11 +465,16 @@ export class ReleasePlanningService {
    *     (fork E: pre-buzz dies).
    *   - legacy / pct-0 releases have no preCampaign key → converted share 0 →
    *     full marketingBudget refund, byte-identical to the pre-slice-4 rule.
-   *   - the release's still-unreleased songs have their `awareness` and
-   *     `peak_awareness` ZEROED. Those points were built purely by this release's
-   *     pre-campaign; leaving them would recreate the buzz-farming exploit fork E
-   *     rejected. (Songs are unreleased/unreserved here — they only re-enter the
-   *     awareness economy via a fresh plan.)
+   *   - the release's still-UNRELEASED songs (is_released = false) have their
+   *     `awareness` and `peak_awareness` ZEROED. Those points were built purely
+   *     by this release's pre-campaign; leaving them would recreate the
+   *     buzz-farming exploit fork E rejected. A SHIPPED lead single (C107) —
+   *     is_released = true, released before the main release yet still linked to
+   *     this row — is EXEMPT: it carries LIVE earned awareness/peak_awareness
+   *     (real buzz + streaming multiplier + historical peak) that must survive
+   *     the cancel. So the awareness zero is scoped to unreleased songs only,
+   *     while the releaseId → null unlink applies to ALL songs on the row
+   *     (required — the row is deleted below, so no song may keep a dangling FK).
    *   - attached hype (metadata.attachedHype) dies implicitly: it lives only on
    *     this release row, which is deleted, and nothing re-credits any pool.
    * Everything below runs in ONE transaction with the refund.
@@ -545,11 +550,22 @@ export class ReleasePlanningService {
 
     // Execute deletion in transaction
     const result = await this.db.transaction(async (tx) => {
-      // Free up songs reserved for this release AND zero the pre-buzz they were
-      // seeded with (fork E: built pre-buzz dies with cancellation). These songs
-      // are unreleased, so peak_awareness held only pre-campaign build too.
+      // Free up songs reserved for this release. Two ORDERED updates (C107):
+      //   1. Zero the pre-buzz ONLY on songs that never shipped (fork E: built
+      //      pre-buzz dies with cancellation). A SHIPPED lead single keeps its
+      //      releaseId while still linked, is_released = true, and carries LIVE
+      //      earned awareness/peak_awareness (buzz + streaming multiplier +
+      //      historical peak) that pre-dates this cancel — zeroing it would
+      //      destroy real, already-earned buzz, not just pre-campaign build.
+      //   2. Unlink ALL songs (releaseId → null) so the release row can be
+      //      deleted below without a dangling FK.
+      // Order matters: zero BEFORE nulling, or step 2 clears releaseId and step
+      // 1's WHERE (releaseId = this release) would then match nothing.
+      await tx.update(songs)
+        .set({ awareness: 0, peak_awareness: 0 })
+        .where(and(eq(songs.releaseId, releaseId), eq(songs.isReleased, false)));
       const freedSongs = await tx.update(songs)
-        .set({ releaseId: null, awareness: 0, peak_awareness: 0 })
+        .set({ releaseId: null })
         .where(eq(songs.releaseId, releaseId))
         .returning();
 

@@ -43,8 +43,6 @@ export function createTestDBArtist(overrides: Partial<Artist> = {}): Artist {
     gameId: 'test_game_1',
     talent: 75,
     workEthic: 70,
-    stress: 0,
-    creativity: 50,
     massAppeal: 50,
     lastAttentionWeek: 1,
     experience: 0,
@@ -52,9 +50,6 @@ export function createTestDBArtist(overrides: Partial<Artist> = {}): Artist {
     signingCost: null,
     bio: null,
     age: null,
-    moodHistory: [],
-    lastMoodEvent: null,
-    moodTrend: 0,
     ...overrides,
   };
 }

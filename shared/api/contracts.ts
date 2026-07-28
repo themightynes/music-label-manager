@@ -174,13 +174,24 @@ export const CampaignResultsSchema = z.object({
     money: z.number(),
     reputation: z.number(),
     artistsSuccessful: z.number(),
-    projectsCompleted: z.number(),
+    // projectsCompleted removed from scoring (2026-07). Kept optional here so older
+    // persisted payloads that still carry it validate without a migration.
+    projectsCompleted: z.number().optional(),
     accessTierBonus: z.number(),
     // Exec-meetings-revival PR-7 (C5): campaign-end award-roll bonus. Optional +
     // defaulted so older persisted campaignResults payloads (pre-PR-7) still
     // validate without a migration.
     awardBonus: z.number().optional().default(0),
   }),
+  // Non-scoring end-game "By the Numbers" career readout. Optional so the
+  // campaign-already-completed replay path and older payloads (which omit it) validate.
+  careerStats: z.object({
+    singlesReleased: z.number(),
+    epsReleased: z.number(),
+    albumsReleased: z.number(),
+    singleShows: z.number(),
+    tours: z.number(),
+  }).optional(),
   victoryType: z.enum(['Commercial Success', 'Critical Acclaim', 'Balanced Growth', 'Survival', 'Failure']),
   summary: z.string(),
   achievements: z.array(z.string()),

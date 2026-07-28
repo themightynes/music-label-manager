@@ -347,7 +347,11 @@ export class SaveService {
       }
 
       console.log('[RESTORE] Step 16: Reinserting artists...');
-      // Restore roster before any collection that references artist IDs
+      // Restore roster before any collection that references artist IDs.
+      // NOTE (C63): Older v2 snapshots carry now-dropped artist keys (stress,
+      // creativity, moodHistory, lastMoodEvent, moodTrend). Drizzle's insert
+      // builder emits only columns that exist in the table schema, so these
+      // extra keys are harmlessly ignored — no SNAPSHOT_VERSION bump required.
       if (Array.isArray(snapshot.artists) && snapshot.artists.length > 0) {
         await tx.insert(artists).values(
           snapshot.artists.map((artist) =>

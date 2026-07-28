@@ -54,7 +54,7 @@ function makeResolverCtx(executives: any[] | null = makeExecutives()) {
 describe('applyTargetedExecutiveMood — the SLICE 5 resolver', () => {
   it('targets a single executive by roleId and persists through the shared clamp path', async () => {
     const { ctx, summary, updateExecutive } = makeResolverCtx();
-    await new ActionProcessor().applyTargetedExecutiveMood(ctx, -5, 'head_ar', 'tx-1', 'test');
+    await new ActionProcessor().applyTargetedExecutiveMood(ctx, -5, 'head_ar', 'tx-1' as any, 'test');
 
     expect(updateExecutive).toHaveBeenCalledTimes(1);
     expect(updateExecutive).toHaveBeenCalledWith('exec-ar', { mood: 45 }, 'tx-1');

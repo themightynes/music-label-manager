@@ -1,5 +1,7 @@
 # Music Label Manager - Post-MVP Development Roadmap (v2.0)
 
+> ⚠️ STALE (annotated July 26, 2026) — this is a **September 2025** post-MVP planning roadmap. Substantial portions of it have since shipped and its status markers are out of date. It remains the live "plan work" pointer (referenced by onboard, `docs/CLAUDE.md`, and the v3 roadmap), so it is kept in place — but for authoritative current status see `DEVELOPMENT_STATUS.md`, not this doc.
+
 *NEW features for 6-month post-MVP development*
 *Last Updated: September 2025*
 

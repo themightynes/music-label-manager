@@ -40,8 +40,6 @@ export const artists = pgTable("artists", {
   // Additional artist attributes
   talent: integer("talent").default(50), // 0-100
   workEthic: integer("work_ethic").default(50), // 0-100
-  stress: integer("stress").default(0), // 0-100
-  creativity: integer("creativity").default(50), // 0-100
   massAppeal: integer("mass_appeal").default(50), // 0-100
   lastAttentionWeek: integer("last_attention_week").default(1),
   experience: integer("experience").default(0),
@@ -50,18 +48,12 @@ export const artists = pgTable("artists", {
   signingCost: integer("signing_cost"), // One-time cost to sign artist
   bio: text("bio"), // Artist biography/description
   age: integer("age"), // Artist age in years
-  // Mood tracking
-  moodHistory: jsonb("mood_history").default('[]'), // Array of mood change events
-  lastMoodEvent: text("last_mood_event"), // Nullable - description of last mood event
-  moodTrend: integer("mood_trend").default(0), // -1 (declining), 0 (stable), 1 (improving)
 }, (table) => {
   return {
     moodCheck: sql`CHECK (${table.mood} >= 0 AND ${table.mood} <= 100)`,
     energyCheck: sql`CHECK (${table.energy} >= 0 AND ${table.energy} <= 100)`,
     talentCheck: sql`CHECK (${table.talent} >= 0 AND ${table.talent} <= 100)`,
     workEthicCheck: sql`CHECK (${table.workEthic} >= 0 AND ${table.workEthic} <= 100)`,
-    stressCheck: sql`CHECK (${table.stress} >= 0 AND ${table.stress} <= 100)`,
-    creativityCheck: sql`CHECK (${table.creativity} >= 0 AND ${table.creativity} <= 100)`,
     massAppealCheck: sql`CHECK (${table.massAppeal} >= 0 AND ${table.massAppeal} <= 100)`,
     temperamentCheck: sql`CHECK (${table.temperament} >= 0 AND ${table.temperament} <= 100)`,
     // Index for save/load performance

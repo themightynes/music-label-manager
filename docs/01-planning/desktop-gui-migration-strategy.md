@@ -1,5 +1,7 @@
 # Desktop GUI Migration Strategy
 
+> **[FUTURE] — deferred decision, not scheduled.** This is a future strategic decision, not active work. The A/B/C pathway choice remains **gated on five unresolved framing questions**: offline support? multiplayer? mobile? timeline? monetization? Until those are answered, no pathway can be chosen and no implementation should begin. **No active work while web-first development continues.** Removed from the active PENDING-DECISIONS queue on **2026-07-27** — parked here as a future decision rather than an open queue item.
+
 ## 📋 Overview
 
 This document outlines the strategic considerations and implementation pathways for transitioning Music Label Manager from a web browser-based game to a desktop GUI application. It provides a framework for decision-making and identifies critical architectural decisions that must be made before implementation begins.

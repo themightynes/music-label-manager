@@ -24,7 +24,7 @@
 - **All three weekly change types — `awareness_gain`, `awareness_decay`, and `breakthrough` — are swallowed**: `categorizeChanges` routes them to the `other` bucket, which is never rendered (`week-summary/categorizeChanges.ts`). The 🔥 BREAKTHROUGH moment — rare, quality-gated, 2.5× explosion — is **completely invisible**. (The old "WeekSummary keeps celebrating a stat players can't reason about" framing was itself stale: it never celebrated.)
 - `breakthrough` isn't classified in `changeImportance.ts` (falls to default) — the exhaustive-switch discipline missed it because nothing rendered it.
 - **No release-level awareness aggregation exists anywhere** — ActiveReleases, Dashboard, MetricsDashboard: zero references. Per-song values already reach the client uncensored via both `/songs` endpoints (`['songs:list', gameId]` TanStack hook exists), so surfacing needs no server changes.
-- The design doc's release-planning surfacing ideas (`[FUTURE] awareness-system-design.md` §"Release Planning Impact") were never built; that doc's engine sections are otherwise ~90% BUILT (divergence: the breakthrough roll formula).
+- The design doc's release-planning surfacing ideas (`docs/99-legacy/superseded-2026-07/[FUTURE] awareness-system-design.md` §"Release Planning Impact") were never built; that doc's engine sections are otherwise ~90% BUILT (divergence: the breakthrough roll formula).
 
 ### Degenerate / min-max cases surfaced (design duty)
 - **Line-spam**: a mature catalog (15–20 released songs) would emit up to 20 gain/decay lines weekly if naively rendered. Must aggregate.

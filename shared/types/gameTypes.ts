@@ -592,6 +592,12 @@ export interface BalanceConfig {
   ui_constants: Record<string, number>;
   save_system: Record<string, any>;
   difficulty_modifiers: Record<string, Record<string, number>>;
+  /** C62 — campaign-end "successful artist" score knobs (threshold + points/artist).
+   *  Optional — absent ⇒ getCampaignScoringConfigSync literal fallbacks (70 / 5). */
+  campaign_scoring?: {
+    artist_success_popularity_threshold: number;
+    points_per_successful_artist: number;
+  };
   /** Meeting-relevance Tier 1 (PR-2). Optional — absent ⇒ read-site HARDCODED fallback. */
   weekly_meeting_selection?: {
     relevance_weight: number;
@@ -1003,4 +1009,9 @@ export interface WeekSummary {
   // was swallowed (the week committed WITHOUT its emails). Optional/additive —
   // only ever set on failure, so successful weeks are byte-identical.
   emailGenerationFailed?: boolean;
+  // C108 observability: true when weekly chart generation/persistence threw and
+  // was swallowed (the week committed WITHOUT chart rows, chartUpdates, or
+  // chart-milestone bonuses). Optional/additive — only ever set on failure, so
+  // successful weeks are byte-identical.
+  chartGenerationFailed?: boolean;
 }

@@ -12,6 +12,7 @@ import {
 } from "@shared/schema";
 import { EMAIL_CATEGORIES, type EmailCategory } from "@shared/types/emailTypes";
 import { formatAutosaveName } from "@shared/utils/saveName";
+import type { DbOrTx } from '@shared/types/db';
 import { db } from "./db";
 import { eq, and, desc, inArray, sql, lte } from "drizzle-orm";
 import type { ReleasedSongData } from "@shared/engine/ChartService";
@@ -74,42 +75,42 @@ export interface IStorage {
 
   // Game state
   getGameState(id: string): Promise<GameState | undefined>;
-  createGameState(gameState: InsertGameState, dbTransaction?: any): Promise<GameState>;
+  createGameState(gameState: InsertGameState, dbTransaction?: DbOrTx): Promise<GameState>;
   updateGameState(id: string, gameState: Partial<InsertGameState>): Promise<GameState>;
 
   // Artists
-  getArtistsByGame(gameId: string, dbTransaction?: any): Promise<Artist[]>;
-  getArtist(id: string, dbTransaction?: any): Promise<Artist | undefined>;
+  getArtistsByGame(gameId: string, dbTransaction?: DbOrTx): Promise<Artist[]>;
+  getArtist(id: string, dbTransaction?: DbOrTx): Promise<Artist | undefined>;
   createArtist(artist: InsertArtist): Promise<Artist>;
-  updateArtist(id: string, artist: Partial<InsertArtist>, dbTransaction?: any): Promise<Artist>;
+  updateArtist(id: string, artist: Partial<InsertArtist>, dbTransaction?: DbOrTx): Promise<Artist>;
 
   // Projects
-  getProjectsByGame(gameId: string, dbTransaction?: any): Promise<Project[]>;
+  getProjectsByGame(gameId: string, dbTransaction?: DbOrTx): Promise<Project[]>;
   getProject(id: string): Promise<Project | undefined>;
   createProject(project: InsertProject): Promise<Project>;
-  updateProject(id: string, project: Partial<InsertProject>, dbTransaction?: any): Promise<Project>;
+  updateProject(id: string, project: Partial<InsertProject>, dbTransaction?: DbOrTx): Promise<Project>;
   deleteProject(id: string): Promise<void>;
   getActiveRecordingProjects(gameId: string): Promise<Project[]>;
 
   // Songs 
   getSongsByGame(gameId: string): Promise<Song[]>;
-  getSongsByArtist(artistId: string, gameId: string, dbTransaction?: any): Promise<Song[]>;
-  getSong(id: string, dbTransaction?: any): Promise<Song | undefined>;
+  getSongsByArtist(artistId: string, gameId: string, dbTransaction?: DbOrTx): Promise<Song[]>;
+  getSong(id: string, dbTransaction?: DbOrTx): Promise<Song | undefined>;
   createSong(song: InsertSong): Promise<Song>;
   updateSong(id: string, song: Partial<InsertSong>): Promise<Song>;
   getReleasedSongs(gameId: string): Promise<Song[]>;
   getSongsByProject(projectId: string): Promise<Song[]>;
-  updateSongs(songUpdates: { songId: string; [key: string]: any }[], dbTransaction?: any): Promise<void>;
+  updateSongs(songUpdates: { songId: string; [key: string]: any }[], dbTransaction?: DbOrTx): Promise<void>;
 
   // Releases
-  getReleasesByGame(gameId: string, dbTransaction?: any): Promise<Release[]>;
+  getReleasesByGame(gameId: string, dbTransaction?: DbOrTx): Promise<Release[]>;
   getReleasesByArtist(artistId: string, gameId: string): Promise<Release[]>;
-  getRelease(id: string, dbTransaction?: any): Promise<Release | undefined>;
+  getRelease(id: string, dbTransaction?: DbOrTx): Promise<Release | undefined>;
   createRelease(release: InsertRelease): Promise<Release>;
-  updateRelease(id: string, release: Partial<InsertRelease>, dbTransaction?: any): Promise<Release>;
-  getPlannedReleases(gameId: string, week: number, dbTransaction?: any): Promise<Release[]>;
-  getSongsByRelease(releaseId: string, dbTransaction?: any): Promise<Song[]>;
-  updateReleaseStatus(releaseId: string, status: string, metadata?: any, dbTransaction?: any): Promise<Release>;
+  updateRelease(id: string, release: Partial<InsertRelease>, dbTransaction?: DbOrTx): Promise<Release>;
+  getPlannedReleases(gameId: string, week: number, dbTransaction?: DbOrTx): Promise<Release[]>;
+  getSongsByRelease(releaseId: string, dbTransaction?: DbOrTx): Promise<Song[]>;
+  updateReleaseStatus(releaseId: string, status: string, metadata?: any, dbTransaction?: DbOrTx): Promise<Release>;
 
   // Release Songs (junction)
   getReleaseSongs(releaseId: string): Promise<ReleaseSong[]>;
@@ -131,15 +132,15 @@ export interface IStorage {
   createWeeklyAction(action: InsertWeeklyAction): Promise<WeeklyAction>;
 
   // Chart operations
-  getReleasedSongsByGame(gameId: string, dbTransaction?: any): Promise<ReleasedSongData[]>;
-  createChartEntries(entries: InsertChartEntry[], dbTransaction?: any): Promise<void>;
-  getChartEntriesBySongAndGame(songId: string, gameId: string, dbTransaction?: any): Promise<DbChartEntry[]>;
-  getChartEntriesByWeekAndGame(chartWeek: Date, gameId: string, dbTransaction?: any): Promise<DbChartEntry[]>;
-  getChartEntriesBySongsAndGame(songIds: string[], gameId: string, dbTransaction?: any): Promise<DbChartEntry[]>;
+  getReleasedSongsByGame(gameId: string, dbTransaction?: DbOrTx): Promise<ReleasedSongData[]>;
+  createChartEntries(entries: InsertChartEntry[], dbTransaction?: DbOrTx): Promise<void>;
+  getChartEntriesBySongAndGame(songId: string, gameId: string, dbTransaction?: DbOrTx): Promise<DbChartEntry[]>;
+  getChartEntriesByWeekAndGame(chartWeek: Date, gameId: string, dbTransaction?: DbOrTx): Promise<DbChartEntry[]>;
+  getChartEntriesBySongsAndGame(songIds: string[], gameId: string, dbTransaction?: DbOrTx): Promise<DbChartEntry[]>;
 
   // Music Labels
   getMusicLabel(gameId: string): Promise<MusicLabel | undefined>;
-  createMusicLabel(label: InsertMusicLabel, dbTransaction?: any): Promise<MusicLabel>;
+  createMusicLabel(label: InsertMusicLabel, dbTransaction?: DbOrTx): Promise<MusicLabel>;
   updateMusicLabel(gameId: string, label: Partial<InsertMusicLabel>): Promise<MusicLabel | undefined>;
 
   // Emails
@@ -151,13 +152,13 @@ export interface IStorage {
     offset?: number;
   }): Promise<{ emails: Email[]; total: number; unreadCount: number }>;
   getEmailById(gameId: string, emailId: string): Promise<Email | undefined>;
-  createEmail(email: InsertEmail, dbTransaction?: any): Promise<Email>;
-  createEmails(emails: InsertEmail[], dbTransaction?: any): Promise<Email[]>;
+  createEmail(email: InsertEmail, dbTransaction?: DbOrTx): Promise<Email>;
+  createEmails(emails: InsertEmail[], dbTransaction?: DbOrTx): Promise<Email[]>;
   markEmailRead(gameId: string, emailId: string, isRead: boolean): Promise<Email>;
   deleteEmail(gameId: string, emailId: string): Promise<void>;
 
   // Mood Events
-  createMoodEvent(moodEvent: InsertMoodEvent, dbTransaction?: any): Promise<MoodEvent>;
+  createMoodEvent(moodEvent: InsertMoodEvent, dbTransaction?: DbOrTx): Promise<MoodEvent>;
   getMoodEventsByGame(gameId: string): Promise<MoodEvent[]>;
   getMoodEventsByArtist(artistId: string, gameId: string): Promise<MoodEvent[]>;
   getGlobalMoodEvents(gameId: string): Promise<MoodEvent[]>;
@@ -312,7 +313,7 @@ export class DatabaseStorage implements IStorage {
     return state || undefined;
   }
 
-  async createGameState(gameState: InsertGameState, dbTransaction?: any): Promise<GameState> {
+  async createGameState(gameState: InsertGameState, dbTransaction?: DbOrTx): Promise<GameState> {
     const dbContext = dbTransaction || this.db;
     const [state] = await dbContext.insert(gameStates).values(gameState).returning();
     return state;
@@ -345,12 +346,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Artists
-  async getArtistsByGame(gameId: string, dbTransaction?: any): Promise<Artist[]> {
+  async getArtistsByGame(gameId: string, dbTransaction?: DbOrTx): Promise<Artist[]> {
     const dbContext = dbTransaction || this.db;
     return await dbContext.select().from(artists).where(eq(artists.gameId, gameId));
   }
 
-  async getArtist(id: string, dbTransaction?: any): Promise<Artist | undefined> {
+  async getArtist(id: string, dbTransaction?: DbOrTx): Promise<Artist | undefined> {
     const dbContext = dbTransaction || this.db;
     const [artist] = await dbContext.select().from(artists).where(eq(artists.id, id));
     return artist || undefined;
@@ -361,7 +362,7 @@ export class DatabaseStorage implements IStorage {
     return newArtist;
   }
 
-  async updateArtist(id: string, artist: Partial<InsertArtist>, dbTransaction?: any): Promise<Artist> {
+  async updateArtist(id: string, artist: Partial<InsertArtist>, dbTransaction?: DbOrTx): Promise<Artist> {
     const dbContext = dbTransaction || this.db;
     const [updatedArtist] = await dbContext.update(artists)
       .set(artist)
@@ -371,7 +372,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Projects
-  async getProjectsByGame(gameId: string, dbTransaction?: any): Promise<Project[]> {
+  async getProjectsByGame(gameId: string, dbTransaction?: DbOrTx): Promise<Project[]> {
     const dbContext = dbTransaction || this.db;
     return await dbContext.select().from(projects).where(eq(projects.gameId, gameId));
   }
@@ -386,7 +387,7 @@ export class DatabaseStorage implements IStorage {
     return newProject;
   }
 
-  async updateProject(id: string, project: Partial<InsertProject>, dbTransaction?: any): Promise<Project> {
+  async updateProject(id: string, project: Partial<InsertProject>, dbTransaction?: DbOrTx): Promise<Project> {
     const dbContext = dbTransaction || this.db;
     const [updatedProject] = await dbContext.update(projects)
       .set(project)
@@ -451,7 +452,7 @@ export class DatabaseStorage implements IStorage {
     return await this.db.select().from(songs).where(eq(songs.gameId, gameId));
   }
 
-  async getSongsByArtist(artistId: string, gameId: string, dbTransaction?: any): Promise<Song[]> {
+  async getSongsByArtist(artistId: string, gameId: string, dbTransaction?: DbOrTx): Promise<Song[]> {
     const dbContext = dbTransaction || this.db;
     console.log('[DatabaseStorage] getSongsByArtist query:', { artistId, gameId });
     const result = await dbContext.select().from(songs)
@@ -478,7 +479,7 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getSong(id: string, dbTransaction?: any): Promise<Song | undefined> {
+  async getSong(id: string, dbTransaction?: DbOrTx): Promise<Song | undefined> {
     const dbContext = dbTransaction || this.db;
     const [song] = await dbContext.select().from(songs).where(eq(songs.id, id));
     return song || undefined;
@@ -501,7 +502,7 @@ export class DatabaseStorage implements IStorage {
     return newSong;
   }
 
-  async updateSong(id: string, song: Partial<InsertSong>, dbTransaction?: any): Promise<Song> {
+  async updateSong(id: string, song: Partial<InsertSong>, dbTransaction?: DbOrTx): Promise<Song> {
     const dbContext = dbTransaction || this.db;
     const [updatedSong] = await dbContext.update(songs)
       .set(song)
@@ -525,7 +526,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(songs.createdAt);
   }
 
-  async updateSongs(songUpdates: { songId: string; [key: string]: any }[], dbTransaction?: any): Promise<void> {
+  async updateSongs(songUpdates: { songId: string; [key: string]: any }[], dbTransaction?: DbOrTx): Promise<void> {
     const dbContext = dbTransaction || this.db;
     console.log(`[STORAGE] 💾💾💾 === UPDATING SONGS === 💾💾💾`);
     console.log(`[STORAGE] 📦 Total songs to update: ${songUpdates.length}`);
@@ -566,7 +567,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Releases
-  async getReleasesByGame(gameId: string, dbTransaction?: any): Promise<Release[]> {
+  async getReleasesByGame(gameId: string, dbTransaction?: DbOrTx): Promise<Release[]> {
     const dbContext = dbTransaction || this.db;
     return await dbContext.select().from(releases).where(eq(releases.gameId, gameId));
   }
@@ -577,7 +578,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(releases.createdAt));
   }
 
-  async getRelease(id: string, dbTransaction?: any): Promise<Release | undefined> {
+  async getRelease(id: string, dbTransaction?: DbOrTx): Promise<Release | undefined> {
     const dbContext = dbTransaction || this.db;
     const [release] = await dbContext.select().from(releases).where(eq(releases.id, id));
     return release || undefined;
@@ -588,7 +589,7 @@ export class DatabaseStorage implements IStorage {
     return newRelease;
   }
 
-  async updateRelease(id: string, release: Partial<InsertRelease>, dbTransaction?: any): Promise<Release> {
+  async updateRelease(id: string, release: Partial<InsertRelease>, dbTransaction?: DbOrTx): Promise<Release> {
     const dbContext = dbTransaction || this.db;
     const [updatedRelease] = await dbContext.update(releases)
       .set(release)
@@ -597,7 +598,7 @@ export class DatabaseStorage implements IStorage {
     return updatedRelease;
   }
 
-  async getPlannedReleases(gameId: string, week: number, dbTransaction?: any): Promise<Release[]> {
+  async getPlannedReleases(gameId: string, week: number, dbTransaction?: DbOrTx): Promise<Release[]> {
     const dbContext = dbTransaction || this.db;
     console.log(`[STORAGE] getPlannedReleases: gameId=${gameId}, week=${week}, usingTransaction=${!!dbTransaction}`);
     
@@ -618,7 +619,7 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getSongsByRelease(releaseId: string, dbTransaction?: any): Promise<Song[]> {
+  async getSongsByRelease(releaseId: string, dbTransaction?: DbOrTx): Promise<Song[]> {
     const dbContext = dbTransaction || this.db;
     console.log(`[STORAGE] getSongsByRelease: releaseId=${releaseId}, usingTransaction=${!!dbTransaction}`);
     
@@ -648,7 +649,7 @@ export class DatabaseStorage implements IStorage {
     return directResults;
   }
 
-  async updateReleaseStatus(releaseId: string, status: string, metadata?: any, dbTransaction?: any): Promise<Release> {
+  async updateReleaseStatus(releaseId: string, status: string, metadata?: any, dbTransaction?: DbOrTx): Promise<Release> {
     const dbContext = dbTransaction || this.db;
     console.log(`[STORAGE] updateReleaseStatus: releaseId=${releaseId}, status=${status}, usingTransaction=${!!dbTransaction}`);
     
@@ -766,7 +767,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Executives
-  async getExecutivesByGame(gameId: string, dbTransaction?: any): Promise<any[]> {
+  async getExecutivesByGame(gameId: string, dbTransaction?: DbOrTx): Promise<any[]> {
     const dbContext = dbTransaction || this.db;
     console.log('[STORAGE] getExecutivesByGame called with gameId:', gameId);
     const result = await dbContext.select().from(executives).where(eq(executives.gameId, gameId));
@@ -775,7 +776,7 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getExecutive(execId: string, dbTransaction?: any): Promise<any | null> {
+  async getExecutive(execId: string, dbTransaction?: DbOrTx): Promise<any | null> {
     const dbContext = dbTransaction || this.db;
     console.log('[STORAGE] getExecutive called with execId:', execId);
     const result = await dbContext.select().from(executives)
@@ -802,7 +803,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Chart operations implementation
-  async getReleasedSongsByGame(gameId: string, dbTransaction?: any): Promise<ReleasedSongData[]> {
+  async getReleasedSongsByGame(gameId: string, dbTransaction?: DbOrTx): Promise<ReleasedSongData[]> {
     const dbToUse = dbTransaction || this.db;
     const releasedSongs = await dbToUse
       .select({
@@ -830,7 +831,7 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async createChartEntries(entries: InsertChartEntry[], dbTransaction?: any): Promise<void> {
+  async createChartEntries(entries: InsertChartEntry[], dbTransaction?: DbOrTx): Promise<void> {
     if (entries.length === 0) return;
 
     const dbToUse = dbTransaction || this.db;
@@ -859,7 +860,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getChartEntriesBySongAndGame(songId: string, gameId: string, dbTransaction?: any): Promise<DbChartEntry[]> {
+  async getChartEntriesBySongAndGame(songId: string, gameId: string, dbTransaction?: DbOrTx): Promise<DbChartEntry[]> {
     const dbToUse = dbTransaction || this.db;
     return await dbToUse
       .select()
@@ -873,7 +874,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(chartEntries.chartWeek));
   }
 
-  async getChartEntriesByWeekAndGame(chartWeek: Date, gameId: string, dbTransaction?: any): Promise<DbChartEntry[]> {
+  async getChartEntriesByWeekAndGame(chartWeek: Date, gameId: string, dbTransaction?: DbOrTx): Promise<DbChartEntry[]> {
     const dbToUse = dbTransaction || this.db;
     // Convert Date to ISO string format (YYYY-MM-DD) for database comparison
     const chartWeekString = chartWeek.toISOString().split('T')[0];
@@ -892,7 +893,7 @@ export class DatabaseStorage implements IStorage {
       );
   }
 
-  async getChartEntriesBySongsAndGame(songIds: string[], gameId: string, dbTransaction?: any): Promise<DbChartEntry[]> {
+  async getChartEntriesBySongsAndGame(songIds: string[], gameId: string, dbTransaction?: DbOrTx): Promise<DbChartEntry[]> {
     if (songIds.length === 0) return [];
 
     const dbToUse = dbTransaction || this.db;
@@ -998,13 +999,13 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async createEmail(emailInput: InsertEmail, dbTransaction?: any): Promise<Email> {
+  async createEmail(emailInput: InsertEmail, dbTransaction?: DbOrTx): Promise<Email> {
     const dbContext = dbTransaction || this.db;
     const [created] = await dbContext.insert(emails).values(emailInput).returning();
     return created;
   }
 
-  async createEmails(emailInputs: InsertEmail[], dbTransaction?: any): Promise<Email[]> {
+  async createEmails(emailInputs: InsertEmail[], dbTransaction?: DbOrTx): Promise<Email[]> {
     if (emailInputs.length === 0) return [];
 
     const dbContext = dbTransaction || this.db;
@@ -1041,7 +1042,7 @@ export class DatabaseStorage implements IStorage {
     return label || undefined;
   }
 
-  async createMusicLabel(label: InsertMusicLabel, dbTransaction?: any): Promise<MusicLabel> {
+  async createMusicLabel(label: InsertMusicLabel, dbTransaction?: DbOrTx): Promise<MusicLabel> {
     const dbContext = dbTransaction || this.db;
     const [created] = await dbContext
       .insert(musicLabels)
@@ -1060,7 +1061,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Mood Events
-  async createMoodEvent(moodEvent: InsertMoodEvent, dbTransaction?: any): Promise<MoodEvent> {
+  async createMoodEvent(moodEvent: InsertMoodEvent, dbTransaction?: DbOrTx): Promise<MoodEvent> {
     const dbContext = dbTransaction || this.db;
     const [created] = await dbContext
       .insert(moodEvents)

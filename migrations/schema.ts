@@ -88,14 +88,9 @@ export const artists = pgTable("artists", {
 	gameId: uuid("game_id"),
 	talent: integer().default(50),
 	workEthic: integer("work_ethic").default(50),
-	stress: integer().default(0),
-	creativity: integer().default(50),
 	massAppeal: integer("mass_appeal").default(50),
 	lastAttentionWeek: integer("last_attention_week").default(1),
 	experience: integer().default(0),
-	moodHistory: jsonb("mood_history").default([]),
-	lastMoodEvent: text("last_mood_event"),
-	moodTrend: integer("mood_trend").default(0),
 });
 
 export const gameStates = pgTable("game_states", {

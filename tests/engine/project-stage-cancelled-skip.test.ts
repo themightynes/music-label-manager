@@ -18,7 +18,7 @@ function makeFakeTx(projects: any[]) {
     select: () => ({ from: () => ({ where: async () => projects }) }),
     update,
   };
-  return { tx, update, updateSet };
+  return { tx: tx as any, update, updateSet };
 }
 
 function buildContext(): WeekContext {

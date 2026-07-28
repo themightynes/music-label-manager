@@ -75,15 +75,15 @@ describe('Slice 6 — tour popularity gains respect the saturation curve', () =>
   it('DIRECTION: for the same big-crowd show, a low-pop artist gains MORE than a high-pop artist', async () => {
     const lo = makeCtx(20);
     const hi = makeCtx(80);
-    const rLo = await proc.applyTourPerformanceImpacts(lo.ctx, 'artist-1', bigCrowdCity(), null);
-    const rHi = await proc.applyTourPerformanceImpacts(hi.ctx, 'artist-1', bigCrowdCity(), null);
+    const rLo = await proc.applyTourPerformanceImpacts(lo.ctx, 'artist-1', bigCrowdCity(), undefined);
+    const rHi = await proc.applyTourPerformanceImpacts(hi.ctx, 'artist-1', bigCrowdCity(), undefined);
 
     expect(rLo.popularityChange).toBeGreaterThan(rHi.popularityChange);
   });
 
   it('EXACT: pop 80 + big crowd (raw gain 7) → satMult ≈ 0.2459, round(7 × 0.2459) = 2', async () => {
     const { ctx, summary } = makeCtx(80);
-    const r = await proc.applyTourPerformanceImpacts(ctx, 'artist-1', bigCrowdCity(), null);
+    const r = await proc.applyTourPerformanceImpacts(ctx, 'artist-1', bigCrowdCity(), undefined);
 
     // satMult(80) = 0.2 + 1.3/(1+(80/35)^4) = 0.245944; 7 × 0.245944 = 1.7216 → 2.
     expect(r.popularityChange).toBe(2);
@@ -95,7 +95,7 @@ describe('Slice 6 — tour popularity gains respect the saturation curve', () =>
 
   it('FLOOR: pop 80 + tiny crowd (raw gain 1) → round(0.2459) = 0 is allowed (no gain, no entry)', async () => {
     const { ctx, summary } = makeCtx(80);
-    const r = await proc.applyTourPerformanceImpacts(ctx, 'artist-1', tinyCrowdCity(), null);
+    const r = await proc.applyTourPerformanceImpacts(ctx, 'artist-1', tinyCrowdCity(), undefined);
 
     // 1 × 0.245944 = 0.2459 → round → 0. A sold-out club for a famous act moves nothing.
     expect(r.popularityChange).toBe(0);
@@ -107,7 +107,7 @@ describe('Slice 6 — tour popularity gains respect the saturation curve', () =>
   it('LOW POP ≈ TABLE: the min(1,·) cap means a pop-0 act gains EXACTLY the raw table value (curve never super-charges)', async () => {
     // satMult(0) = 0.2 + 1.3/1 = 1.5, but min(1, 1.5) = 1 → gain = table (7), NOT 11.
     const { ctx } = makeCtx(0);
-    const r = await proc.applyTourPerformanceImpacts(ctx, 'artist-1', bigCrowdCity(), null);
+    const r = await proc.applyTourPerformanceImpacts(ctx, 'artist-1', bigCrowdCity(), undefined);
 
     expect(r.popularityChange).toBe(7);
   });
@@ -115,7 +115,7 @@ describe('Slice 6 — tour popularity gains respect the saturation curve', () =>
   it('MOOD UNCHANGED: the saturation cap touches popularity only — mood reaction is the raw table delta', async () => {
     // 90% attendance > good_max(85) → great_delta (+8), independent of popularity.
     const { ctx } = makeCtx(80);
-    const r = await proc.applyTourPerformanceImpacts(ctx, 'artist-1', bigCrowdCity(), null);
+    const r = await proc.applyTourPerformanceImpacts(ctx, 'artist-1', bigCrowdCity(), undefined);
     expect(r.moodChange).toBe(marketFormulas.tour_revenue.mood_reactions.great_delta);
   });
 });
